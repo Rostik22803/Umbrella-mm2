@@ -316,6 +316,7 @@ CreateTabPage("Main")
 CreateTabPage("Visuals")
 CreateTabPage("Combat")
 CreateTabPage("HvH")
+CreateTabPage("Skins")
 CreateTabPage("Settings")
 
 local function SwitchTab(targetTab)
@@ -367,7 +368,8 @@ AddTabButton("Main", "⚡", 1)
 AddTabButton("Visuals", "👁", 2)
 AddTabButton("Combat", "⚔", 3)
 AddTabButton("HvH", "☠", 4)
-AddTabButton("Settings", "⚙", 5)
+AddTabButton("Skins", "🔪", 5)
+AddTabButton("Settings", "⚙", 6)
 
 ------------------------------------------------------------------------
 -- КОМПОНЕНТЫ ИНТЕРФЕЙСА
@@ -675,48 +677,36 @@ CreateToggle(SecRageHvH, "Anti-Murderer Orbit Shield", false, function(st) _G.An
 CreateSlider(SecRageHvH, "Orbit Distance", _G.OrbitDistance, 8, 25, false, function(val) _G.OrbitDistance = val end)
 CreateToggle(SecRageHvH, "Kill Trash Talker (Chat)", false, function(st) _G.KillTrashTalkActive = st end)
 
-local SecVisualSkin = CreateSection(Tabs["Settings"], "Visual Skin Changer")
-_G.VisualSkinChangerActive = false
+-- 5. SKINS (SKINCHANGER & INVENTORY)
+_G.SelectedKnifeSkin = "Harvester"
+_G.SelectedGunSkin = "Harvester"
+_G.EnableSkinChanger = true
+_G.ChromaSkinActive = false
+_G.ModifyInventoryUI = true
 
-local function ApplyVisualSkins()
-    pcall(function()
-        local renv = getrenv and getrenv() or _G
-        local DataBase = renv._G and renv._G.Database
-        local PlayerData = renv._G and renv._G.PlayerData
-        if DataBase and DataBase.Item and PlayerData and PlayerData.Weapons then
-            local WeaponOwnRange = {min = 1, max = 5}
-            local newOwned = {}
-            for i, v in pairs(DataBase.Item) do
-                newOwned[i] = math.random(WeaponOwnRange.min, WeaponOwnRange.max)
-            end
-            PlayerData.Weapons.Owned = newOwned
-        end
+local SecKnifeSkins = CreateSection(Tabs["Skins"], "Knife SkinChanger")
+CreateToggle(SecKnifeSkins, "Enable SkinChanger", true, function(st) _G.EnableSkinChanger = st end)
+CreateToggle(SecKnifeSkins, "Chroma Rainbow Effect", false, function(st) _G.ChromaSkinActive = st end)
+CreateToggle(SecKnifeSkins, "Spoof Inventory UI", true, function(st) _G.ModifyInventoryUI = st end)
+
+local SecSkinChoice = CreateSection(Tabs["Skins"], "Select Preset Skins")
+local PresetKnives = {"Harvester", "Corrupt", "Icebreaker", "Chroma Candleflame", "Bat", "Nikilis Scythe", "Swirly Blade"}
+local PresetGuns = {"Harvester", "Icebeam", "Swirly Gun", "Chroma Laser", "Luger", "Raygun", "Ocean"}
+
+for _, kName in ipairs(PresetKnives) do
+    CreateToggle(SecSkinChoice, "Knife: " .. kName, kName == "Harvester", function(st)
+        if st then _G.SelectedKnifeSkin = kName end
     end)
 end
 
-local SkinConn
-CreateToggle(SecVisualSkin, "Unlock All Skins & Pets (Visual)", false, function(st)
-    _G.VisualSkinChangerActive = st
-    if st then
-        ApplyVisualSkins()
-        if not SkinConn then
-            SkinConn = RunService.RenderStepped:Connect(function()
-                if _G.VisualSkinChangerActive then
-                    ApplyVisualSkins()
-                end
-            end)
-        end
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.Health = 0
-        end
-    else
-        if SkinConn then
-            SkinConn:Disconnect()
-            SkinConn = nil
-        end
-    end
-end)
+for _, gName in ipairs(PresetGuns) do
+    CreateToggle(SecSkinChoice, "Gun: " .. gName, gName == "Harvester", function(st)
+        if st then _G.SelectedGunSkin = gName end
+    end)
+end
 
+-- 6. SETTINGS
+local SecColors = CreateSection(Tabs["Settings"], "Theme & Menu")
 local ColorInfo = Instance.new("TextLabel")
 ColorInfo.Parent = SecColors
 ColorInfo.BackgroundTransparency = 1
@@ -1473,7 +1463,136 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         end
     end
     
-    return OldNamecall(self, ...)
+    ------------------------------------------------------------------------
+-- ЛОГИКА SKINCHANGER И СПУФИНГА ИНВЕНТАРЯ
+------------------------------------------------------------------------
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local function GetWeaponModelFromDB(weaponName)
+    local db = ReplicatedStorage:FindFirstChild("Database") or ReplicatedStorage:FindFirstChild("Weapons")
+    if db then
+        local found = db:FindFirstChild(weaponName, true)
+        if found then return found end
+    end
+    return nil
+end
+
+local function ApplySkinToTool(tool, skinName)
+    if not _G.EnableSkinChanger or not tool then return end
+    
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    
+    local dbSkinModel = GetWeaponModelFromDB(skinName)
+    if dbSkinModel then
+        local skinHandle = dbSkinModel:FindFirstChild("Handle") or dbSkinModel
+        if skinHandle then
+            local mesh = handle:FindFirstChildOfClass("SpecialMesh") or handle:FindFirstChildOfClass("Mesh")
+            local skinMesh = skinHandle:FindFirstChildOfClass("SpecialMesh") or skinHandle:FindFirstChildOfClass("Mesh")
+            
+            if mesh and skinMesh then
+                mesh.MeshId = skinMesh.MeshId
+                mesh.TextureId = skinMesh.TextureId
+                mesh.Scale = skinMesh.Scale
+            end
+        end
+    end
+end
+
+-- Прослушивание взятия оружия в руки
+local function SetupSkinChangerForCharacter(char)
+    if not char then return end
+    char.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then
+            if child.Name == "Knife" then
+                ApplySkinToTool(child, _G.SelectedKnifeSkin)
+            elseif child.Name == "Gun" or child.Name == "Revolver" then
+                ApplySkinToTool(child, _G.SelectedGunSkin)
+            end
+        end
+    end)
+    
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Tool") then
+            if child.Name == "Knife" then
+                ApplySkinToTool(child, _G.SelectedKnifeSkin)
+            elseif child.Name == "Gun" or child.Name == "Revolver" then
+                ApplySkinToTool(child, _G.SelectedGunSkin)
+            end
+        end
+    end
+end
+
+if LocalPlayer.Character then SetupSkinChangerForCharacter(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(SetupSkinChangerForCharacter)
+
+-- Chroma Rainbow Effect Loop
+task.spawn(function()
+    local hue = 0
+    while true do
+        task.wait(0.03)
+        if _G.ChromaSkinActive and LocalPlayer.Character then
+            hue = (hue + 0.01) % 1
+            local chromaColor = Color3.fromHSV(hue, 1, 1)
+            
+            for _, item in ipairs(LocalPlayer.Character:GetChildren()) do
+                if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                    local mesh = item.Handle:FindFirstChildOfClass("SpecialMesh")
+                    if mesh then
+                        mesh.VertexColor = Vector3.new(chromaColor.R, chromaColor.G, chromaColor.B)
+                    else
+                        item.Handle.Color = chromaColor
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Спуфинг визуального инвентаря в GUI MM2
+local function SpoofInventoryUI()
+    if not _G.ModifyInventoryUI then return end
+    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not pGui then return end
+    
+    local mainGui = pGui:FindFirstChild("MainGUI") or pGui:FindFirstChild("ScreenGui")
+    if mainGui then
+        local invFrame = mainGui:FindFirstChild("Inventory", true) or mainGui:FindFirstChild("Weapons", true)
+        if invFrame then
+            local container = invFrame:FindFirstChild("Container", true) or invFrame:FindFirstChild("Items", true)
+            if container then
+                -- Визуально проставляем скины в сетке инвентаря
+                for _, skinName in ipairs({_G.SelectedKnifeSkin, _G.SelectedGunSkin}) do
+                    if not container:FindFirstChild("Fake_" .. skinName) then
+                        local fakeCard = Instance.new("Frame")
+                        fakeCard.Name = "Fake_" .. skinName
+                        fakeCard.Size = UDim2.new(0, 75, 0, 75)
+                        fakeCard.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+                        fakeCard.Parent = container
+                        
+                        local title = Instance.new("TextLabel", fakeCard)
+                        title.Size = UDim2.new(1, 0, 0, 20)
+                        title.Position = UDim2.new(0, 0, 1, -20)
+                        title.Text = skinName
+                        title.TextColor3 = Color3.fromRGB(255, 215, 0)
+                        title.TextSize = 10
+                        title.BackgroundTransparency = 1
+                        
+                        Instance.new("UICorner", fakeCard).CornerRadius = UDim.new(0, 6)
+                    end
+                end
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if _G.ModifyInventoryUI then
+        pcall(SpoofInventoryUI)
+    end
+end)
+
+return OldNamecall(self, ...)
 end)
 
 local isMinimized = false
