@@ -652,7 +652,7 @@ _G.SpinSpeed = 30
 _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
 
-_G.SkinChangerActive = false
+_G.SkinChangerActive = true
 _G.ChromaEffectActive = true
 _G.SelectedKnifeSkin = "Chroma Lightbringer"
 _G.SelectedGunSkin = "Chroma Luger"
@@ -747,7 +747,6 @@ CreateToggle(SecRageHvH, "Long Knife Reach (Hitbox TP)", false, function(st) _G.
 CreateSlider(SecRageHvH, "Reach Distance", _G.KnifeReachDist, 10, 40, false, function(val) _G.KnifeReachDist = val end)
 CreateToggle(SecRageHvH, "Auto Shoot Murderer (Sheriff)", false, function(st) _G.AutoShootSheriff = st end)
 CreateToggle(SecRageHvH, "Backstab Teleport Aimbot", false, function(st) _G.BackstabAimbot = st end)
-CreateToggle(SecRageHvH, "Anti-Murderer Orbit Shield", false, function(st) _G.AntiMurdererOrbit = st end)
 CreateSlider(SecRageHvH, "Orbit Distance", _G.OrbitDistance, 8, 25, false, function(val) _G.OrbitDistance = val end)
 CreateToggle(SecRageHvH, "Kill Trash Talker (Chat)", false, function(st) _G.KillTrashTalkActive = st end)
 
@@ -756,7 +755,7 @@ local KnifeList = {"Chroma Lightbringer", "Chroma Darkbringer", "Corrupt", "Icew
 local GunList = {"Chroma Luger", "Chroma Laser", "Ocean Gun", "Icebreaker", "Darkbeam", "Elderwood Revolver"}
 
 local SecSkinMain = CreateSection(Tabs["Skins"], "SkinChanger Control")
-CreateToggle(SecSkinMain, "Enable Skin Changer", false, function(st)
+CreateToggle(SecSkinMain, "Enable Skin Changer", true, function(st)
     _G.SkinChangerActive = st
     if RefreshAllSkins then RefreshAllSkins() end
 end)
@@ -764,20 +763,22 @@ CreateToggle(SecSkinMain, "Enable RGB Chroma Glow", true, function(st)
     _G.ChromaEffectActive = st
     if RefreshAllSkins then RefreshAllSkins() end
 end)
-CreateButton(SecSkinMain, "Re-Apply Skins", function()
+CreateButton(SecSkinMain, "Re-Apply Skins Now", function()
     if RefreshAllSkins then RefreshAllSkins() end
 end)
 
 local SecKnifeSkins = CreateSection(Tabs["Skins"], "Knife Skins")
 CreateDropdown(SecKnifeSkins, "Knife Model", KnifeList, _G.SelectedKnifeSkin, function(val)
     _G.SelectedKnifeSkin = val
-    if _G.SkinChangerActive and RefreshAllSkins then RefreshAllSkins() end
+    _G.SkinChangerActive = true
+    if RefreshAllSkins then RefreshAllSkins() end
 end)
 
 local SecGunSkins = CreateSection(Tabs["Skins"], "Gun Skins")
 CreateDropdown(SecGunSkins, "Gun Model", GunList, _G.SelectedGunSkin, function(val)
     _G.SelectedGunSkin = val
-    if _G.SkinChangerActive and RefreshAllSkins then RefreshAllSkins() end
+    _G.SkinChangerActive = true
+    if RefreshAllSkins then RefreshAllSkins() end
 end)
 
 -- 6. SETTINGS
@@ -849,9 +850,34 @@ local SkinDatabase = {
     }
 }
 
-function applySkinToTool(tool)
-    if not _G.SkinChangerActive then return end
+local function removeCustomSkin(tool)
     if not tool or not tool:IsA("Tool") then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+
+    local existingCustom = handle:FindFirstChild("CustomSkinPart")
+    if existingCustom then
+        existingCustom:Destroy()
+    end
+
+    handle.Transparency = 0
+    pcall(function() handle.LocalTransparencyModifier = 0 end)
+    for _, child in ipairs(handle:GetDescendants()) do
+        if child:IsA("BasePart") then
+            child.Transparency = 0
+        elseif child:IsA("Decal") or child:IsA("Texture") then
+            child.Transparency = 0
+        end
+    end
+end
+
+function applySkinToTool(tool)
+    if not tool or not tool:IsA("Tool") then return end
+
+    if not _G.SkinChangerActive then
+        removeCustomSkin(tool)
+        return
+    end
 
     local nameLower = tool.Name:lower()
     local config = nil
@@ -864,44 +890,53 @@ function applySkinToTool(tool)
 
     if not config then return end
 
-    local handle = tool:FindFirstChild("Handle")
+    local handle = tool:FindFirstChild("Handle") or tool:WaitForChild("Handle", 2)
     if not handle then return end
 
-    if handle:IsA("MeshPart") then
-        pcall(function()
-            if config.TextureId and config.TextureId ~= "" then
-                handle.TextureID = config.TextureId
-            end
-            if config.MeshId and config.MeshId ~= "" then
-                handle.MeshId = config.MeshId
-            end
-        end)
-    elseif handle:FindFirstChildOfClass("SpecialMesh") then
-        local mesh = handle:FindFirstChildOfClass("SpecialMesh")
-        pcall(function()
-            if config.MeshId and config.MeshId ~= "" then
-                mesh.MeshId = config.MeshId
-            end
-            if config.TextureId and config.TextureId ~= "" then
-                mesh.TextureId = config.TextureId
-            end
-        end)
+    removeCustomSkin(tool)
+
+    handle.Transparency = 1
+    pcall(function() handle.LocalTransparencyModifier = 1 end)
+    for _, child in ipairs(handle:GetDescendants()) do
+        if child:IsA("BasePart") then
+            child.Transparency = 1
+        elseif child:IsA("Decal") or child:IsA("Texture") then
+            child.Transparency = 1
+        end
     end
 
+    local customPart = Instance.new("Part")
+    customPart.Name = "CustomSkinPart"
+    customPart.Size = Vector3.new(1, 1, 1)
+    customPart.CanCollide = false
+    customPart.Massless = true
+    customPart.Transparency = 0
+    customPart.CFrame = handle.CFrame
+    customPart.Parent = handle
+
+    local mesh = Instance.new("SpecialMesh")
+    mesh.Name = "SkinMesh"
+    mesh.MeshType = Enum.MeshType.FileMesh
+    mesh.MeshId = config.MeshId
+    mesh.TextureId = config.TextureId
+    mesh.Scale = Vector3.new(1, 1, 1)
+    mesh.Parent = customPart
+
+    local weld = Instance.new("WeldConstraint")
+    weld.Name = "SkinWeld"
+    weld.Part0 = handle
+    weld.Part1 = customPart
+    weld.Parent = customPart
+
     if config.Chroma and _G.ChromaEffectActive then
-        if not handle:FindFirstChild("ChromaHighlight") then
-            local hl = Instance.new("Highlight")
-            hl.Name = "ChromaHighlight"
-            hl.Adornee = handle
-            hl.FillTransparency = 0.5
-            hl.OutlineTransparency = 0
-            hl.FillColor = Color3.fromHSV(0, 1, 1)
-            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-            hl.Parent = handle
-        end
-    else
-        local existingHl = handle:FindFirstChild("ChromaHighlight")
-        if existingHl then existingHl:Destroy() end
+        local hl = Instance.new("Highlight")
+        hl.Name = "ChromaHighlight"
+        hl.Adornee = customPart
+        hl.FillTransparency = 0.4
+        hl.OutlineTransparency = 0
+        hl.FillColor = Color3.fromHSV((tick() * 0.5) % 1, 1, 1)
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.Parent = customPart
     end
 end
 
@@ -964,19 +999,28 @@ RunService.RenderStepped:Connect(function()
     if _G.ChromaEffectActive and _G.SkinChangerActive then
         local hue = (tick() * 0.5) % 1
         local rgb = Color3.fromHSV(hue, 1, 1)
-        if LocalPlayer.Character then
-            for _, item in ipairs(LocalPlayer.Character:GetChildren()) do
+        
+        local function updateToolChroma(container)
+            if not container then return end
+            for _, item in ipairs(container:GetChildren()) do
                 if item:IsA("Tool") then
                     local handle = item:FindFirstChild("Handle")
                     if handle then
-                        local hl = handle:FindFirstChild("ChromaHighlight")
-                        if hl then
-                            hl.FillColor = rgb
+                        local customPart = handle:FindFirstChild("CustomSkinPart")
+                        if customPart then
+                            local hl = customPart:FindFirstChild("ChromaHighlight")
+                            if hl then
+                                hl.FillColor = rgb
+                            end
                         end
                     end
                 end
             end
         end
+        
+        if LocalPlayer.Character then updateToolChroma(LocalPlayer.Character) end
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then updateToolChroma(backpack) end
     end
 end)
 local RoleColors = {
