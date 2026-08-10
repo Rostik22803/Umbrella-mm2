@@ -1462,9 +1462,11 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
             end
         end
     end
-    
-    ------------------------------------------------------------------------
--- ЛОГИКА SKINCHANGER И СПУФИНГА ИНВЕНТАРЯ
+    return OldNamecall(self, ...)
+end)
+
+------------------------------------------------------------------------
+-- ЛОГИКА SKINCHANGER И СПУФИНГА ИНВЕНТАРЯ (SAFE EXECUTION)
 ------------------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -1530,7 +1532,7 @@ LocalPlayer.CharacterAdded:Connect(SetupSkinChangerForCharacter)
 task.spawn(function()
     local hue = 0
     while true do
-        task.wait(0.03)
+        task.wait(0.1)
         if _G.ChromaSkinActive and LocalPlayer.Character then
             hue = (hue + 0.01) % 1
             local chromaColor = Color3.fromHSV(hue, 1, 1)
@@ -1549,50 +1551,46 @@ task.spawn(function()
     end
 end)
 
--- Спуфинг визуального инвентаря в GUI MM2
-local function SpoofInventoryUI()
-    if not _G.ModifyInventoryUI then return end
-    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if not pGui then return end
-    
-    local mainGui = pGui:FindFirstChild("MainGUI") or pGui:FindFirstChild("ScreenGui")
-    if mainGui then
-        local invFrame = mainGui:FindFirstChild("Inventory", true) or mainGui:FindFirstChild("Weapons", true)
-        if invFrame then
-            local container = invFrame:FindFirstChild("Container", true) or invFrame:FindFirstChild("Items", true)
-            if container then
-                -- Визуально проставляем скины в сетке инвентаря
-                for _, skinName in ipairs({_G.SelectedKnifeSkin, _G.SelectedGunSkin}) do
-                    if not container:FindFirstChild("Fake_" .. skinName) then
-                        local fakeCard = Instance.new("Frame")
-                        fakeCard.Name = "Fake_" .. skinName
-                        fakeCard.Size = UDim2.new(0, 75, 0, 75)
-                        fakeCard.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-                        fakeCard.Parent = container
-                        
-                        local title = Instance.new("TextLabel", fakeCard)
-                        title.Size = UDim2.new(1, 0, 0, 20)
-                        title.Position = UDim2.new(0, 0, 1, -20)
-                        title.Text = skinName
-                        title.TextColor3 = Color3.fromRGB(255, 215, 0)
-                        title.TextSize = 10
-                        title.BackgroundTransparency = 1
-                        
-                        Instance.new("UICorner", fakeCard).CornerRadius = UDim.new(0, 6)
+-- Спуфинг визуального инвентаря в GUI MM2 (Безопасный асинхронный цикл)
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if _G.ModifyInventoryUI then
+            pcall(function()
+                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+                if not pGui then return end
+                
+                local mainGui = pGui:FindFirstChild("MainGUI") or pGui:FindFirstChild("ScreenGui")
+                if mainGui then
+                    local invFrame = mainGui:FindFirstChild("Inventory", true) or mainGui:FindFirstChild("Weapons", true)
+                    if invFrame then
+                        local container = invFrame:FindFirstChild("Container", true) or invFrame:FindFirstChild("Items", true)
+                        if container then
+                            for _, skinName in ipairs({_G.SelectedKnifeSkin, _G.SelectedGunSkin}) do
+                                if not container:FindFirstChild("Fake_" .. skinName) then
+                                    local fakeCard = Instance.new("Frame")
+                                    fakeCard.Name = "Fake_" .. skinName
+                                    fakeCard.Size = UDim2.new(0, 75, 0, 75)
+                                    fakeCard.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+                                    fakeCard.Parent = container
+                                    
+                                    local title = Instance.new("TextLabel", fakeCard)
+                                    title.Size = UDim2.new(1, 0, 0, 20)
+                                    title.Position = UDim2.new(0, 0, 1, -20)
+                                    title.Text = skinName
+                                    title.TextColor3 = Color3.fromRGB(255, 215, 0)
+                                    title.TextSize = 10
+                                    title.BackgroundTransparency = 1
+                                    
+                                    Instance.new("UICorner", fakeCard).CornerRadius = UDim.new(0, 6)
+                                end
+                            end
+                        end
                     end
                 end
-            end
+            end)
         end
     end
-end
-
-RunService.Heartbeat:Connect(function()
-    if _G.ModifyInventoryUI then
-        pcall(SpoofInventoryUI)
-    end
-end)
-
-return OldNamecall(self, ...)
 end)
 
 local isMinimized = false
