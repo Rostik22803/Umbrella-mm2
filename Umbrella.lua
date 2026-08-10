@@ -536,55 +536,120 @@ local function CreateSlider(parentSec, text, defaultVal, minVal, maxVal, isDecim
     end)
 end
 
-local function CreateDropdown(parentSec, text, options, defaultVal, callback)
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Parent = parentSec
-    DropdownFrame.BackgroundTransparency = 1
-    DropdownFrame.Size = UDim2.new(1, 0, 0, 38)
+local function CreateButton(parentSec, text, callback)
+    local BtnFrame = Instance.new("Frame")
+    BtnFrame.Parent = parentSec
+    BtnFrame.BackgroundTransparency = 1
+    BtnFrame.Size = UDim2.new(1, 0, 0, 24)
     
-    local Label = Instance.new("TextLabel")
-    Label.Parent = DropdownFrame
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 0, 0, 0)
-    Label.Size = UDim2.new(1, 0, 0, 14)
-    Label.Font = Enum.Font.SourceSans
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(200, 205, 215)
-    Label.TextSize = 11
-    Label.TextXAlignment = Enum.TextXAlignment.Left
+    local Btn = Instance.new("TextButton")
+    Btn.Parent = BtnFrame
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(220, 225, 235)
+    Btn.TextSize = 12
     
-    local DropBtn = Instance.new("TextButton")
-    DropBtn.Parent = DropdownFrame
-    DropBtn.Position = UDim2.new(0, 0, 0, 16)
-    DropBtn.Size = UDim2.new(1, 0, 0, 20)
-    DropBtn.BackgroundColor3 = Color3.fromRGB(25, 26, 32)
-    DropBtn.Font = Enum.Font.SourceSansBold
-    DropBtn.Text = "  " .. defaultVal .. "  ▼"
-    DropBtn.TextColor3 = Color3.fromRGB(220, 35, 45)
-    DropBtn.TextSize = 11
-    DropBtn.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 4)
-    
-    local Stroke = Instance.new("UIStroke", DropBtn)
-    Stroke.Color = Color3.fromRGB(40, 42, 52)
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Parent = Btn
+    Stroke.Color = Color3.fromRGB(45, 48, 60)
     Stroke.Thickness = 1
     
-    local currentIndex = 1
-    for idx, opt in ipairs(options) do
-        if opt == defaultVal then currentIndex = idx break end
-    end
-    
-    DropBtn.MouseButton1Click:Connect(function()
-        currentIndex = (currentIndex % #options) + 1
-        local selected = options[currentIndex]
-        DropBtn.Text = "  " .. selected .. "  ▼"
-        callback(selected)
+    Btn.MouseEnter:Connect(function()
+        Btn.BackgroundColor3 = Color3.fromRGB(45, 18, 22)
+        Stroke.Color = Color3.fromRGB(220, 35, 45)
     end)
+    Btn.MouseLeave:Connect(function()
+        Btn.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+        Stroke.Color = Color3.fromRGB(45, 48, 60)
+    end)
+    
+    Btn.MouseButton1Click:Connect(function()
+        callback()
+    end)
+    return Btn
+end
+
+-- =====================================================
+-- Skin Changer Database & Logic
+-- =====================================================
+local SkinDatabase = {
+    ["Niklis Scythe"] = {
+        MeshId = "rbxassetid://183060002",
+        TextureId = "rbxassetid://183060046"
+    },
+    ["Corrupt"] = {
+        MeshId = "rbxassetid://183060002",
+        TextureId = "rbxassetid://183060021"
+    },
+    ["Icebreaker"] = {
+        MeshId = "rbxassetid://6032223708",
+        TextureId = "rbxassetid://6032223961"
+    },
+    ["Harvester"] = {
+        MeshId = "rbxassetid://10850022359",
+        TextureId = "rbxassetid://10850022513"
+    },
+    ["Chroma Candleflame"] = {
+        MeshId = "rbxassetid://7847425141",
+        TextureId = "rbxassetid://7847425287"
+    },
+    ["Icepiercer"] = {
+        MeshId = "rbxassetid://11681285324",
+        TextureId = "rbxassetid://11681285514"
+    },
+    ["Elderwood Scythe"] = {
+        MeshId = "rbxassetid://4242633005",
+        TextureId = "rbxassetid://4242633190"
+    }
+}
+
+local function ApplySkinToTool(tool, skinName)
+    if not tool or not tool:IsA("Tool") then return end
+    local skinData = SkinDatabase[skinName]
+    if not skinData then return end
+
+    local handle = tool:FindFirstChild("Handle")
+    if handle then
+        local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+        if mesh then
+            mesh.MeshId = skinData.MeshId
+            mesh.TextureId = skinData.TextureId
+        elseif handle:IsA("MeshPart") then
+            handle.MeshId = skinData.MeshId
+            handle.TextureID = skinData.TextureId
+        end
+    end
+end
+
+local function ChangeEquippedSkin(targetSkinName)
+    if not _G.SkinChangerActive then return end
+    
+    if LocalPlayer:FindFirstChild("Backpack") then
+        for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
+            if item:IsA("Tool") and (item.Name == "Knife" or item.Name == "Gun" or item.Name == "Revolver") then
+                ApplySkinToTool(item, targetSkinName)
+            end
+        end
+    end
+
+    if LocalPlayer.Character then
+        for _, item in pairs(LocalPlayer.Character:GetChildren()) do
+            if item:IsA("Tool") and (item.Name == "Knife" or item.Name == "Gun" or item.Name == "Revolver") then
+                ApplySkinToTool(item, targetSkinName)
+            end
+        end
+    end
 end
 
 ------------------------------------------------------------------------
 -- НАПОЛНЕНИЕ ВКЛАДОК И НАСТРОЙКА HVH ФУНКЦИЙ
 ------------------------------------------------------------------------
+_G.SkinChangerActive = true
+_G.SelectedSkin = "Niklis Scythe"
+
 _G.ChamsActive = false
 _G.SelfChamsActive = false
 _G.WeaponChamsActive = false
@@ -628,37 +693,6 @@ _G.SpeedValue = 40
 _G.SpinSpeed = 30
 _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
-
-_G.KnifeSkinChangerActive = false
-_G.SelectedKnifeSkin = "Harvester"
-_G.GunSkinChangerActive = false
-_G.SelectedGunSkin = "Chroma Darkbringer"
-_G.RainbowWeaponActive = false
-_G.WeaponGlowActive = false
-
-local PresetKnifeSkins = {
-    ["Harvester"] = {Mesh = "rbxassetid://10619894452", Texture = "rbxassetid://10619895240"},
-    ["Icebreaker"] = {Mesh = "rbxassetid://6027404558", Texture = "rbxassetid://6027405234"},
-    ["Chroma Elderwood"] = {Mesh = "rbxassetid://5852230623", Texture = "rbxassetid://5852231574"},
-    ["Corrupt"] = {Mesh = "rbxassetid://184067848", Texture = "rbxassetid://184067880"},
-    ["Candy Knife"] = {Mesh = "rbxassetid://321524317", Texture = "rbxassetid://321524364"},
-    ["Bat Knife"] = {Mesh = "rbxassetid://11270830419", Texture = "rbxassetid://11270831120"},
-    ["Nikilis Scythe"] = {Mesh = "rbxassetid://178491823", Texture = "rbxassetid://178491857"},
-    ["Chroma Swirly"] = {Mesh = "rbxassetid://8093155877", Texture = "rbxassetid://8093156641"},
-    ["Chroma Fang"] = {Mesh = "rbxassetid://237497910", Texture = "rbxassetid://237497939"},
-    ["Ocean Knife"] = {Mesh = "rbxassetid://14041183359", Texture = "rbxassetid://14041184138"}
-}
-
-local PresetGunSkins = {
-    ["Chroma Darkbringer"] = {Mesh = "rbxassetid://4483017772", Texture = "rbxassetid://4483018861"},
-    ["Chroma Lightbringer"] = {Mesh = "rbxassetid://4483015523", Texture = "rbxassetid://4483016480"},
-    ["Sugar Gun"] = {Mesh = "rbxassetid://321524172", Texture = "rbxassetid://321524240"},
-    ["Swirly Gun"] = {Mesh = "rbxassetid://8093158055", Texture = "rbxassetid://8093158752"},
-    ["Waves Gun"] = {Mesh = "rbxassetid://14041185564", Texture = "rbxassetid://14041186278"},
-    ["Chroma Luger"] = {Mesh = "rbxassetid://164417622", Texture = "rbxassetid://164417652"},
-    ["Icebeam"] = {Mesh = "rbxassetid://6027405943", Texture = "rbxassetid://6027406603"},
-    ["Elderwood Gun"] = {Mesh = "rbxassetid://5852232537", Texture = "rbxassetid://5852233261"}
-}
 
 -- 1. MAIN
 local SecMovement = CreateSection(Tabs["Main"], "Movement Mods")
@@ -754,21 +788,40 @@ CreateToggle(SecRageHvH, "Anti-Murderer Orbit Shield", false, function(st) _G.An
 CreateSlider(SecRageHvH, "Orbit Distance", _G.OrbitDistance, 8, 25, false, function(val) _G.OrbitDistance = val end)
 CreateToggle(SecRageHvH, "Kill Trash Talker (Chat)", false, function(st) _G.KillTrashTalkActive = st end)
 
--- 5. SKINS (SKINCHANGER)
-local KnifeSkinOptions = {"Harvester", "Icebreaker", "Chroma Elderwood", "Corrupt", "Candy Knife", "Bat Knife", "Nikilis Scythe", "Chroma Swirly", "Chroma Fang", "Ocean Knife"}
-local GunSkinOptions = {"Chroma Darkbringer", "Chroma Lightbringer", "Sugar Gun", "Swirly Gun", "Waves Gun", "Chroma Luger", "Icebeam", "Elderwood Gun"}
+-- 5. SKINS
+local SecSkinsCtrl = CreateSection(Tabs["Skins"], "Skin Changer Control")
+local ActiveSkinLabel = Instance.new("TextLabel")
+ActiveSkinLabel.Parent = SecSkinsCtrl
+ActiveSkinLabel.BackgroundTransparency = 1
+ActiveSkinLabel.Size = UDim2.new(1, 0, 0, 20)
+ActiveSkinLabel.Font = Enum.Font.SourceSansBold
+ActiveSkinLabel.Text = "Current Skin: Niklis Scythe"
+ActiveSkinLabel.TextColor3 = Color3.fromRGB(220, 35, 45)
+ActiveSkinLabel.TextSize = 12
+ActiveSkinLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local SecKnifeSkin = CreateSection(Tabs["Skins"], "Knife Skinchanger")
-CreateToggle(SecKnifeSkin, "Enable Knife Skinchanger", false, function(st) _G.KnifeSkinChangerActive = st end)
-CreateDropdown(SecKnifeSkin, "Select Knife Skin", KnifeSkinOptions, _G.SelectedKnifeSkin, function(val) _G.SelectedKnifeSkin = val end)
+CreateToggle(SecSkinsCtrl, "Enable Skin Changer", true, function(st) 
+    _G.SkinChangerActive = st 
+    if st and _G.SelectedSkin then
+        ChangeEquippedSkin(_G.SelectedSkin)
+    end
+end)
 
-local SecGunSkin = CreateSection(Tabs["Skins"], "Gun Skinchanger")
-CreateToggle(SecGunSkin, "Enable Gun Skinchanger", false, function(st) _G.GunSkinChangerActive = st end)
-CreateDropdown(SecGunSkin, "Select Gun Skin", GunSkinOptions, _G.SelectedGunSkin, function(val) _G.SelectedGunSkin = val end)
+CreateButton(SecSkinsCtrl, "Apply Selected Skin Now", function()
+    if _G.SelectedSkin then
+        ChangeEquippedSkin(_G.SelectedSkin)
+    end
+end)
 
-local SecSkinEffects = CreateSection(Tabs["Skins"], "Visual Effects & RGB")
-CreateToggle(SecSkinEffects, "Chroma RGB Rainbow Weapon", false, function(st) _G.RainbowWeaponActive = st end)
-CreateToggle(SecSkinEffects, "Weapon Glow Effect", false, function(st) _G.WeaponGlowActive = st end)
+local SecSkinList = CreateSection(Tabs["Skins"], "Select Weapon Skin")
+local skinListNames = {"Niklis Scythe", "Corrupt", "Icebreaker", "Harvester", "Chroma Candleflame", "Icepiercer", "Elderwood Scythe"}
+for _, skinName in ipairs(skinListNames) do
+    CreateButton(SecSkinList, skinName, function()
+        _G.SelectedSkin = skinName
+        ActiveSkinLabel.Text = "Current Skin: " .. skinName
+        ChangeEquippedSkin(skinName)
+    end)
+end
 
 -- 6. SETTINGS
 local SecColors = CreateSection(Tabs["Settings"], "Theme & Menu")
@@ -1531,86 +1584,6 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return OldNamecall(self, ...)
 end)
 
-------------------------------------------------------------------------
--- VISUAL SKIN CHANGER ENGINE
-------------------------------------------------------------------------
-local function ApplySkinToWeapon(tool, skinData)
-    if not tool or not skinData then return end
-    local handle = tool:FindFirstChild("Handle")
-    if not handle then return end
-
-    local mesh = handle:FindFirstChildOfClass("SpecialMesh") or handle:FindFirstChildOfClass("Mesh")
-    if not mesh then
-        mesh = Instance.new("SpecialMesh")
-        mesh.Parent = handle
-    end
-
-    if skinData.Mesh and skinData.Mesh ~= "" then
-        mesh.MeshId = skinData.Mesh
-    end
-    if skinData.Texture and skinData.Texture ~= "" then
-        mesh.TextureId = skinData.Texture
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if LocalPlayer.Character then
-            if _G.KnifeSkinChangerActive then
-                local knife = LocalPlayer.Character:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
-                if knife then
-                    local skinData = PresetKnifeSkins[_G.SelectedKnifeSkin]
-                    if skinData then ApplySkinToWeapon(knife, skinData) end
-                end
-            end
-
-            if _G.GunSkinChangerActive then
-                local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Character:FindFirstChild("Revolver") or 
-                            (LocalPlayer:FindFirstChild("Backpack") and (LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Revolver")))
-                if gun then
-                    local skinData = PresetGunSkins[_G.SelectedGunSkin]
-                    if skinData then ApplySkinToWeapon(gun, skinData) end
-                end
-            end
-        end
-    end
-end)
-
-local rainbowHue = 0
-RunService.RenderStepped:Connect(function(dt)
-    if (_G.RainbowWeaponActive or _G.WeaponGlowActive) and LocalPlayer.Character then
-        rainbowHue = (rainbowHue + dt * 0.5) % 1
-        local rainbowColor = Color3.fromHSV(rainbowHue, 1, 1)
-        
-        for _, tool in ipairs(LocalPlayer.Character:GetChildren()) do
-            if tool:IsA("Tool") then
-                local handle = tool:FindFirstChild("Handle")
-                if handle then
-                    if _G.RainbowWeaponActive then
-                        handle.Color = rainbowColor
-                    end
-                    
-                    if _G.WeaponGlowActive then
-                        local highlight = handle:FindFirstChild("UmbrellaGlow")
-                        if not highlight then
-                            highlight = Instance.new("Highlight")
-                            highlight.Name = "UmbrellaGlow"
-                            highlight.Parent = handle
-                        end
-                        highlight.FillColor = _G.RainbowWeaponActive and rainbowColor or Color3.fromRGB(220, 35, 45)
-                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        highlight.FillTransparency = 0.3
-                    else
-                        local highlight = handle:FindFirstChild("UmbrellaGlow")
-                        if highlight then highlight:Destroy() end
-                    end
-                end
-            end
-        end
-    end
-end)
-
 local isMinimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
@@ -1627,4 +1600,33 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         MinimizeBtn.Text = "−"
     end
 end)
+
+------------------------------------------------------------------------
+-- AUTO SKIN CHANGER EVENT LISTENERS
+------------------------------------------------------------------------
+local function HookSkinChanger(char)
+    if not char then return end
+    char.ChildAdded:Connect(function(child)
+        if _G.SkinChangerActive and child:IsA("Tool") and (child.Name == "Knife" or child.Name == "Gun" or child.Name == "Revolver") then
+            if _G.SelectedSkin then
+                ApplySkinToTool(child, _G.SelectedSkin)
+            end
+        end
+    end)
+    for _, child in ipairs(char:GetChildren()) do
+        if _G.SkinChangerActive and child:IsA("Tool") and (child.Name == "Knife" or child.Name == "Gun" or child.Name == "Revolver") then
+            if _G.SelectedSkin then
+                ApplySkinToTool(child, _G.SelectedSkin)
+            end
+        end
+    end
+end
+
+if LocalPlayer.Character then
+    HookSkinChanger(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    HookSkinChanger(char)
+end)
+
 
