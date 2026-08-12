@@ -1,7 +1,7 @@
 return {
-    ["Осел"] = "rbxassetid://15258571412",
-    ["Милая тян"] = "rbxassetid://120285863159417",
-    ["Свинья"] = "rbxassetid://12928490816",
-    ["Ангел"] = "rbxassetid://12318430407",
-    ["Демон"] = "rbxassetid://116615563871570"
+    ["donkey"]    = "rbxassetid://15258571412",
+    ["cute girl"] = "rbxassetid://120285863159417",
+    ["pig"]       = "rbxassetid://12928490816",
+    ["angel"]     = "rbxassetid://12318430407",
+    ["demon"]     = "rbxassetid://116615563871570"
 }
