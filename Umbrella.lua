@@ -988,16 +988,72 @@ CreateSlider(SecRageHvH, "Orbit Distance", _G.OrbitDistance, 8, 25, false, funct
 CreateToggle(SecRageHvH, "Kill Trash Talker (Chat)", false, function(st) _G.KillTrashTalkActive = st end)
 
 -- 5. SETTINGS
-local SecColors = CreateSection(Tabs["Settings"], "Theme & Menu")
+local SecColors = CreateSection(Tabs["Settings"], "Theme & Customization")
 local ColorInfo = Instance.new("TextLabel")
 ColorInfo.Parent = SecColors
 ColorInfo.BackgroundTransparency = 1
-ColorInfo.Size = UDim2.new(1, 0, 0, 40)
+ColorInfo.Size = UDim2.new(1, 0, 0, 24)
 ColorInfo.Font = Enum.Font.SourceSans
-ColorInfo.Text = "Umbrella MM2 Edition Supremacy v10.0 Loaded Successfully."
+ColorInfo.Text = "Umbrella Supremacy v10.0 -- Menu Customization"
 ColorInfo.TextColor3 = Color3.fromRGB(150, 155, 165)
 ColorInfo.TextSize = 12
 ColorInfo.TextWrapped = true
+
+CreateColorPicker(SecColors, "Menu Accent Color", Color3.fromRGB(220, 35, 45), function(accentColor)
+    UIStrokeMain.Color = accentColor
+    HeaderLine.BackgroundColor3 = accentColor
+    LoadingStroke.Color = accentColor
+    ProgressBarFill.BackgroundColor3 = accentColor
+    Page.ScrollBarImageColor3 = accentColor
+    for _, btn in pairs(TabButtons) do
+        local stroke = btn:FindFirstChildOfClass("UIStroke")
+        if btn.TextColor3 == Color3.fromRGB(255, 255, 255) then
+            btn.BackgroundColor3 = Color3.new(accentColor.R * 0.25, accentColor.G * 0.25, accentColor.B * 0.25)
+            if stroke then stroke.Color = accentColor end
+        end
+    end
+end)
+
+CreateSlider(SecColors, "Menu Transparency", 0, 0, 0.8, true, function(val)
+    MainFrame.BackgroundTransparency = val
+    Sidebar.BackgroundTransparency = val
+    Header.BackgroundTransparency = val
+end)
+
+local SecKeybinds = CreateSection(Tabs["Settings"], "Controls & Unload")
+local ToggleKey = Enum.KeyCode.RightShift
+local KeybindLabel = Instance.new("TextLabel")
+KeybindLabel.Parent = SecKeybinds
+KeybindLabel.BackgroundTransparency = 1
+KeybindLabel.Size = UDim2.new(1, 0, 0, 22)
+KeybindLabel.Font = Enum.Font.SourceSans
+KeybindLabel.Text = "Toggle Keybind: [ RightShift ]"
+KeybindLabel.TextColor3 = Color3.fromRGB(200, 205, 215)
+KeybindLabel.TextSize = 12
+KeybindLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == ToggleKey then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+local UnloadBtn = Instance.new("TextButton")
+UnloadBtn.Parent = SecKeybinds
+UnloadBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 20)
+UnloadBtn.Size = UDim2.new(1, 0, 0, 26)
+UnloadBtn.Font = Enum.Font.SourceSansBold
+UnloadBtn.Text = "Unload / Destroy Interface"
+UnloadBtn.TextColor3 = Color3.fromRGB(255, 70, 80)
+UnloadBtn.TextSize = 12
+Instance.new("UICorner", UnloadBtn).CornerRadius = UDim.new(0, 6)
+local UnloadStroke = Instance.new("UIStroke", UnloadBtn)
+UnloadStroke.Color = Color3.fromRGB(220, 35, 45)
+UnloadStroke.Thickness = 1
+
+UnloadBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
 SwitchTab("Main")
 
