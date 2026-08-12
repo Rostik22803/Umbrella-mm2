@@ -599,7 +599,15 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
         OptBtn.ZIndex = 11
 
         OptBtn.MouseButton1Click:Connect(function()
- ------------------------------------------------------------------------
+            MainBtn.Text = "  " .. optName .. "  ▼"
+            isExpanded = false
+            ListFrame.Visible = false
+            callback(optName)
+        end)
+    end
+end
+
+------------------------------------------------------------------------
 -- НАПОЛНЕНИЕ ВКЛАДОК И НАСТРОЙКА HVH ФУНКЦИЙ
 ------------------------------------------------------------------------
 _G.ChamsActive = false
@@ -1004,7 +1012,9 @@ CreateColorPicker(SecColors, "Menu Accent Color", Color3.fromRGB(220, 35, 45), f
     HeaderLine.BackgroundColor3 = accentColor
     LoadingStroke.Color = accentColor
     ProgressBarFill.BackgroundColor3 = accentColor
-    Page.ScrollBarImageColor3 = accentColor
+    for _, page in pairs(Tabs) do
+        page.ScrollBarImageColor3 = accentColor
+    end
     for _, btn in pairs(TabButtons) do
         local stroke = btn:FindFirstChildOfClass("UIStroke")
         if btn.TextColor3 == Color3.fromRGB(255, 255, 255) then
