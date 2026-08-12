@@ -617,7 +617,7 @@ _G.DroppedGunEspActive = false
 _G.MurdererRepelActive = false
 
 _G.CustomModelsActive = false
-_G.SelectedCustomModel = "Осел"
+_G.SelectedCustomModel = "donkey"
 
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
@@ -657,16 +657,16 @@ _G.SpinSpeed = 30
 _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
 
--- Кастомные модельки (GitHub Repository models.lua)
+-- Custom Models (English Keys + Roblox Asset IDs)
 local CustomModelAssetIDs = {
-    ["Осел"] = "rbxassetid://13545163452",
-    ["Милая тян"] = "rbxassetid://13545163452",
-    ["Свинья"] = "rbxassetid://13545163452",
-    ["Ангел"] = "rbxassetid://13545163452",
-    ["Демон"] = "rbxassetid://13545163452"
+    ["donkey"]    = "rbxassetid://15258571412",
+    ["cute girl"] = "rbxassetid://120285863159417",
+    ["pig"]       = "rbxassetid://12928490816",
+    ["angel"]     = "rbxassetid://12318430407",
+    ["demon"]     = "rbxassetid://116615563871570"
 }
 
--- Динамическая загрузка внешней таблицы с GitHub (если есть доступ)
+-- Load external Lua table from GitHub if available
 task.spawn(function()
     pcall(function()
         local downloadedLua = game:HttpGet("https://raw.githubusercontent.com/Rostik22803/Umbrella-mm2/refs/heads/main/models.lua")
@@ -674,60 +674,16 @@ task.spawn(function()
             local loadedModels = loadstring(downloadedLua)()
             if typeof(loadedModels) == "table" then
                 for k, v in pairs(loadedModels) do
-                    CustomModelAssetIDs[k] = v
+                    local strVal = tostring(v)
+                    if not strVal:find("rbxassetid://") then
+                        strVal = "rbxassetid://" .. strVal
+                    end
+                    CustomModelAssetIDs[tostring(k):lower()] = strVal
                 end
             end
         end
     end)
 end)
-
-local function ApplyCustomModel(modelName)
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local assetId = CustomModelAssetIDs[modelName]
-    if not assetId then return end
-    
-    task.spawn(function()
-        local objs = game:GetObjects(assetId)
-        if objs and #objs > 0 then
-            local newModel = objs[1]
-            if newModel then
-                -- Очистка старой кастомной модельки если была
-                for _, old in ipairs(char:GetChildren()) do
-                    if old.Name == "CustomChangerModel" then
-                        old:Destroy()
-                    end
-                end
-                
-                -- Делаем оригинальное тело невидимым
-                for _, p in ipairs(char:GetDescendants()) do
-                    if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
-                        p.Transparency = 1
-                    elseif p:IsA("Decal") then
-                        p.Transparency = 1
-                    end
-                end
-                
-                newModel.Name = "CustomChangerModel"
-                newModel.Parent = char
-                
-                local primary = newModel.PrimaryPart or newModel:FindFirstChild("HumanoidRootPart") or newModel:FindFirstChildOfClass("BasePart")
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                
-                if primary and hrp then
-                    primary.Anchored = false
-                    primary.CanCollide = false
-                    local weld = Instance.new("WeldConstraint")
-                    weld.Part0 = hrp
-                    weld.Part1 = primary
-                    weld.Parent = primary
-                    newModel:SetPrimaryPartCFrame(hrp.CFrame)
-                end
-            end
-        end
-    end)
-end
 
 local function RemoveCustomModel()
     local char = LocalPlayer.Character
@@ -744,6 +700,68 @@ local function RemoveCustomModel()
             p.Transparency = 0
         end
     end
+end
+
+local function ApplyCustomModel(modelName)
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    RemoveCustomModel()
+    
+    local key = tostring(modelName):lower()
+    local assetId = CustomModelAssetIDs[key]
+    if not assetId then return end
+    
+    task.spawn(function()
+        local success, objs = pcall(function()
+            return game:GetObjects(assetId)
+        end)
+        
+        if success and objs and #objs > 0 then
+            local rawObj = objs[1]
+            local newModel = nil
+            
+            if rawObj:IsA("Model") then
+                newModel = rawObj:Clone()
+            else
+                newModel = Instance.new("Model")
+                rawObj:Clone().Parent = newModel
+            end
+            
+            if newModel then
+                newModel.Name = "CustomChangerModel"
+                
+                -- Hide original body parts
+                for _, p in ipairs(char:GetDescendants()) do
+                    if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
+                        p.Transparency = 1
+                    elseif p:IsA("Decal") then
+                        p.Transparency = 1
+                    end
+                end
+                
+                local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+                if not hrp then return end
+                
+                newModel.Parent = char
+                
+                local primary = newModel.PrimaryPart or newModel:FindFirstChild("HumanoidRootPart") or newModel:FindFirstChildOfClass("BasePart")
+                if primary then
+                    newModel:PivotTo(hrp.CFrame)
+                    for _, part in ipairs(newModel:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.Anchored = false
+                            part.CanCollide = false
+                            local weld = Instance.new("WeldConstraint")
+                            weld.Part0 = hrp
+                            weld.Part1 = part
+                            weld.Parent = part
+                        end
+                    end
+                end
+            end
+        end
+    end)
 end
 
 LocalPlayer.CharacterAdded:Connect(function(char)
@@ -802,7 +820,7 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-CreateDropdown(SecModels, "Select Model", {"Осел", "Милая тян", "Свинья", "Ангел", "Демон"}, "Осел", function(selected)
+CreateDropdown(SecModels, "Select Model", {"donkey", "cute girl", "pig", "angel", "demon"}, "donkey", function(selected)
     _G.SelectedCustomModel = selected
     if _G.CustomModelsActive then
         ApplyCustomModel(selected)
