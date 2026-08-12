@@ -599,21 +599,19 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
         OptBtn.ZIndex = 11
 
         OptBtn.MouseButton1Click:Connect(function()
-            MainBtn.Text = "  " .. optName .. "  ▼"
-            isExpanded = false
-            ListFrame.Visible = false
-            callback(optName)
-        end)
-    end
-end
-
-------------------------------------------------------------------------
+ ------------------------------------------------------------------------
 -- НАПОЛНЕНИЕ ВКЛАДОК И НАСТРОЙКА HVH ФУНКЦИЙ
 ------------------------------------------------------------------------
 _G.ChamsActive = false
+_G.ChamsStyle = "Highlight" -- "Box" или "Highlight" (Заливка + Обводка)
+_G.ChamsFillTransparency = 0.5
+_G.ChamsOutlineTransparency = 0
 _G.SelfChamsActive = false
+_G.SelfChamsColor = Color3.fromRGB(255, 20, 147)
 _G.WeaponChamsActive = false
+_G.WeaponChamsColor = Color3.fromRGB(255, 215, 0)
 _G.DroppedGunEspActive = false
+_G.DroppedGunEspColor = Color3.fromRGB(0, 255, 255)
 _G.MurdererRepelActive = false
 
 _G.CustomModelsActive = false
@@ -634,6 +632,7 @@ _G.KillAuraActive = false
 _G.SpeedActive = false
 _G.SpinbotActive = false
 _G.BhopActive = false
+_G.BhopJumpPower = 50
 
 _G.JitterActive = false
 _G.JitterRange = 45
@@ -656,6 +655,72 @@ _G.SpeedValue = 40
 _G.SpinSpeed = 30
 _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
+
+-- Вспомогательная функция создания палитры цвета (Color Picker)
+local function CreateColorPicker(parentSec, text, defaultColor, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Parent = parentSec
+    Frame.BackgroundTransparency = 1
+    Frame.Size = UDim2.new(1, 0, 0, 48)
+    
+    local Label = Instance.new("TextLabel")
+    Label.Parent = Frame
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 0, 0, 0)
+    Label.Size = UDim2.new(1, -40, 0, 16)
+    Label.Font = Enum.Font.SourceSans
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(200, 205, 215)
+    Label.TextSize = 11
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local Preview = Instance.new("Frame")
+    Preview.Parent = Frame
+    Preview.Position = UDim2.new(1, -34, 0, 0)
+    Preview.Size = UDim2.new(0, 34, 0, 16)
+    Preview.BackgroundColor3 = defaultColor
+    Instance.new("UICorner", Preview).CornerRadius = UDim.new(0, 4)
+    local PreviewStroke = Instance.new("UIStroke", Preview)
+    PreviewStroke.Color = Color3.fromRGB(50, 52, 60)
+    PreviewStroke.Thickness = 1
+    
+    local PalettesFrame = Instance.new("Frame")
+    PalettesFrame.Parent = Frame
+    PalettesFrame.BackgroundTransparency = 1
+    PalettesFrame.Position = UDim2.new(0, 0, 0, 20)
+    PalettesFrame.Size = UDim2.new(1, 0, 0, 24)
+    
+    local PaletteLayout = Instance.new("UIListLayout", PalettesFrame)
+    PaletteLayout.FillDirection = Enum.FillDirection.Horizontal
+    PaletteLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    PaletteLayout.Padding = UDim.new(0, 5)
+    
+    local PresetColors = {
+        Color3.fromRGB(255, 35, 45),   -- Red
+        Color3.fromRGB(255, 140, 0),  -- Orange
+        Color3.fromRGB(255, 215, 0),  -- Yellow
+        Color3.fromRGB(30, 255, 100),  -- Green
+        Color3.fromRGB(0, 255, 255),   -- Cyan
+        Color3.fromRGB(30, 140, 255),  -- Blue
+        Color3.fromRGB(160, 32, 240),  -- Purple
+        Color3.fromRGB(255, 20, 147),  -- Pink
+        Color3.fromRGB(255, 255, 255)  -- White
+    }
+    
+    for i, col in ipairs(PresetColors) do
+        local Btn = Instance.new("TextButton")
+        Btn.Parent = PalettesFrame
+        Btn.Text = ""
+        Btn.BackgroundColor3 = col
+        Btn.Size = UDim2.new(0, 20, 0, 20)
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+        
+        Btn.MouseButton1Click:Connect(function()
+            Preview.BackgroundColor3 = col
+            callback(col)
+        end)
+    end
+end
 
 -- Custom Models (English Keys + Roblox Asset IDs)
 local CustomModelAssetIDs = {
@@ -771,11 +836,22 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+-- Вспомогательная очистка всех видов Чамсов у модели
+local function ClearChamsFromModel(model)
+    if not model then return end
+    for _, obj in ipairs(model:GetDescendants()) do
+        if obj.Name == "MM2_BoxCham" or obj.Name == "MM2_HighlightCham" or obj.Name == "MM2_SelfCham" or obj.Name == "MM2_WeaponCham" or obj.Name == "MM2_GunCham" then
+            obj:Destroy()
+        end
+    end
+end
+
 -- 1. MAIN
 local SecMovement = CreateSection(Tabs["Main"], "Movement Mods")
 CreateToggle(SecMovement, "Speedhack", false, function(st) _G.SpeedActive = st end)
 CreateSlider(SecMovement, "Walk Speed", _G.SpeedValue, 16, 150, false, function(val) _G.SpeedValue = val end)
 CreateToggle(SecMovement, "Bhop (Auto Jump)", false, function(st) _G.BhopActive = st end)
+CreateSlider(SecMovement, "Bhop Jump Power (Height)", _G.BhopJumpPower, 20, 150, false, function(val) _G.BhopJumpPower = val end)
 CreateToggle(SecMovement, "Infinite Jump (Fly Air)", false, function(st) _G.InfiniteJumpActive = st end)
 CreateToggle(SecMovement, "Spinbot", false, function(st) _G.SpinbotActive = st end)
 CreateSlider(SecMovement, "Spin Speed", _G.SpinSpeed, 10, 100, false, function(val) _G.SpinSpeed = val end)
@@ -788,26 +864,74 @@ CreateToggle(SecUtility, "Distance Pickup (No Teleport)", false, function(st) _G
 CreateToggle(SecUtility, "Murderer Repel Shield (Push Away)", false, function(st) _G.MurdererRepelActive = st end)
 
 -- 2. VISUALS
-local SecESP = CreateSection(Tabs["Visuals"], "Player ESP & Weapon Chams")
-CreateToggle(SecESP, "Role Box Chams (Players)", false, function(st)
+local SecESP = CreateSection(Tabs["Visuals"], "Player ESP & Chams Options")
+CreateToggle(SecESP, "Role Chams (Players)", false, function(st)
     _G.ChamsActive = st
     if not st then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
-                for _, obj in ipairs(player.Character:GetDescendants()) do
-                    if obj.Name == "MM2_BoxCham" then obj:Destroy() end
-                end
+                ClearChamsFromModel(player.Character)
             end
         end
     end
 end)
 
-CreateToggle(SecESP, "Self Chams (Neon Pink)", false, function(st)
+CreateDropdown(SecESP, "Chams Style Mode", {"Highlight (Fill+Outline)", "Box (Squares)"}, "Highlight (Fill+Outline)", function(selected)
+    if selected:find("Box") then
+        _G.ChamsStyle = "Box"
+    else
+        _G.ChamsStyle = "Highlight"
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            ClearChamsFromModel(player.Character)
+        end
+    end
+end)
+
+CreateSlider(SecESP, "Chams Fill Transparency", _G.ChamsFillTransparency, 0, 1, true, function(val)
+    _G.ChamsFillTransparency = val
+end)
+
+CreateToggle(SecESP, "Self Chams", false, function(st)
     _G.SelfChamsActive = st
     if not st and LocalPlayer.Character then
-        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if obj.Name == "MM2_SelfCham" then obj:Destroy() end
+        ClearChamsFromModel(LocalPlayer.Character)
+    end
+end)
+CreateColorPicker(SecESP, "Self Chams Color", _G.SelfChamsColor, function(color)
+    _G.SelfChamsColor = color
+    if LocalPlayer.Character then ClearChamsFromModel(LocalPlayer.Character) end
+end)
+
+local SecWeaponVisuals = CreateSection(Tabs["Visuals"], "Weapon & Item Chams")
+CreateToggle(SecWeaponVisuals, "Weapon Chams", false, function(st)
+    _G.WeaponChamsActive = st
+    if not st then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "MM2_WeaponCham" then obj:Destroy() end
         end
+    end
+end)
+CreateColorPicker(SecWeaponVisuals, "Weapon Chams Color", _G.WeaponChamsColor, function(color)
+    _G.WeaponChamsColor = color
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "MM2_WeaponCham" then obj:Destroy() end
+    end
+end)
+
+CreateToggle(SecWeaponVisuals, "Dropped Gun ESP", false, function(st)
+    _G.DroppedGunEspActive = st
+    if not st then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "MM2_GunCham" then obj:Destroy() end
+        end
+    end
+end)
+CreateColorPicker(SecWeaponVisuals, "Dropped Gun Color", _G.DroppedGunEspColor, function(color)
+    _G.DroppedGunEspColor = color
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "MM2_GunCham" then obj:Destroy() end
     end
 end)
 
@@ -824,24 +948,6 @@ CreateDropdown(SecModels, "Select Model", {"donkey", "cute girl", "pig", "angel"
     _G.SelectedCustomModel = selected
     if _G.CustomModelsActive then
         ApplyCustomModel(selected)
-    end
-end)
-
-CreateToggle(SecESP, "Weapon Chams (Gold Glow)", false, function(st)
-    _G.WeaponChamsActive = st
-    if not st then
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "MM2_WeaponCham" then obj:Destroy() end
-        end
-    end
-end)
-
-CreateToggle(SecESP, "Dropped Gun ESP (Cyan Highlight)", false, function(st)
-    _G.DroppedGunEspActive = st
-    if not st then
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "MM2_GunCham" then obj:Destroy() end
-        end
     end
 end)
 
@@ -946,8 +1052,48 @@ local function GetRole(player)
     return "Innocent"
 end
 
+local function ApplyChamsToCharacter(character, color, isSelf)
+    if not character then return end
+    if _G.ChamsStyle == "Highlight" then
+        local hlName = isSelf and "MM2_SelfCham" or "MM2_HighlightCham"
+        local existingHl = character:FindFirstChild(hlName)
+        if not existingHl then
+            existingHl = Instance.new("Highlight")
+            existingHl.Name = hlName
+            existingHl.Adornee = character
+            existingHl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            existingHl.Parent = character
+        end
+        existingHl.FillColor = color
+        existingHl.OutlineColor = color
+        existingHl.FillTransparency = _G.ChamsFillTransparency
+        existingHl.OutlineTransparency = _G.ChamsOutlineTransparency
+    else
+        local boxName = isSelf and "MM2_SelfCham" or "MM2_BoxCham"
+        for _, part in ipairs(character:GetChildren()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                local box = part:FindFirstChild(boxName)
+                if not box then
+                    box = Instance.new("BoxHandleAdornment")
+                    box.Name = boxName
+                    box.Size = part.Size + Vector3.new(0.04, 0.04, 0.04)
+                    box.AlwaysOnTop = true
+                    box.ZIndex = 5
+                    box.Adornee = part
+                    box.Parent = part
+                end
+                box.Color3 = color
+                box.Transparency = _G.ChamsFillTransparency
+            end
+        end
+    end
+end
+
 local function CreateBoxCham(part, color, chamName)
-    if part:FindFirstChild(chamName) then return end
+    if part:FindFirstChild(chamName) then 
+        part:FindFirstChild(chamName).Color3 = color
+        return 
+    end
     local box = Instance.new("BoxHandleAdornment")
     box.Name = chamName
     box.Size = part.Size + Vector3.new(0.04, 0.04, 0.04)
@@ -1048,7 +1194,7 @@ task.spawn(function()
                         if tool:IsA("Tool") then
                             local handle = tool:FindFirstChild("Handle")
                             if handle then
-                                CreateBoxCham(handle, Color3.fromRGB(255, 215, 0), "MM2_WeaponCham")
+                                CreateBoxCham(handle, _G.WeaponChamsColor, "MM2_WeaponCham")
                             end
                         end
                     end
@@ -1065,7 +1211,7 @@ task.spawn(function()
         if _G.DroppedGunEspActive then
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj.Name == "GunDrop" and obj:IsA("BasePart") then
-                    CreateBoxCham(obj, Color3.fromRGB(0, 255, 255), "MM2_GunCham")
+                    CreateBoxCham(obj, _G.DroppedGunEspColor, "MM2_GunCham")
                 end
             end
         end
@@ -1367,16 +1513,7 @@ task.spawn(function()
                 if player ~= LocalPlayer and player.Character then
                     local role = GetRole(player)
                     local color = RoleColors[role]
-                    for _, part in ipairs(player.Character:GetChildren()) do
-                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                            local existingCham = part:FindFirstChild("MM2_BoxCham")
-                            if existingCham then 
-                                existingCham.Color3 = color 
-                            else 
-                                CreateBoxCham(part, color, "MM2_BoxCham") 
-                            end
-                        end
-                    end
+                    ApplyChamsToCharacter(player.Character, color, false)
                 end
             end
         end
@@ -1388,17 +1525,7 @@ task.spawn(function()
     while true do
         task.wait(0.3)
         if _G.SelfChamsActive and LocalPlayer.Character then
-            local pinkColor = Color3.fromRGB(255, 20, 147)
-            for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    local existingCham = part:FindFirstChild("MM2_SelfCham")
-                    if existingCham then
-                        existingCham.Color3 = pinkColor
-                    else
-                        CreateBoxCham(part, pinkColor, "MM2_SelfCham")
-                    end
-                end
-            end
+            ApplyChamsToCharacter(LocalPlayer.Character, _G.SelfChamsColor, true)
         end
     end
 end)
@@ -1413,11 +1540,13 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- ПОТОК BHOP
+-- ПОТОК BHOP (с настраиваемой высотой / JumpPower)
 RunService.RenderStepped:Connect(function()
     if _G.BhopActive and LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = _G.BhopJumpPower
             humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         end
     end
@@ -1658,4 +1787,3 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         MinimizeBtn.Text = "−"
     end
 end)
-
