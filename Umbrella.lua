@@ -659,11 +659,11 @@ _G.KillAuraDelay = 0.1
 
 -- Custom Models (English Keys + Roblox Asset IDs)
 local CustomModelAssetIDs = {
-    ["donkey"]    = "rbxassetid://15258571412",
+    ["donkey"]    = "rbxassetid://5633413387",
     ["cute girl"] = "rbxassetid://120285863159417",
-    ["pig"]       = "rbxassetid://12928490816",
+    ["pig"]       = "rbxassetid://3907559467",
     ["angel"]     = "rbxassetid://12318430407",
-    ["demon"]     = "rbxassetid://116615563871570"
+    ["demon"]     = "rbxassetid://1988558105"
 }
 
 -- Load external Lua table from GitHub if available
