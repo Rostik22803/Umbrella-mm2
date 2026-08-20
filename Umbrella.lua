@@ -304,7 +304,7 @@ local function CreateTabPage(name)
     
     local Grid = Instance.new("UIGridLayout")
     Grid.Parent = Page
-    Grid.CellSize = UDim2.new(0, 260, 0, 270)
+    Grid.CellSize = UDim2.new(0, 260, 0, 320)
     Grid.CellPadding = UDim2.new(0, 12, 0, 12)
     Grid.SortOrder = Enum.SortOrder.LayoutOrder
     
@@ -376,7 +376,7 @@ local function CreateSection(parentPage, title)
     local Section = Instance.new("Frame")
     Section.Parent = parentPage
     Section.BackgroundColor3 = Color3.fromRGB(18, 19, 25)
-    Section.Size = UDim2.new(0, 260, 0, 270)
+    Section.Size = UDim2.new(0, 260, 0, 320)
     
     Instance.new("UICorner", Section).CornerRadius = UDim.new(0, 8)
     local Stroke = Instance.new("UIStroke")
@@ -622,11 +622,27 @@ _G.DroppedGunEspActive = false
 _G.DroppedGunEspColor = Color3.fromRGB(0, 255, 255)
 _G.MurdererRepelActive = false
 
+-- ADVANCED VISUALS, ESP & LIMB VISIBILITY CHECK SETTINGS
+_G.EspBoxType = "None" -- "None", "2D Box", "2D Corner Box", "3D Box", "Filled 2D Box"
+_G.EspNameActive = false
+_G.EspRoleActive = false
+_G.EspDistanceActive = false
+_G.EspHealthActive = false
+_G.EspSkeletonActive = false
+
+_G.VisCheckActive = true
+_G.PerLimbVisCheckActive = true
+_G.VisColorMurderer = Color3.fromRGB(255, 35, 45)
+_G.VisColorSheriff  = Color3.fromRGB(30, 140, 255)
+_G.VisColorInnocent = Color3.fromRGB(30, 255, 100)
+_G.OccludedColor    = Color3.fromRGB(120, 120, 120)
+
 _G.CustomModelsActive = false
 _G.SelectedCustomModel = "donkey"
 
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
+_G.AutoAimMurderer = false
 _G.PredictionActive = false
 _G.PredictionAmount = 0.165
 _G.AwallCheckActive = false
@@ -901,6 +917,14 @@ CreateSlider(SecESP, "Chams Fill Transparency", _G.ChamsFillTransparency, 0, 1, 
     _G.ChamsFillTransparency = val
 end)
 
+CreateToggle(SecESP, "Dynamic Visibility Check (Raycast)", true, function(st)
+    _G.VisCheckActive = st
+end)
+
+CreateToggle(SecESP, "Per-Limb Vis Color (Head vs Body)", true, function(st)
+    _G.PerLimbVisCheckActive = st
+end)
+
 CreateToggle(SecESP, "Self Chams", false, function(st)
     _G.SelfChamsActive = st
     if not st and LocalPlayer.Character then
@@ -911,6 +935,37 @@ CreateColorPicker(SecESP, "Self Chams Color", _G.SelfChamsColor, function(color)
     _G.SelfChamsColor = color
     if LocalPlayer.Character then ClearChamsFromModel(LocalPlayer.Character) end
 end)
+
+local Sec2DESP = CreateSection(Tabs["Visuals"], "Box ESP, Info Overlay & Skeleton")
+CreateDropdown(Sec2DESP, "Box ESP Style", {"None", "2D Box", "2D Corner Box", "3D Box", "Filled 2D Box"}, "None", function(selected)
+    _G.EspBoxType = selected
+end)
+
+CreateToggle(Sec2DESP, "Show Player Nickname (Name)", false, function(st)
+    _G.EspNameActive = st
+end)
+
+CreateToggle(Sec2DESP, "Show Role & Held Weapon", false, function(st)
+    _G.EspRoleActive = st
+end)
+
+CreateToggle(Sec2DESP, "Show Distance (Meters)", false, function(st)
+    _G.EspDistanceActive = st
+end)
+
+CreateToggle(Sec2DESP, "Show Health Bar & Text", false, function(st)
+    _G.EspHealthActive = st
+end)
+
+CreateToggle(Sec2DESP, "Skeleton ESP (Player Bones)", false, function(st)
+    _G.EspSkeletonActive = st
+end)
+
+local SecESPColors = CreateSection(Tabs["Visuals"], "ESP & Visibility Role Colors")
+CreateColorPicker(SecESPColors, "Murderer Vis Color", _G.VisColorMurderer, function(col) _G.VisColorMurderer = col end)
+CreateColorPicker(SecESPColors, "Sheriff Vis Color", _G.VisColorSheriff, function(col) _G.VisColorSheriff = col end)
+CreateColorPicker(SecESPColors, "Innocent Vis Color", _G.VisColorInnocent, function(col) _G.VisColorInnocent = col end)
+CreateColorPicker(SecESPColors, "Occluded / Hidden Color", _G.OccludedColor, function(col) _G.OccludedColor = col end)
 
 local SecWeaponVisuals = CreateSection(Tabs["Visuals"], "Weapon & Item Chams")
 CreateToggle(SecWeaponVisuals, "Weapon Chams", false, function(st)
@@ -963,6 +1018,7 @@ end)
 local SecCombat = CreateSection(Tabs["Combat"], "Aimbot & Prediction")
 CreateToggle(SecCombat, "Camera Lock Aimbot (LKM)", false, function(st) _G.CameraAimActive = st end)
 CreateToggle(SecCombat, "Real Invisible Silent Aim", false, function(st) _G.RealSilentAimActive = st end)
+CreateToggle(SecCombat, "Auto Aim Murderer (Auto Shoot)", false, function(st) _G.AutoAimMurderer = st _G.AutoShootSheriff = st end)
 CreateToggle(SecCombat, "Movement Velocity Prediction", false, function(st) _G.PredictionActive = st end)
 CreateSlider(SecCombat, "Prediction Time", _G.PredictionAmount, 0.05, 0.5, true, function(val) _G.PredictionAmount = val end)
 CreateToggle(SecCombat, "Fast Automatic Gun (Hold LKM)", false, function(st) _G.FastGunActive = st end)
@@ -1118,8 +1174,50 @@ local function GetRole(player)
     return "Innocent"
 end
 
-local function ApplyChamsToCharacter(character, color, isSelf)
+local function CheckPartVisibility(part)
+    if not part or not part:IsA("BasePart") or not LocalPlayer.Character then return false end
+    local origin = Camera.CFrame.Position
+    local destination = part.Position
+    local direction = (destination - origin)
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    
+    local result = workspace:Raycast(origin, direction, raycastParams)
+    if result then
+        if result.Instance and (result.Instance:IsDescendantOf(part.Parent) or result.Instance == part) then
+            return true
+        end
+        return false
+    end
+    return true
+end
+
+local function GetRoleVisColor(role)
+    if role == "Murderer" then
+        return _G.VisColorMurderer
+    elseif role == "Sheriff" then
+        return _G.VisColorSheriff
+    else
+        return _G.VisColorInnocent
+    end
+end
+
+local function ApplyChamsToCharacter(character, color, isSelf, player)
     if not character then return end
+    
+    local role = player and GetRole(player) or "Innocent"
+    local visColor = isSelf and _G.SelfChamsColor or GetRoleVisColor(role)
+    
+    local head = character:FindFirstChild("Head")
+    local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    
+    local headVis = head and CheckPartVisibility(head) or false
+    local torsoVis = (torso and CheckPartVisibility(torso)) or (hrp and CheckPartVisibility(hrp)) or false
+    local overallVis = headVis or torsoVis
+    
     if _G.ChamsStyle == "Highlight" then
         local hlName = isSelf and "MM2_SelfCham" or "MM2_HighlightCham"
         local existingHl = character:FindFirstChild(hlName)
@@ -1130,8 +1228,9 @@ local function ApplyChamsToCharacter(character, color, isSelf)
             existingHl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             existingHl.Parent = character
         end
-        existingHl.FillColor = color
-        existingHl.OutlineColor = color
+        local hlColor = isSelf and visColor or ((not _G.VisCheckActive or overallVis) and visColor or _G.OccludedColor)
+        existingHl.FillColor = hlColor
+        existingHl.OutlineColor = hlColor
         existingHl.FillTransparency = _G.ChamsFillTransparency
         existingHl.OutlineTransparency = _G.ChamsOutlineTransparency
     else
@@ -1148,7 +1247,19 @@ local function ApplyChamsToCharacter(character, color, isSelf)
                     box.Adornee = part
                     box.Parent = part
                 end
-                box.Color3 = color
+                
+                local partColor = visColor
+                if not isSelf and _G.VisCheckActive then
+                    if _G.PerLimbVisCheckActive then
+                        -- Точная проверка каждого отдельного лимба (руки, ноги, голова, тело) через стены
+                        local isPartVis = CheckPartVisibility(part)
+                        partColor = isPartVis and visColor or _G.OccludedColor
+                    else
+                        partColor = overallVis and visColor or _G.OccludedColor
+                    end
+                end
+                
+                box.Color3 = partColor
                 box.Transparency = _G.ChamsFillTransparency
             end
         end
@@ -1353,30 +1464,42 @@ task.spawn(function()
     end
 end)
 
--- 6. HVH: AUTO SHOOT MURDERER FOR SHERIFF
+-- 6. HVH & COMBAT: AUTO AIM & SHOOT MURDERER (VISIBLE CHECK)
 task.spawn(function()
     while true do
-        task.wait(0.05)
-        if _G.AutoShootSheriff and (GetRole(LocalPlayer) == "Sheriff" or GetRole(LocalPlayer) == "Innocent") and LocalPlayer.Character then
-            local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Character:FindFirstChild("Revolver")
-            if not gun then
-                local bpack = LocalPlayer:FindFirstChild("Backpack")
-                if bpack then
-                    local bgun = bpack:FindFirstChild("Gun") or bpack:FindFirstChild("Revolver")
-                    if bgun then bgun.Parent = LocalPlayer.Character gun = bgun end
+        task.wait(0.04)
+        if (_G.AutoAimMurderer or _G.AutoShootSheriff) and (GetRole(LocalPlayer) == "Sheriff" or GetRole(LocalPlayer) == "Innocent") and LocalPlayer.Character then
+            local myHrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if myHrp then
+                local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Character:FindFirstChild("Revolver")
+                if not gun then
+                    local bpack = LocalPlayer:FindFirstChild("Backpack")
+                    if bpack then
+                        local bgun = bpack:FindFirstChild("Gun") or bpack:FindFirstChild("Revolver")
+                        if bgun then
+                            bgun.Parent = LocalPlayer.Character
+                            gun = bgun
+                        end
+                    end
                 end
-            end
-            if gun then
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and GetRole(player) == "Murderer" and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local targetHrp = player.Character.HumanoidRootPart
-                        local isVisible, _ = CheckAwallRay(targetHrp)
-                        if isVisible then
-                            local predPos = GetPredictedPosition(targetHrp)
-                            gun:Activate()
-                            local shootRemote = gun:FindFirstChild("Shoot") or gun:FindFirstChild("ShootServer")
-                            if shootRemote and shootRemote:IsA("RemoteEvent") then
-                                shootRemote:FireServer(predPos)
+                if gun then
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and GetRole(player) == "Murderer" and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            local targetHrp = player.Character.HumanoidRootPart
+                            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                            if humanoid and humanoid.Health > 0 then
+                                local isVisible, _ = CheckAwallRay(targetHrp)
+                                if isVisible then
+                                    local predPos = GetPredictedPosition(targetHrp)
+                                    gun:Activate()
+                                    local shootRemote = gun:FindFirstChild("Shoot") or gun:FindFirstChild("ShootServer")
+                                    if shootRemote and shootRemote:IsA("RemoteEvent") then
+                                        pcall(function() shootRemote:FireServer(CFrame.new(myHrp.Position, predPos)) end)
+                                        pcall(function() shootRemote:FireServer(predPos) end)
+                                    end
+                                    task.wait(0.15)
+                                    break
+                                end
                             end
                         end
                     end
@@ -1579,7 +1702,242 @@ task.spawn(function()
                 if player ~= LocalPlayer and player.Character then
                     local role = GetRole(player)
                     local color = RoleColors[role]
-                    ApplyChamsToCharacter(player.Character, color, false)
+                    ApplyChamsToCharacter(player.Character, color, false, player)
+                end
+            end
+        end
+    end
+end)
+
+------------------------------------------------------------------------
+-- 2D BOX, OVERLAY INFO (NICK, ROLE, DIST, HP) & SKELETON ESP ENGINE
+------------------------------------------------------------------------
+local EspOverlayHolder = Instance.new("Folder")
+EspOverlayHolder.Name = "MM2_EspOverlayHolder"
+EspOverlayHolder.Parent = ScreenGui
+
+local SkeletonBonesR6 = {
+    {"Head", "Torso"},
+    {"Torso", "Left Arm"},
+    {"Torso", "Right Arm"},
+    {"Torso", "Left Leg"},
+    {"Torso", "Right Leg"}
+}
+
+local SkeletonBonesR15 = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"RightLowerLeg", "RightFoot"}
+}
+
+local function ClearEspOverlays()
+    for _, child in ipairs(EspOverlayHolder:GetChildren()) do
+        child:Destroy()
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.EspBoxType == "None" and not _G.EspNameActive and not _G.EspRoleActive and not _G.EspDistanceActive and not _G.EspHealthActive and not _G.EspSkeletonActive then
+        ClearEspOverlays()
+        return
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local char = player.Character
+            local hrp = char.HumanoidRootPart
+            local head = char:FindFirstChild("Head")
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid and humanoid.Health > 0 and head then
+                local role = GetRole(player)
+                local headVis = _G.VisCheckActive and CheckPartVisibility(head) or true
+                local bodyVis = _G.VisCheckActive and CheckPartVisibility(hrp) or true
+                local overallVis = headVis or bodyVis
+                local visColor = (overallVis or not _G.VisCheckActive) and GetRoleVisColor(role) or _G.OccludedColor
+                
+                local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.7, 0))
+                local legsPos, legsOnScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                
+                if headOnScreen and legsOnScreen then
+                    local bGuiName = "EspGui_" .. player.Name
+                    local bGui = EspOverlayHolder:FindFirstChild(bGuiName)
+                    if not bGui then
+                        bGui = Instance.new("BillboardGui")
+                        bGui.Name = bGuiName
+                        bGui.Parent = EspOverlayHolder
+                        bGui.AlwaysOnTop = true
+                        bGui.Size = UDim2.new(0, 220, 0, 90)
+                        bGui.ExtentsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
+                        
+                        local mainLayout = Instance.new("UIListLayout", bGui)
+                        mainLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                        mainLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        mainLayout.Padding = UDim.new(0, 1)
+                        
+                        local nLabel = Instance.new("TextLabel")
+                        nLabel.Name = "NameLabel"
+                        nLabel.Parent = bGui
+                        nLabel.BackgroundTransparency = 1
+                        nLabel.Size = UDim2.new(1, 0, 0, 14)
+                        nLabel.Font = Enum.Font.SourceSansBold
+                        nLabel.TextSize = 12
+                        nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        nLabel.TextStrokeTransparency = 0.3
+                        nLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                        
+                        local rLabel = Instance.new("TextLabel")
+                        rLabel.Name = "RoleLabel"
+                        rLabel.Parent = bGui
+                        rLabel.BackgroundTransparency = 1
+                        rLabel.Size = UDim2.new(1, 0, 0, 13)
+                        rLabel.Font = Enum.Font.SourceSansBold
+                        rLabel.TextSize = 11
+                        rLabel.TextStrokeTransparency = 0.3
+                        rLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                        
+                        local dLabel = Instance.new("TextLabel")
+                        dLabel.Name = "DistLabel"
+                        dLabel.Parent = bGui
+                        dLabel.BackgroundTransparency = 1
+                        dLabel.Size = UDim2.new(1, 0, 0, 12)
+                        dLabel.Font = Enum.Font.SourceSans
+                        dLabel.TextSize = 10
+                        dLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+                        dLabel.TextStrokeTransparency = 0.3
+                        
+                        local hpBg = Instance.new("Frame")
+                        hpBg.Name = "HealthBg"
+                        hpBg.Parent = bGui
+                        hpBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                        hpBg.Size = UDim2.new(0, 80, 0, 5)
+                        Instance.new("UICorner", hpBg).CornerRadius = UDim.new(1, 0)
+                        
+                        local hpFill = Instance.new("Frame")
+                        hpFill.Name = "HealthFill"
+                        hpFill.Parent = hpBg
+                        hpFill.BackgroundColor3 = Color3.fromRGB(30, 255, 100)
+                        hpFill.Size = UDim2.new(1, 0, 1, 0)
+                        Instance.new("UICorner", hpFill).CornerRadius = UDim.new(1, 0)
+                    end
+                    
+                    bGui.Adornee = head
+                    
+                    local nLabel = bGui:FindFirstChild("NameLabel")
+                    local rLabel = bGui:FindFirstChild("RoleLabel")
+                    local dLabel = bGui:FindFirstChild("DistLabel")
+                    local hpBg = bGui:FindFirstChild("HealthBg")
+                    local hpFill = hpBg and hpBg:FindFirstChild("HealthFill")
+                    
+                    if nLabel then
+                        nLabel.Visible = _G.EspNameActive
+                        nLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+                        nLabel.TextColor3 = visColor
+                    end
+                    
+                    if rLabel then
+                        rLabel.Visible = _G.EspRoleActive
+                        local toolStr = ""
+                        for _, item in ipairs(char:GetChildren()) do
+                            if item:IsA("Tool") then
+                                toolStr = " [" .. item.Name .. "]"
+                                break
+                            end
+                        end
+                        rLabel.Text = "[ " .. role:upper() .. toolStr .. " ]"
+                        rLabel.TextColor3 = visColor
+                    end
+                    
+                    local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    local dist = myHrp and (myHrp.Position - hrp.Position).Magnitude or 0
+                    if dLabel then
+                        dLabel.Visible = _G.EspDistanceActive
+                        dLabel.Text = math.floor(dist) .. "m"
+                    end
+                    
+                    if hpBg and hpFill then
+                        hpBg.Visible = _G.EspHealthActive
+                        local healthPct = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                        hpFill.Size = UDim2.new(healthPct, 0, 1, 0)
+                        hpFill.BackgroundColor3 = Color3.fromRGB(255 - math.floor(healthPct * 225), math.floor(healthPct * 225), 30)
+                    end
+                    
+                    -- 3D BOX HANDLE ADORNMENT ESP
+                    if _G.EspBoxType == "3D Box" or _G.EspBoxType == "2D Box" or _G.EspBoxType == "Filled 2D Box" or _G.EspBoxType == "2D Corner Box" then
+                        local box3d = char:FindFirstChild("MM2_3DBoxEsp")
+                        if not box3d then
+                            box3d = Instance.new("BoxHandleAdornment")
+                            box3d.Name = "MM2_3DBoxEsp"
+                            box3d.AlwaysOnTop = true
+                            box3d.ZIndex = 6
+                            box3d.Size = Vector3.new(3, 5, 3)
+                            box3d.Adornee = hrp
+                            box3d.Parent = char
+                        end
+                        box3d.Color3 = visColor
+                        box3d.Transparency = (_G.EspBoxType == "Filled 2D Box") and 0.4 or 0.75
+                    else
+                        local old3d = char:FindFirstChild("MM2_3DBoxEsp")
+                        if old3d then old3d:Destroy() end
+                    end
+                    
+                    -- SKELETON ESP DRAWING (Head -> Torso -> Limbs)
+                    if _G.EspSkeletonActive then
+                        local bones = char:FindFirstChild("UpperTorso") and SkeletonBonesR15 or SkeletonBonesR6
+                        for idx, pair in ipairs(bones) do
+                            local p1 = char:FindFirstChild(pair[1])
+                            local p2 = char:FindFirstChild(pair[2])
+                            if p1 and p2 then
+                                local p1Vis = _G.VisCheckActive and CheckPartVisibility(p1) or true
+                                local p2Vis = _G.VisCheckActive and CheckPartVisibility(p2) or true
+                                local boneVis = p1Vis or p2Vis
+                                local boneColor = (boneVis or not _G.VisCheckActive) and GetRoleVisColor(role) or _G.OccludedColor
+                                
+                                local beamName = "SkL_" .. pair[1] .. "_" .. pair[2]
+                                local b1 = p1:FindFirstChild("Att_" .. pair[1]) or Instance.new("Attachment", p1)
+                                b1.Name = "Att_" .. pair[1]
+                                local b2 = p2:FindFirstChild("Att_" .. pair[2]) or Instance.new("Attachment", p2)
+                                b2.Name = "Att_" .. pair[2]
+                                
+                                local beam = p1:FindFirstChild(beamName)
+                                if not beam then
+                                    beam = Instance.new("Beam")
+                                    beam.Name = beamName
+                                    beam.Parent = p1
+                                    beam.Attachment0 = b1
+                                    beam.Attachment1 = b2
+                                    beam.Width0 = 0.12
+                                    beam.Width1 = 0.12
+                                    beam.AlwaysOnTop = true
+                                    beam.FaceCamera = true
+                                    beam.Transparency = NumberSequence.new(0.2)
+                                end
+                                beam.Color = ColorSequence.new(boneColor)
+                            end
+                        end
+                    else
+                        for _, part in ipairs(char:GetChildren()) do
+                            if part:IsA("BasePart") then
+                                for _, child in ipairs(part:GetChildren()) do
+                                    if child:IsA("Beam") and child.Name:find("SkL_") then
+                                        child:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end
+
                 end
             end
         end
