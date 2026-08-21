@@ -629,6 +629,8 @@ _G.EspRoleActive = false
 _G.EspDistanceActive = false
 _G.EspHealthActive = false
 _G.EspSkeletonActive = false
+_G.EspFontName = "SourceSansBold"
+_G.EspTextSize = 12
 
 _G.VisCheckActive = true
 _G.PerLimbVisCheckActive = true
@@ -959,6 +961,14 @@ end)
 
 CreateToggle(Sec2DESP, "Skeleton ESP (Player Bones)", false, function(st)
     _G.EspSkeletonActive = st
+end)
+
+CreateDropdown(Sec2DESP, "ESP Text Font", {"SourceSansBold", "SourceSans", "GothamBold", "Gotham", "ArialBold", "Code", "Arcade", "RobotoBold", "UbuntuBold", "SciFi", "Fantasy"}, "SourceSansBold", function(selected)
+    _G.EspFontName = selected
+end)
+
+CreateSlider(Sec2DESP, "ESP Text Size", _G.EspTextSize, 8, 24, false, function(val)
+    _G.EspTextSize = val
 end)
 
 local SecESPColors = CreateSection(Tabs["Visuals"], "ESP & Visibility Role Colors")
@@ -1716,6 +1726,20 @@ local EspOverlayHolder = Instance.new("Folder")
 EspOverlayHolder.Name = "MM2_EspOverlayHolder"
 EspOverlayHolder.Parent = ScreenGui
 
+local FontMap = {
+    ["SourceSansBold"] = Enum.Font.SourceSansBold,
+    ["SourceSans"]     = Enum.Font.SourceSans,
+    ["GothamBold"]     = Enum.Font.GothamBold,
+    ["Gotham"]         = Enum.Font.Gotham,
+    ["ArialBold"]      = Enum.Font.ArialBold,
+    ["Code"]           = Enum.Font.Code,
+    ["Arcade"]         = Enum.Font.Arcade,
+    ["RobotoBold"]     = Enum.Font.RobotoBold,
+    ["UbuntuBold"]     = Enum.Font.UbuntuBold,
+    ["SciFi"]          = Enum.Font.SciFi,
+    ["Fantasy"]        = Enum.Font.Fantasy,
+}
+
 local SkeletonBonesR6 = {
     {"Head", "Torso"},
     {"Torso", "Left Arm"},
@@ -1747,11 +1771,32 @@ local function ClearEspOverlays()
     end
 end
 
+local function ClearSkeletonFromCharacter(char)
+    if not char then return end
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            for _, child in ipairs(part:GetChildren()) do
+                if (child:IsA("Beam") and child.Name:find("SkL_")) or (child:IsA("Attachment") and child.Name:find("SkAtt_")) then
+                    child:Destroy()
+                end
+            end
+        end
+    end
+end
+
 RunService.RenderStepped:Connect(function()
     if _G.EspBoxType == "None" and not _G.EspNameActive and not _G.EspRoleActive and not _G.EspDistanceActive and not _G.EspHealthActive and not _G.EspSkeletonActive then
         ClearEspOverlays()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                ClearSkeletonFromCharacter(player.Character)
+            end
+        end
         return
     end
+
+    local currentFont = FontMap[_G.EspFontName] or Enum.Font.SourceSansBold
+    local baseSize = _G.EspTextSize or 12
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -1767,10 +1812,63 @@ RunService.RenderStepped:Connect(function()
                 local overallVis = headVis or bodyVis
                 local visColor = (overallVis or not _G.VisCheckActive) and GetRoleVisColor(role) or _G.OccludedColor
                 
+                -- SKELETON ESP DRAWING (World Space Beams - runs independently of 2D box screen limits)
+                if _G.EspSkeletonActive then
+                    local bones = char:FindFirstChild("UpperTorso") and SkeletonBonesR15 or SkeletonBonesR6
+                    for _, pair in ipairs(bones) do
+                        local p1 = char:FindFirstChild(pair[1])
+                        local p2 = char:FindFirstChild(pair[2])
+                        if p1 and p2 then
+                            local p1Vis = _G.VisCheckActive and CheckPartVisibility(p1) or true
+                            local p2Vis = _G.VisCheckActive and CheckPartVisibility(p2) or true
+                            local boneVis = p1Vis or p2Vis
+                            local boneColor = (boneVis or not _G.VisCheckActive) and GetRoleVisColor(role) or _G.OccludedColor
+                            
+                            local att1Name = "SkAtt_" .. pair[1] .. "_" .. pair[2]
+                            local att2Name = "SkAtt_" .. pair[2] .. "_" .. pair[1]
+                            local beamName = "SkL_" .. pair[1] .. "_" .. pair[2]
+
+                            local b1 = p1:FindFirstChild(att1Name)
+                            if not b1 then
+                                b1 = Instance.new("Attachment")
+                                b1.Name = att1Name
+                                b1.Parent = p1
+                            end
+
+                            local b2 = p2:FindFirstChild(att2Name)
+                            if not b2 then
+                                b2 = Instance.new("Attachment")
+                                b2.Name = att2Name
+                                b2.Parent = p2
+                            end
+
+                            local beam = p1:FindFirstChild(beamName)
+                            if not beam then
+                                beam = Instance.new("Beam")
+                                beam.Name = beamName
+                                beam.Attachment0 = b1
+                                beam.Attachment1 = b2
+                                beam.Width0 = 0.15
+                                beam.Width1 = 0.15
+                                beam.AlwaysOnTop = true
+                                beam.FaceCamera = true
+                                beam.LightInfluence = 0
+                                beam.LightEmission = 1
+                                beam.Parent = p1
+                            end
+                            beam.Color = ColorSequence.new(boneColor)
+                            beam.Enabled = true
+                        end
+                    end
+                else
+                    ClearSkeletonFromCharacter(char)
+                end
+
+                -- 2D OVERLAY INFO (NICK, ROLE, DIST, HP)
                 local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.7, 0))
                 local legsPos, legsOnScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
                 
-                if headOnScreen and legsOnScreen then
+                if headOnScreen or legsOnScreen then
                     local bGuiName = "EspGui_" .. player.Name
                     local bGui = EspOverlayHolder:FindFirstChild(bGuiName)
                     if not bGui then
@@ -1778,7 +1876,6 @@ RunService.RenderStepped:Connect(function()
                         bGui.Name = bGuiName
                         bGui.Parent = EspOverlayHolder
                         bGui.AlwaysOnTop = true
-                        bGui.Size = UDim2.new(0, 220, 0, 90)
                         bGui.ExtentsOffsetWorldSpace = Vector3.new(0, 3.2, 0)
                         
                         local mainLayout = Instance.new("UIListLayout", bGui)
@@ -1790,9 +1887,6 @@ RunService.RenderStepped:Connect(function()
                         nLabel.Name = "NameLabel"
                         nLabel.Parent = bGui
                         nLabel.BackgroundTransparency = 1
-                        nLabel.Size = UDim2.new(1, 0, 0, 14)
-                        nLabel.Font = Enum.Font.SourceSansBold
-                        nLabel.TextSize = 12
                         nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                         nLabel.TextStrokeTransparency = 0.3
                         nLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -1801,9 +1895,6 @@ RunService.RenderStepped:Connect(function()
                         rLabel.Name = "RoleLabel"
                         rLabel.Parent = bGui
                         rLabel.BackgroundTransparency = 1
-                        rLabel.Size = UDim2.new(1, 0, 0, 13)
-                        rLabel.Font = Enum.Font.SourceSansBold
-                        rLabel.TextSize = 11
                         rLabel.TextStrokeTransparency = 0.3
                         rLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                         
@@ -1811,9 +1902,6 @@ RunService.RenderStepped:Connect(function()
                         dLabel.Name = "DistLabel"
                         dLabel.Parent = bGui
                         dLabel.BackgroundTransparency = 1
-                        dLabel.Size = UDim2.new(1, 0, 0, 12)
-                        dLabel.Font = Enum.Font.SourceSans
-                        dLabel.TextSize = 10
                         dLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
                         dLabel.TextStrokeTransparency = 0.3
                         
@@ -1833,7 +1921,8 @@ RunService.RenderStepped:Connect(function()
                     end
                     
                     bGui.Adornee = head
-                    
+                    bGui.Size = UDim2.new(0, 240, 0, (baseSize + 3) * 3 + 20)
+
                     local nLabel = bGui:FindFirstChild("NameLabel")
                     local rLabel = bGui:FindFirstChild("RoleLabel")
                     local dLabel = bGui:FindFirstChild("DistLabel")
@@ -1842,12 +1931,18 @@ RunService.RenderStepped:Connect(function()
                     
                     if nLabel then
                         nLabel.Visible = _G.EspNameActive
+                        nLabel.Font = currentFont
+                        nLabel.TextSize = baseSize
+                        nLabel.Size = UDim2.new(1, 0, 0, baseSize + 2)
                         nLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
                         nLabel.TextColor3 = visColor
                     end
                     
                     if rLabel then
                         rLabel.Visible = _G.EspRoleActive
+                        rLabel.Font = currentFont
+                        rLabel.TextSize = math.max(8, baseSize - 1)
+                        rLabel.Size = UDim2.new(1, 0, 0, math.max(8, baseSize - 1) + 2)
                         local toolStr = ""
                         for _, item in ipairs(char:GetChildren()) do
                             if item:IsA("Tool") then
@@ -1863,6 +1958,9 @@ RunService.RenderStepped:Connect(function()
                     local dist = myHrp and (myHrp.Position - hrp.Position).Magnitude or 0
                     if dLabel then
                         dLabel.Visible = _G.EspDistanceActive
+                        dLabel.Font = currentFont
+                        dLabel.TextSize = math.max(8, baseSize - 2)
+                        dLabel.Size = UDim2.new(1, 0, 0, math.max(8, baseSize - 2) + 2)
                         dLabel.Text = math.floor(dist) .. "m"
                     end
                     
@@ -1891,54 +1989,13 @@ RunService.RenderStepped:Connect(function()
                         local old3d = char:FindFirstChild("MM2_3DBoxEsp")
                         if old3d then old3d:Destroy() end
                     end
-                    
-                    -- SKELETON ESP DRAWING (Head -> Torso -> Limbs)
-                    if _G.EspSkeletonActive then
-                        local bones = char:FindFirstChild("UpperTorso") and SkeletonBonesR15 or SkeletonBonesR6
-                        for idx, pair in ipairs(bones) do
-                            local p1 = char:FindFirstChild(pair[1])
-                            local p2 = char:FindFirstChild(pair[2])
-                            if p1 and p2 then
-                                local p1Vis = _G.VisCheckActive and CheckPartVisibility(p1) or true
-                                local p2Vis = _G.VisCheckActive and CheckPartVisibility(p2) or true
-                                local boneVis = p1Vis or p2Vis
-                                local boneColor = (boneVis or not _G.VisCheckActive) and GetRoleVisColor(role) or _G.OccludedColor
-                                
-                                local beamName = "SkL_" .. pair[1] .. "_" .. pair[2]
-                                local b1 = p1:FindFirstChild("Att_" .. pair[1]) or Instance.new("Attachment", p1)
-                                b1.Name = "Att_" .. pair[1]
-                                local b2 = p2:FindFirstChild("Att_" .. pair[2]) or Instance.new("Attachment", p2)
-                                b2.Name = "Att_" .. pair[2]
-                                
-                                local beam = p1:FindFirstChild(beamName)
-                                if not beam then
-                                    beam = Instance.new("Beam")
-                                    beam.Name = beamName
-                                    beam.Parent = p1
-                                    beam.Attachment0 = b1
-                                    beam.Attachment1 = b2
-                                    beam.Width0 = 0.12
-                                    beam.Width1 = 0.12
-                                    beam.AlwaysOnTop = true
-                                    beam.FaceCamera = true
-                                    beam.Transparency = NumberSequence.new(0.2)
-                                end
-                                beam.Color = ColorSequence.new(boneColor)
-                            end
-                        end
-                    else
-                        for _, part in ipairs(char:GetChildren()) do
-                            if part:IsA("BasePart") then
-                                for _, child in ipairs(part:GetChildren()) do
-                                    if child:IsA("Beam") and child.Name:find("SkL_") then
-                                        child:Destroy()
-                                    end
-                                end
-                            end
-                        end
-                    end
 
+                else
+                    local oldGui = EspOverlayHolder:FindFirstChild("EspGui_" .. player.Name)
+                    if oldGui then oldGui:Destroy() end
                 end
+            else
+                ClearSkeletonFromCharacter(char)
             end
         end
     end
