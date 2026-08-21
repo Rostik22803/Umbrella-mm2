@@ -132,7 +132,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(14, 15, 19)
 MainFrame.Position = UDim2.new(0.5, -360, 0.5, -240)
 MainFrame.Size = UDim2.new(0, 720, 0, 480)
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = false
 MainFrame.ClipsDescendants = false
 MainFrame.Visible = false
 
@@ -584,6 +584,7 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     MainBtn.MouseButton1Click:Connect(function()
         isExpanded = not isExpanded
         ListFrame.Visible = isExpanded
+        DropFrame.ZIndex = isExpanded and 100 or 5
     end)
 
     for i, optName in ipairs(options) do
@@ -602,6 +603,7 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
             MainBtn.Text = "  " .. optName .. "  ▼"
             isExpanded = false
             ListFrame.Visible = false
+            DropFrame.ZIndex = 5
             callback(optName)
         end)
     end
@@ -1790,6 +1792,8 @@ RunService.RenderStepped:Connect(function()
         for _, player in ipairs(Players:GetPlayers()) do
             if player.Character then
                 ClearSkeletonFromCharacter(player.Character)
+                local old3d = player.Character:FindFirstChild("MM2_3DBoxEsp")
+                if old3d then old3d:Destroy() end
             end
         end
         return
@@ -2266,5 +2270,36 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         ContentArea.Visible = true
         Sidebar.Visible = true
         MinimizeBtn.Text = "−"
+    end
+end)
+
+-- CUSTOM DRAGGING UTILITY (Fixes draggable bug blocking child button clicks)
+local dragToggle = nil
+local dragStart = nil
+local startPos = nil
+
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    TweenService:Create(MainFrame, TweenInfo.new(0.08), {Position = position}):Play()
+end
+
+Header.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not UserInputService:GetFocusedTextBox() then
+        dragToggle = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragToggle = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragToggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateInput(input)
     end
 end)
