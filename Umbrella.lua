@@ -1320,74 +1320,37 @@ do
 	end
 end
 
-local RATKO_LOGO_B64 = "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"
-
-local ratko_b64decode
-do
-	local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-	local map = {}
-	for i = 1, #b do map[string.byte(b, i)] = i - 1 end
-	ratko_b64decode = function(data)
-		local t, n = {}, 0
-		local acc, bits = 0, 0
-		for i = 1, #data do
-			local c = string.byte(data, i)
-			local v = map[c]
-			if v then
-				acc = acc * 64 + v
-				bits = bits + 6
-				if bits >= 8 then
-					bits = bits - 8
-					local byte = math.floor(acc / (2 ^ bits))
-					acc = acc - byte * (2 ^ bits)
-					n = n + 1
-					t[n] = string.char(byte % 256)
-				end
-			end
-		end
-		return table.concat(t)
-	end
-end
-
 local function ensureCloudIcon()
-	if type(writefile) ~= "function" then
+	if type(isfile) ~= "function" or type(readfile) ~= "function" or type(writefile) ~= "function" then
 		return false
 	end
 
-	if type(makefolder) == "function" then
-		pcall(makefolder, "assets")
-	end
-
-	local logoData = nil
-	if type(isfile) == "function" and type(readfile) == "function" then
-		local candidates = { "logo.png", "logo.jpg", "assets/ratko_logo.png" }
-		for _, c in ipairs(candidates) do
-			local ok, exists = pcall(isfile, c)
-			if ok and exists then
-				local rOk, content = pcall(readfile, c)
-				if rOk and type(content) == "string" and #content > 100 then
-					logoData = content
-					break
-				end
-			end
-		end
-	end
-
-	if not logoData then
-		logoData = ratko_b64decode(RATKO_LOGO_B64)
-	end
-
-	if type(logoData) == "string" and #logoData > 0 then
-		pcall(writefile, cloudIconPath, logoData)
-		pcall(writefile, cloudAssetPath, logoData)
-		pcall(writefile, "assets/ratko_logo.png", logoData)
+	local existsOk, exists = pcall(isfile, cloudIconPath)
+	if existsOk and exists then
 		return true
 	end
 
-	return false
+	local srcOk, src = pcall(isfile, cloudAssetPath)
+	if not srcOk or not src then
+		return false
+	end
+
+	local readOk, data = pcall(readfile, cloudAssetPath)
+	if not readOk or type(data) ~= "string" then
+		return false
+	end
+
+	local convOk, out = pcall(pngRecolorWhite, data, 64)
+	if not convOk or type(out) ~= "string" or #out == 0 then
+		return false
+	end
+
+	return pcall(writefile, cloudIconPath, out)
 end
 
-ensureCloudIcon()
+if not ensureCloudIcon() then
+	cloudIconPath = cloudAssetPath
+end
 
 local esp = nil
 local lib = nil
@@ -1825,44 +1788,10 @@ function fatality:UpdateColors() end
 
 local root = nil
 
-local MINT_THEME = {
-	accent = Color3.fromRGB(46, 230, 168),     -- #2EE6A8 Neon Mint
-	text   = Color3.fromRGB(245, 252, 250),     -- #F5FCFA Crisp White
-	panel  = Color3.fromRGB(20, 26, 23),       -- #141A17 Dark Mint Slate
-	head   = Color3.fromRGB(15, 20, 18),       -- #0F1412 Obsidian Header
-	side   = Color3.fromRGB(17, 23, 20),       -- #111714 Dark Sidebar
-	line   = Color3.fromRGB(42, 64, 55),       -- #2A4037 Frosted Mint Border
-	dim    = Color3.fromRGB(140, 170, 158),     -- #8CAA9E Muted Mint-Gray
-	glow   = Color3.fromRGB(46, 230, 168),     -- #2EE6A8 Mint Neon Glow
-	bg     = Color3.fromRGB(12, 16, 14),       -- #0C100E Deep Window Bg
-}
-
-local function applyTheme(target, t)
-	if not target then return end
-	t = t or MINT_THEME
-	if type(target.setcolor) == "function" then
-		for k, v in pairs(t) do
-			pcall(target.setcolor, target, k, v)
-		end
-	end
-	if type(target.colors) == "table" then
-		for k, v in pairs(t) do
-			target.colors[k] = v
-		end
-	end
-end
-
 function fatality.new(cfg)
 	cfg = cfg or {}
 
-	root = lib:window({
-		name = cfg.Name or "Ratkoexternal",
-		title = cfg.Name or "Ratkoexternal",
-		bind = "Insert"
-	})
-
-	applyTheme(lib, MINT_THEME)
-	applyTheme(root, MINT_THEME)
+	root = lib:window({ bind = "Insert" })
 
 	local win = {}
 
@@ -1896,95 +1825,15 @@ function fatality.new(cfg)
 	function win:AddColors()
 		local ct = root:tab({ name = "colors", icon = "palette", tip = "menu colors" })
 
-		local pickers = {}
-		pickers.accent = ct:color({ name = "accent", key = "accent", side = "left", default = MINT_THEME.accent })
-		pickers.text   = ct:color({ name = "text", key = "text", side = "right", default = MINT_THEME.text })
-		pickers.panel  = ct:color({ name = "panel", key = "panel", side = "left", default = MINT_THEME.panel })
-		pickers.head   = ct:color({ name = "header", key = "head", side = "right", default = MINT_THEME.head })
-		pickers.side   = ct:color({ name = "sidebar", key = "side", side = "left", default = MINT_THEME.side })
-		pickers.line   = ct:color({ name = "outline", key = "line", side = "right", default = MINT_THEME.line })
-		pickers.dim    = ct:color({ name = "muted", key = "dim", side = "left", default = MINT_THEME.dim })
-		pickers.glow   = ct:color({ name = "network", key = "glow", side = "right", default = MINT_THEME.glow })
-		pickers.bg     = ct:color({ name = "background", key = "bg", side = "left", default = MINT_THEME.bg })
-
-		-- Apply mint-white theme right away to all color pickers
-		for k, col in pairs(MINT_THEME) do
-			if pickers[k] and type(pickers[k].set) == "function" then
-				pcall(pickers[k].set, pickers[k], col)
-			end
-		end
-
-		if type(ct.section) == "function" then
-			local pre_sec = ct:section({ name = "THEME PRESETS", side = "full" })
-			if pre_sec and type(pre_sec.button) == "function" then
-				pre_sec:button({
-					name = "Reset to Mint-White (Default)",
-					icon = "rotate-ccw",
-					callback = function()
-						applyTheme(root, MINT_THEME)
-						applyTheme(lib, MINT_THEME)
-						for k, col in pairs(MINT_THEME) do
-							if pickers[k] and type(pickers[k].set) == "function" then
-								pcall(pickers[k].set, pickers[k], col)
-							end
-						end
-						event_notify:Notify({ Icon = "palette", Title = "Ratkoexternal", Content = "Restored Mint-White Theme!", Duration = 3, Color = MINT_THEME.accent })
-					end,
-				})
-
-				pre_sec:button({
-					name = "Frost Mint (High Contrast)",
-					icon = "sparkles",
-					callback = function()
-						local frost = {
-							accent = Color3.fromRGB(0, 255, 178),
-							text   = Color3.fromRGB(255, 255, 255),
-							panel  = Color3.fromRGB(18, 24, 21),
-							head   = Color3.fromRGB(12, 18, 15),
-							side   = Color3.fromRGB(15, 21, 18),
-							line   = Color3.fromRGB(50, 75, 65),
-							dim    = Color3.fromRGB(160, 195, 180),
-							glow   = Color3.fromRGB(0, 255, 178),
-							bg     = Color3.fromRGB(10, 14, 12),
-						}
-						applyTheme(root, frost)
-						applyTheme(lib, frost)
-						for k, col in pairs(frost) do
-							if pickers[k] and type(pickers[k].set) == "function" then
-								pcall(pickers[k].set, pickers[k], col)
-							end
-						end
-						event_notify:Notify({ Icon = "palette", Title = "Ratkoexternal", Content = "Applied Frost Mint Theme!", Duration = 3, Color = frost.accent })
-					end,
-				})
-
-				pre_sec:button({
-					name = "Emerald Mint (Deep)",
-					icon = "gem",
-					callback = function()
-						local emerald = {
-							accent = Color3.fromRGB(32, 223, 144),
-							text   = Color3.fromRGB(235, 250, 245),
-							panel  = Color3.fromRGB(15, 23, 19),
-							head   = Color3.fromRGB(10, 16, 13),
-							side   = Color3.fromRGB(12, 19, 15),
-							line   = Color3.fromRGB(35, 55, 45),
-							dim    = Color3.fromRGB(130, 165, 150),
-							glow   = Color3.fromRGB(32, 223, 144),
-							bg     = Color3.fromRGB(8, 13, 10),
-						}
-						applyTheme(root, emerald)
-						applyTheme(lib, emerald)
-						for k, col in pairs(emerald) do
-							if pickers[k] and type(pickers[k].set) == "function" then
-								pcall(pickers[k].set, pickers[k], col)
-							end
-						end
-						event_notify:Notify({ Icon = "palette", Title = "Ratkoexternal", Content = "Applied Emerald Mint Theme!", Duration = 3, Color = emerald.accent })
-					end,
-				})
-			end
-		end
+		ct:color({ name = "accent", key = "accent", side = "left" })
+		ct:color({ name = "text", key = "text", side = "right" })
+		ct:color({ name = "panel", key = "panel", side = "left" })
+		ct:color({ name = "header", key = "head", side = "right" })
+		ct:color({ name = "sidebar", key = "side", side = "left" })
+		ct:color({ name = "outline", key = "line", side = "right" })
+		ct:color({ name = "muted", key = "dim", side = "left" })
+		ct:color({ name = "network", key = "glow", side = "right" })
+		ct:color({ name = "background", key = "bg", side = "left" })
 
 		return ct
 	end
@@ -2019,48 +1868,20 @@ task.spawn(function()
 end)
 
 fatality:Loader({
-	Name = "Ratkoexternal",
+	Name = "SHITARO",
 	Duration = 4
 });
 
 notification:Notify({
 	Title = "Ratkoexternal",
-	Content = "Welcome back, " .. game.Players.LocalPlayer.DisplayName .. "! [Ratkoexternal]",
+	Content = "yo, "..game.Players.LocalPlayer.DisplayName..' welcome back nigga',
 	Icon = "clipboard"
 })
 
 local window = fatality.new({
-	Name = "Ratkoexternal",
+	Name = "SHITARO",
 	Expire = "Never",
 });
-
--- Background sync to guarantee custom letter 'R' logo and Ratkoexternal title in CoreGui
-task.spawn(function()
-	task.wait(0.3)
-	pcall(function()
-		local container = (gethui and gethui()) or game:GetService("CoreGui")
-		local custom = getcustomasset or getsynasset or (syn and syn.get_custom_asset) or (fluxus and fluxus.get_custom_asset)
-		local assetUri = custom and custom("assets/cloud_accent.png") or nil
-
-		for _, gui in ipairs(container:GetChildren()) do
-			if gui:IsA("ScreenGui") then
-				for _, desc in ipairs(gui:GetDescendants()) do
-					if desc:IsA("TextLabel") then
-						if desc.Text:find("SHITARO") or desc.Text:find("shitaro") then
-							desc.Text = desc.Text:gsub("SHITARO", "Ratkoexternal"):gsub("shitaro", "Ratkoexternal")
-						end
-					elseif desc:IsA("ImageLabel") and assetUri then
-						local pName = desc.Parent and desc.Parent.Name:lower() or ""
-						local dName = desc.Name:lower()
-						if pName:find("head") or pName:find("title") or pName:find("top") or dName:find("logo") or dName:find("cloud") then
-							desc.Image = assetUri
-						end
-					end
-				end
-			end
-		end
-	end)
-end)
 
 local roleThreadConns = {}
 local roleThread = task.spawn(function()
@@ -5273,7 +5094,7 @@ do
 	farm_tgl.Option:AddToggle({
 		Name = "murder check",
 		Default = false,
-		Flag = "bypass by ratko external",
+		Flag = "bypass by shitaro ezez",
 		Callback = function(v)
 			avoid_murder = v
 			farm_target = nil
