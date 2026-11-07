@@ -924,13 +924,19 @@ _G.KillAuraDelay = 0.1
 
 -- Custom Models (English Keys + Roblox Asset IDs)
 local CustomModelAssetIDs = {
-    ["angel"]       = "rbxassetid://12318430407",
-    ["goku"]        = "rbxassetid://12905880344",
-    ["sonic"]       = "rbxassetid://8345265917",
-    ["noob"]        = "rbxassetid://4446576906",
-    ["spiderman"]   = "rbxassetid://13803824982",
-    ["gojo"]        = "rbxassetid://14034779103",
-    ["grim reaper"] = "rbxassetid://8302036060"
+    ["angel"]             = "rbxassetid://12318430407",
+    ["spiderman"]         = "rbxassetid://13803824982",
+    ["donkey"]            = "rbxassetid://15258571412",
+    ["pig"]               = "rbxassetid://12928490816",
+    ["tung tung sahur"]   = "rbxassetid://138151705692565",
+    ["la vaca saturnita"] = "rbxassetid://129565620410132"
+}
+
+local ModelFallbacks = {
+    ["tung tung sahur"]   = "rbxassetid://128230179587698",
+    ["la vaca saturnita"] = "rbxassetid://76127116347738",
+    ["donkey"]            = "rbxassetid://6299324098",
+    ["pig"]               = "rbxassetid://3642054273"
 }
 
 -- Load external Lua table from GitHub if available
@@ -984,6 +990,13 @@ local function ApplyCustomModel(modelName)
             return game:GetObjects(assetId)
         end)
         
+        if (not success or not objs or #objs == 0) and ModelFallbacks[key] then
+            pcall(function()
+                objs = game:GetObjects(ModelFallbacks[key])
+                if objs and #objs > 0 then success = true end
+            end)
+        end
+        
         if success and objs and #objs > 0 then
             local rawObj = objs[1]
             local newModel = nil
@@ -997,15 +1010,6 @@ local function ApplyCustomModel(modelName)
             
             if newModel then
                 newModel.Name = "CustomChangerModel"
-                
-                -- Hide original body parts
-                for _, p in ipairs(char:GetDescendants()) do
-                    if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
-                        p.Transparency = 1
-                    elseif p:IsA("Decal") then
-                        p.Transparency = 1
-                    end
-                end
                 
                 local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
                 if not hrp then return end
@@ -1025,6 +1029,15 @@ local function ApplyCustomModel(modelName)
                             weld.Part0 = hrp
                             weld.Part1 = part
                             weld.Parent = part
+                        end
+                    end
+                    
+                    -- Hide original parts only after custom model is mounted successfully
+                    for _, p in ipairs(char:GetDescendants()) do
+                        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and not p:IsDescendantOf(newModel) then
+                            p.Transparency = 1
+                        elseif p:IsA("Decal") and not p:IsDescendantOf(newModel) then
+                            p.Transparency = 1
                         end
                     end
                 end
@@ -2632,7 +2645,7 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-CreateDropdown(SecModels, "Select Model", {"angel", "goku", "sonic", "noob", "spiderman", "gojo", "grim reaper"}, _G.SelectedCustomModel, function(selected)
+CreateDropdown(SecModels, "Select Model", {"angel", "spiderman", "donkey", "pig", "tung tung sahur", "la vaca saturnita"}, _G.SelectedCustomModel, function(selected)
     _G.SelectedCustomModel = selected
     if _G.CustomModelsActive then
         ApplyCustomModel(selected)
