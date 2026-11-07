@@ -788,7 +788,7 @@ _G.DroppedGunEspActive = false
 _G.MurdererRepelActive = false
 
 _G.CustomModelsActive = false
-_G.SelectedCustomModel = "donkey"
+_G.SelectedCustomModel = "angel"
 
 -- Custom Weapons (Knife & Gun Skins / 3D Models)
 _G.CustomKnifeActive = false
@@ -924,11 +924,13 @@ _G.KillAuraDelay = 0.1
 
 -- Custom Models (English Keys + Roblox Asset IDs)
 local CustomModelAssetIDs = {
-    ["donkey"]    = "rbxassetid://15258571412",
-    ["cute girl"] = "rbxassetid://120285863159417",
-    ["pig"]       = "rbxassetid://12928490816",
-    ["angel"]     = "rbxassetid://12318430407",
-    ["demon"]     = "rbxassetid://116615563871570"
+    ["angel"]       = "rbxassetid://12318430407",
+    ["goku"]        = "rbxassetid://12905880344",
+    ["sonic"]       = "rbxassetid://8345265917",
+    ["noob"]        = "rbxassetid://4446576906",
+    ["spiderman"]   = "rbxassetid://13803824982",
+    ["gojo"]        = "rbxassetid://14034779103",
+    ["grim reaper"] = "rbxassetid://8302036060"
 }
 
 -- Load external Lua table from GitHub if available
@@ -1017,6 +1019,8 @@ local function ApplyCustomModel(modelName)
                         if part:IsA("BasePart") then
                             part.Anchored = false
                             part.CanCollide = false
+                            part.CanTouch = false
+                            part.CanQuery = false
                             local weld = Instance.new("WeldConstraint")
                             weld.Part0 = hrp
                             weld.Part1 = part
@@ -1243,7 +1247,13 @@ local function BackupWeapon(tool)
     if not tool or OriginalWeaponData[tool] then return end
     local handle = tool:FindFirstChild("Handle")
     if not handle then return end
+    local mesh = handle:FindFirstChildOfClass("SpecialMesh")
     OriginalWeaponData[tool] = {
+        MeshId = mesh and mesh.MeshId or "",
+        TextureId = mesh and mesh.TextureId or "",
+        Scale = mesh and mesh.Scale or Vector3.new(1, 1, 1),
+        Offset = mesh and mesh.Offset or Vector3.new(0, 0, 0),
+        VertexColor = mesh and mesh.VertexColor or Vector3.new(1, 1, 1),
         Color = handle.Color,
         Material = handle.Material,
         Transparency = handle.Transparency
@@ -1274,6 +1284,14 @@ local function RestoreWeapon(tool)
         handle.Transparency = data.Transparency or 0
         handle.Color = data.Color
         handle.Material = data.Material
+        local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+        if mesh then
+            mesh.MeshId = data.MeshId
+            mesh.TextureId = data.TextureId
+            mesh.Scale = data.Scale
+            mesh.Offset = data.Offset
+            mesh.VertexColor = data.VertexColor
+        end
     else
         handle.Transparency = 0
     end
@@ -1404,28 +1422,26 @@ local function ApplyWeaponFX(tool, isKnife, emitterPart)
     end
 end
 
-local function CreateWeaponVisual(tool, handle, preset, isKnife)
-    local visual = tool:FindFirstChild("MM2_WeaponVisual")
-    if visual and visual:GetAttribute("PresetModel") == (isKnife and _G.SelectedKnifeModel or _G.SelectedGunModel) then
-        -- Already created for this preset, just maintain effects / colors
-        if _G.CustomWeaponColor == "Rainbow RGB" or (preset and preset.IsChroma) then
-            visual.Color = _G.RainbowColor
-            local sm = visual:FindFirstChildOfClass("SpecialMesh")
-            if sm then
-                sm.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
-            end
-        end
-        ApplyWeaponFX(tool, isKnife, visual)
-        return visual
+local function ApplyCustomKnife(tool)
+    if not tool or not _G.CustomKnifeActive then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    
+    BackupWeapon(tool)
+    
+    local preset = KnifePresets[_G.SelectedKnifeModel]
+    if not preset then
+        RestoreWeapon(tool)
+        return
     end
     
-    if visual then visual:Destroy() end
-    
     -- Special 3D Lightsaber
-    if preset and preset.IsSpecial3D == "Lightsaber" then
+    if preset.IsSpecial3D == "Lightsaber" then
         handle.Transparency = 1
         local old = tool:FindFirstChild("CustomWeaponModel")
         if old then old:Destroy() end
+        local oldVis = tool:FindFirstChild("MM2_WeaponVisual")
+        if oldVis then oldVis:Destroy() end
         
         local model = Instance.new("Model")
         model.Name = "CustomWeaponModel"
@@ -1436,6 +1452,8 @@ local function CreateWeaponVisual(tool, handle, preset, isKnife)
         hilt.Material = Enum.Material.Metal
         hilt.Color = Color3.fromRGB(45, 45, 45)
         hilt.CanCollide = false
+        hilt.CanTouch = false
+        hilt.CanQuery = false
         hilt.Massless = true
         hilt.CFrame = handle.CFrame
         hilt.Parent = model
@@ -1451,6 +1469,8 @@ local function CreateWeaponVisual(tool, handle, preset, isKnife)
         end
         blade.Color = bladeColor
         blade.CanCollide = false
+        blade.CanTouch = false
+        blade.CanQuery = false
         blade.Massless = true
         blade.CFrame = handle.CFrame * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.rad(90))
         blade.Parent = model
@@ -1467,97 +1487,63 @@ local function CreateWeaponVisual(tool, handle, preset, isKnife)
         
         model.Parent = tool
         ApplyWeaponFX(tool, true, blade)
-        return model
+        return
     end
     
-    -- Standard SpecialMesh 3D visual part
+    -- Clean up any 3D model
     local oldModel = tool:FindFirstChild("CustomWeaponModel")
     if oldModel then oldModel:Destroy() end
+    local oldVis = tool:FindFirstChild("MM2_WeaponVisual")
+    if oldVis then oldVis:Destroy() end
     
-    visual = Instance.new("Part")
-    visual.Name = "MM2_WeaponVisual"
-    visual.CanCollide = false
-    visual.Massless = true
-    visual.CastShadow = true
-    visual.Transparency = 0
-    visual.Size = Vector3.new(0.2, 0.2, 0.2)
-    visual.CFrame = handle.CFrame
-    visual:SetAttribute("PresetModel", isKnife and _G.SelectedKnifeModel or _G.SelectedGunModel)
-    if preset and preset.IsChroma then
-        visual:SetAttribute("IsChroma", true)
+    -- Native MM2 Handle SpecialMesh transformation (Zero Raycast Interception, 100% Attack Function)
+    local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+    if not mesh then
+        mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.Parent = handle
     end
     
-    local sm = Instance.new("SpecialMesh")
-    sm.MeshType = Enum.MeshType.FileMesh
-    sm.MeshId = preset.MeshId
-    sm.TextureId = preset.TextureId or ""
-    sm.Scale = preset.Scale or Vector3.new(1, 1, 1)
-    sm.Parent = visual
+    mesh.MeshId = preset.MeshId
+    mesh.TextureId = preset.TextureId or ""
+    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
+    handle.Transparency = 0
     
     -- Material override
     if _G.CustomWeaponMaterial ~= "Default" then
-        if _G.CustomWeaponMaterial == "Neon Glow" then visual.Material = Enum.Material.Neon
-        elseif _G.CustomWeaponMaterial == "ForceField" then visual.Material = Enum.Material.ForceField
-        elseif _G.CustomWeaponMaterial == "Glass" then visual.Material = Enum.Material.Glass
-        elseif _G.CustomWeaponMaterial == "Chrome Metal" then visual.Material = Enum.Material.Metal end
+        if _G.CustomWeaponMaterial == "Neon Glow" then handle.Material = Enum.Material.Neon
+        elseif _G.CustomWeaponMaterial == "ForceField" then handle.Material = Enum.Material.ForceField
+        elseif _G.CustomWeaponMaterial == "Glass" then handle.Material = Enum.Material.Glass
+        elseif _G.CustomWeaponMaterial == "Chrome Metal" then handle.Material = Enum.Material.Metal end
     elseif preset.Material then
-        visual.Material = preset.Material
+        handle.Material = preset.Material
     else
-        visual.Material = Enum.Material.Plastic
+        handle.Material = Enum.Material.Plastic
     end
     
     -- Color
     if _G.CustomWeaponColor ~= "Original" then
         if _G.CustomWeaponColor == "Rainbow RGB" then
-            visual.Color = _G.RainbowColor
-            sm.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+            handle.Color = _G.RainbowColor
+            mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
         elseif ChamColorPresets[_G.CustomWeaponColor] then
             local col = ChamColorPresets[_G.CustomWeaponColor]
-            visual.Color = col
-            sm.VertexColor = Vector3.new(col.R, col.G, col.B)
+            handle.Color = col
+            mesh.VertexColor = Vector3.new(col.R, col.G, col.B)
         end
     elseif preset.IsChroma then
-        visual.Color = _G.RainbowColor
-        sm.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+        handle.Color = _G.RainbowColor
+        mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
     elseif preset.Color then
-        visual.Color = preset.Color
-        sm.VertexColor = Vector3.new(preset.Color.R, preset.Color.G, preset.Color.B)
+        handle.Color = preset.Color
+        mesh.VertexColor = Vector3.new(preset.Color.R, preset.Color.G, preset.Color.B)
     else
-        visual.Color = Color3.fromRGB(255, 255, 255)
-        sm.VertexColor = Vector3.new(1, 1, 1)
+        handle.Color = Color3.fromRGB(255, 255, 255)
+        mesh.VertexColor = Vector3.new(1, 1, 1)
     end
     
-    -- Hide original handle so only custom weapon is visible
-    handle.Transparency = 1
-    for _, ch in ipairs(handle:GetChildren()) do
-        if ch:IsA("Decal") then ch.Transparency = 1 end
-    end
-    
-    -- Weld to handle
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = handle
-    weld.Part1 = visual
-    weld.Parent = visual
-    
-    visual.Parent = tool
-    ApplyWeaponFX(tool, isKnife, visual)
-    return visual
-end
-
-local function ApplyCustomKnife(tool)
-    if not tool or not _G.CustomKnifeActive then return end
-    local handle = tool:FindFirstChild("Handle")
-    if not handle then return end
-    
-    BackupWeapon(tool)
-    
-    local preset = KnifePresets[_G.SelectedKnifeModel]
-    if not preset then
-        RestoreWeapon(tool)
-        return
-    end
-    
-    CreateWeaponVisual(tool, handle, preset, true)
+    ApplyWeaponFX(tool, true, handle)
 end
 
 local function ApplyCustomGun(tool)
@@ -1573,7 +1559,60 @@ local function ApplyCustomGun(tool)
         return
     end
     
-    CreateWeaponVisual(tool, handle, preset, false)
+    -- Clean up any 3D model
+    local oldModel = tool:FindFirstChild("CustomWeaponModel")
+    if oldModel then oldModel:Destroy() end
+    local oldVis = tool:FindFirstChild("MM2_WeaponVisual")
+    if oldVis then oldVis:Destroy() end
+    
+    -- Native MM2 Handle SpecialMesh transformation (Zero Raycast Interception, 100% Shooting Function)
+    local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+    if not mesh then
+        mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.Parent = handle
+    end
+    
+    mesh.MeshId = preset.MeshId
+    mesh.TextureId = preset.TextureId or ""
+    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
+    handle.Transparency = 0
+    
+    -- Material override
+    if _G.CustomWeaponMaterial ~= "Default" then
+        if _G.CustomWeaponMaterial == "Neon Glow" then handle.Material = Enum.Material.Neon
+        elseif _G.CustomWeaponMaterial == "ForceField" then handle.Material = Enum.Material.ForceField
+        elseif _G.CustomWeaponMaterial == "Glass" then handle.Material = Enum.Material.Glass
+        elseif _G.CustomWeaponMaterial == "Chrome Metal" then handle.Material = Enum.Material.Metal end
+    elseif preset.Material then
+        handle.Material = preset.Material
+    else
+        handle.Material = Enum.Material.Plastic
+    end
+    
+    -- Color
+    if _G.CustomWeaponColor ~= "Original" then
+        if _G.CustomWeaponColor == "Rainbow RGB" then
+            handle.Color = _G.RainbowColor
+            mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+        elseif ChamColorPresets[_G.CustomWeaponColor] then
+            local col = ChamColorPresets[_G.CustomWeaponColor]
+            handle.Color = col
+            mesh.VertexColor = Vector3.new(col.R, col.G, col.B)
+        end
+    elseif preset.IsChroma then
+        handle.Color = _G.RainbowColor
+        mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+    elseif preset.Color then
+        handle.Color = preset.Color
+        mesh.VertexColor = Vector3.new(preset.Color.R, preset.Color.G, preset.Color.B)
+    else
+        handle.Color = Color3.fromRGB(255, 255, 255)
+        mesh.VertexColor = Vector3.new(1, 1, 1)
+    end
+    
+    ApplyWeaponFX(tool, false, handle)
 end
 
 local function GetPlayerKnife()
@@ -2593,7 +2632,7 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-CreateDropdown(SecModels, "Select Model", {"donkey", "cute girl", "pig", "angel", "demon"}, "donkey", function(selected)
+CreateDropdown(SecModels, "Select Model", {"angel", "goku", "sonic", "noob", "spiderman", "gojo", "grim reaper"}, _G.SelectedCustomModel, function(selected)
     _G.SelectedCustomModel = selected
     if _G.CustomModelsActive then
         ApplyCustomModel(selected)
