@@ -41,6 +41,8 @@ ScreenGui.ResetOnSpawn = false
 ------------------------------------------------------------------------
 -- 8-СЕГМЕНТНЫЙ ЗОНТ UMBRELLA
 ------------------------------------------------------------------------
+local UmbrellaCircles = {}
+
 local function CreateExactUmbrellaLogo(parent, size)
     local Container = Instance.new("Frame")
     Container.Name = "UmbrellaLogoContainer"
@@ -54,6 +56,7 @@ local function CreateExactUmbrellaLogo(parent, size)
     UmbrellaCircle.Size = UDim2.new(1, 0, 1, 0)
     UmbrellaCircle.ClipsDescendants = true
     Instance.new("UICorner", UmbrellaCircle).CornerRadius = UDim.new(1, 0)
+    table.insert(UmbrellaCircles, UmbrellaCircle)
     
     for i = 0, 3 do
         local WedgeFrame = Instance.new("Frame")
@@ -450,22 +453,218 @@ CreateTabPage("Combat")
 CreateTabPage("HvH")
 CreateTabPage("Settings")
 
+------------------------------------------------------------------------
+-- СИСТЕМА ЦВЕТОВ, ТЕМ И КАСТОМИЗАЦИИ ИНТЕРФЕЙСА
+------------------------------------------------------------------------
+local ColorPresets = {
+    ["Umbrella Red"]     = Color3.fromRGB(220, 35, 45),
+    ["Blood Crimson"]    = Color3.fromRGB(255, 30, 40),
+    ["Cyber Cyan"]       = Color3.fromRGB(0, 240, 255),
+    ["Electric Purple"]  = Color3.fromRGB(180, 50, 255),
+    ["Neon Pink"]        = Color3.fromRGB(255, 20, 147),
+    ["Acid Green"]       = Color3.fromRGB(40, 255, 70),
+    ["Sunset Gold"]      = Color3.fromRGB(255, 200, 30),
+    ["Deep Orange"]      = Color3.fromRGB(255, 110, 20),
+    ["Sky Blue"]         = Color3.fromRGB(50, 150, 255),
+    ["Pure White"]       = Color3.fromRGB(255, 255, 255),
+    ["Muted Gray"]       = Color3.fromRGB(150, 155, 165),
+    ["Rainbow RGB"]      = Color3.fromRGB(255, 255, 255)
+}
+
+local ColorOptionNames = {
+    "Umbrella Red",
+    "Blood Crimson",
+    "Cyber Cyan",
+    "Electric Purple",
+    "Neon Pink",
+    "Acid Green",
+    "Sunset Gold",
+    "Deep Orange",
+    "Sky Blue",
+    "Pure White",
+    "Rainbow RGB"
+}
+
+local FOVColorOptionNames = {
+    "Theme Match",
+    "Umbrella Red",
+    "Blood Crimson",
+    "Cyber Cyan",
+    "Electric Purple",
+    "Neon Pink",
+    "Acid Green",
+    "Sunset Gold",
+    "Deep Orange",
+    "Sky Blue",
+    "Pure White",
+    "Rainbow RGB"
+}
+
+local MenuBgPresets = {
+    ["Classic Dark"]   = {Main = Color3.fromRGB(14, 15, 19), Header = Color3.fromRGB(18, 19, 25), Sidebar = Color3.fromRGB(15, 16, 21), Section = Color3.fromRGB(18, 19, 25), Stroke = Color3.fromRGB(30, 32, 40)},
+    ["Pitch Black"]    = {Main = Color3.fromRGB(8, 8, 10),   Header = Color3.fromRGB(12, 12, 15), Sidebar = Color3.fromRGB(10, 10, 13), Section = Color3.fromRGB(13, 13, 17), Stroke = Color3.fromRGB(24, 24, 30)},
+    ["Midnight Navy"]  = {Main = Color3.fromRGB(10, 13, 22), Header = Color3.fromRGB(14, 18, 30), Sidebar = Color3.fromRGB(12, 15, 25), Section = Color3.fromRGB(16, 21, 34), Stroke = Color3.fromRGB(26, 35, 54)},
+    ["Charcoal Gray"]  = {Main = Color3.fromRGB(22, 23, 27), Header = Color3.fromRGB(28, 29, 35), Sidebar = Color3.fromRGB(25, 26, 31), Section = Color3.fromRGB(28, 29, 35), Stroke = Color3.fromRGB(42, 44, 54)},
+    ["Deep Crimson"]   = {Main = Color3.fromRGB(20, 10, 13), Header = Color3.fromRGB(28, 12, 17), Sidebar = Color3.fromRGB(24, 11, 15), Section = Color3.fromRGB(28, 12, 17), Stroke = Color3.fromRGB(48, 20, 26)},
+    ["Dark Violet"]    = {Main = Color3.fromRGB(16, 10, 22), Header = Color3.fromRGB(24, 13, 32), Sidebar = Color3.fromRGB(20, 11, 27), Section = Color3.fromRGB(24, 13, 32), Stroke = Color3.fromRGB(42, 22, 56)}
+}
+
+local MenuBgOptionNames = {
+    "Classic Dark",
+    "Pitch Black",
+    "Midnight Navy",
+    "Charcoal Gray",
+    "Deep Crimson",
+    "Dark Violet"
+}
+
+_G.SelectedThemeColor = "Umbrella Red"
+_G.SelectedMenuBgTheme = "Classic Dark"
+_G.MenuTransparency = 0
+_G.SectionTransparency = 0
+_G.SelectedFOVColor = "Umbrella Red"
+_G.FOVTransparency = 0
+_G.FOVThickness = 1.2
+_G.SelectedWeaponChamColor = "Sunset Gold"
+_G.SelectedDroppedGunColor = "Cyber Cyan"
+_G.SelectedMurdererColor = "Blood Crimson"
+_G.SelectedSheriffColor = "Sky Blue"
+_G.SelectedInnocentColor = "Acid Green"
+_G.ChamsFillTransparency = 0.35
+_G.ChamsOutlineTransparency = 0.0
+_G.RainbowColor = Color3.fromRGB(220, 35, 45)
+
+local AllSections = {}
+local AllSectionTitles = {}
+local AllSectionLines = {}
+local AllSectionScrollbars = {}
+local AllSectionStrokes = {}
+local AllSliderFills = {}
+local AllToggles = {}
+local AllDropdownStrokes = {}
+local AllDropdownScrollbars = {}
+
+local function GetThemeAccentColor()
+    if _G.SelectedThemeColor == "Rainbow RGB" or _G.RGBSyncActive then
+        return _G.RainbowColor or Color3.fromRGB(220, 35, 45)
+    end
+    return ColorPresets[_G.SelectedThemeColor] or Color3.fromRGB(220, 35, 45)
+end
+
+local function ColorToHex(c)
+    local r = math.clamp(math.round(c.R * 255), 0, 255)
+    local g = math.clamp(math.round(c.G * 255), 0, 255)
+    local b = math.clamp(math.round(c.B * 255), 0, 255)
+    return string.format("#%02X%02X%02X", r, g, b)
+end
+
+local CurrentActiveTab = "Main"
+
 local function SwitchTab(targetTab)
+    CurrentActiveTab = targetTab
     for name, page in pairs(Tabs) do
         page.Visible = (name == targetTab)
     end
+    local accent = GetThemeAccentColor()
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
     for name, btn in pairs(TabButtons) do
         local stroke = btn:FindFirstChildOfClass("UIStroke")
         if name == targetTab then
-            btn.BackgroundColor3 = Color3.fromRGB(35, 15, 18)
+            btn.BackgroundColor3 = Color3.fromRGB(
+                math.clamp(math.round(accent.R * 60), 20, 80),
+                math.clamp(math.round(accent.G * 60), 15, 80),
+                math.clamp(math.round(accent.B * 60), 18, 80)
+            )
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            if stroke then stroke.Color = Color3.fromRGB(220, 35, 45) end
+            if stroke then stroke.Color = accent end
         else
-            btn.BackgroundColor3 = Color3.fromRGB(20, 21, 27)
+            btn.BackgroundColor3 = bgPreset.Sidebar
             btn.TextColor3 = Color3.fromRGB(140, 145, 155)
-            if stroke then stroke.Color = Color3.fromRGB(30, 32, 40) end
+            if stroke then stroke.Color = bgPreset.Stroke end
         end
     end
+end
+
+local function ApplyMenuTheme()
+    local accent = GetThemeAccentColor()
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+    
+    MainFrame.BackgroundColor3 = bgPreset.Main
+    MainFrame.BackgroundTransparency = _G.MenuTransparency or 0
+    
+    Header.BackgroundColor3 = bgPreset.Header
+    Header.BackgroundTransparency = math.clamp((_G.MenuTransparency or 0) * 0.85, 0, 0.95)
+    
+    Sidebar.BackgroundColor3 = bgPreset.Sidebar
+    Sidebar.BackgroundTransparency = math.clamp((_G.MenuTransparency or 0) * 0.85, 0, 0.95)
+    
+    if SidebarLine then SidebarLine.BackgroundColor3 = bgPreset.Stroke end
+    
+    UIStrokeMain.Color = accent
+    HeaderLine.BackgroundColor3 = accent
+    
+    TitleLabel.Text = 'UMBRELLA <font color="' .. ColorToHex(accent) .. '">CORPORATION</font>'
+    Badge.TextColor3 = accent
+    Badge.BackgroundColor3 = Color3.fromRGB(
+        math.clamp(math.round(accent.R * 45), 25, 70),
+        math.clamp(math.round(accent.G * 45), 15, 70),
+        math.clamp(math.round(accent.B * 45), 18, 70)
+    )
+    
+    for _, circle in ipairs(UmbrellaCircles) do
+        circle.BackgroundColor3 = accent
+    end
+    
+    if Watermark then
+        Watermark.BackgroundColor3 = bgPreset.Sidebar
+        Watermark.BackgroundTransparency = _G.MenuTransparency or 0
+        local wmStroke = Watermark:FindFirstChildOfClass("UIStroke")
+        if wmStroke then wmStroke.Color = accent end
+        local wmLine = Watermark:FindFirstChildWhichIsA("Frame")
+        if wmLine then wmLine.BackgroundColor3 = accent end
+        local wmLabel = Watermark:FindFirstChildOfClass("TextLabel")
+        if wmLabel then
+            wmLabel.Text = 'UMBRELLA <font color="' .. ColorToHex(accent) .. '">SUPREMACY</font> | 60 FPS | MM2 HvH'
+        end
+    end
+    
+    for _, sec in ipairs(AllSections) do
+        sec.BackgroundColor3 = bgPreset.Section
+        sec.BackgroundTransparency = _G.SectionTransparency or 0
+    end
+    for _, stroke in ipairs(AllSectionStrokes) do
+        stroke.Color = bgPreset.Stroke
+    end
+    for _, line in ipairs(AllSectionLines) do
+        line.BackgroundColor3 = bgPreset.Stroke
+    end
+    for _, title in ipairs(AllSectionTitles) do
+        title.TextColor3 = accent
+    end
+    for _, scroller in ipairs(AllSectionScrollbars) do
+        scroller.ScrollBarImageColor3 = accent
+    end
+    for _, tabScroller in pairs(Tabs) do
+        tabScroller.ScrollBarImageColor3 = accent
+    end
+    for _, fill in ipairs(AllSliderFills) do
+        fill.BackgroundColor3 = accent
+    end
+    for _, dropStroke in ipairs(AllDropdownStrokes) do
+        dropStroke.Color = accent
+    end
+    for _, dropScroller in ipairs(AllDropdownScrollbars) do
+        dropScroller.ScrollBarImageColor3 = accent
+    end
+    for _, toggleData in ipairs(AllToggles) do
+        if toggleData.GetState() then
+            toggleData.Button.BackgroundColor3 = accent
+        else
+            toggleData.Button.BackgroundColor3 = bgPreset.Stroke
+        end
+    end
+    
+    SwitchTab(CurrentActiveTab or "Main")
 end
 
 local function AddTabButton(name, iconText, layoutOrder)
@@ -507,13 +706,15 @@ AddTabButton("Settings", "⚙", 5)
 local function CreateSection(parentPage, title)
     local Section = Instance.new("Frame")
     Section.Parent = parentPage
-    Section.BackgroundColor3 = Color3.fromRGB(18, 19, 25)
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+    Section.BackgroundColor3 = bgPreset.Section
+    Section.BackgroundTransparency = _G.SectionTransparency or 0
     Section.Size = UDim2.new(0, 275, 0, 290)
     
     Instance.new("UICorner", Section).CornerRadius = UDim.new(0, 8)
     local Stroke = Instance.new("UIStroke")
     Stroke.Parent = Section
-    Stroke.Color = Color3.fromRGB(30, 32, 40)
+    Stroke.Color = bgPreset.Stroke
     Stroke.Thickness = 1
     
     local SecTitle = Instance.new("TextLabel")
@@ -523,13 +724,13 @@ local function CreateSection(parentPage, title)
     SecTitle.Size = UDim2.new(1, -20, 0, 18)
     SecTitle.Font = Enum.Font.SourceSansBold
     SecTitle.Text = title:upper()
-    SecTitle.TextColor3 = Color3.fromRGB(220, 35, 45)
+    SecTitle.TextColor3 = GetThemeAccentColor()
     SecTitle.TextSize = 12
     SecTitle.TextXAlignment = Enum.TextXAlignment.Left
     
     local SecLine = Instance.new("Frame")
     SecLine.Parent = Section
-    SecLine.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+    SecLine.BackgroundColor3 = bgPreset.Stroke
     SecLine.BorderSizePixel = 0
     SecLine.Position = UDim2.new(0, 10, 0, 26)
     SecLine.Size = UDim2.new(1, -20, 0, 1)
@@ -540,7 +741,7 @@ local function CreateSection(parentPage, title)
     SecContainer.Position = UDim2.new(0, 8, 0, 30)
     SecContainer.Size = UDim2.new(1, -12, 1, -34)
     SecContainer.ScrollBarThickness = 3
-    SecContainer.ScrollBarImageColor3 = Color3.fromRGB(220, 35, 45)
+    SecContainer.ScrollBarImageColor3 = GetThemeAccentColor()
     SecContainer.BorderSizePixel = 0
     SecContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
     SecContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -556,6 +757,12 @@ local function CreateSection(parentPage, title)
     Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         SecContainer.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 10)
     end)
+    
+    table.insert(AllSections, Section)
+    table.insert(AllSectionTitles, SecTitle)
+    table.insert(AllSectionLines, SecLine)
+    table.insert(AllSectionScrollbars, SecContainer)
+    table.insert(AllSectionStrokes, Stroke)
     
     return SecContainer
 end
@@ -582,7 +789,8 @@ local function CreateToggle(parentSec, text, defaultState, callback)
     SwitchBg.Text = ""
     SwitchBg.Position = UDim2.new(1, -36, 0, 2)
     SwitchBg.Size = UDim2.new(0, 34, 0, 18)
-    SwitchBg.BackgroundColor3 = defaultState and Color3.fromRGB(220, 35, 45) or Color3.fromRGB(30, 32, 40)
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+    SwitchBg.BackgroundColor3 = defaultState and GetThemeAccentColor() or bgPreset.Stroke
     Instance.new("UICorner", SwitchBg).CornerRadius = UDim.new(1, 0)
     
     local SwitchDot = Instance.new("Frame")
@@ -595,15 +803,21 @@ local function CreateToggle(parentSec, text, defaultState, callback)
     local state = defaultState
     SwitchBg.MouseButton1Click:Connect(function()
         state = not state
+        local currentBg = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
         if state then
-            SwitchBg.BackgroundColor3 = Color3.fromRGB(220, 35, 45)
+            SwitchBg.BackgroundColor3 = GetThemeAccentColor()
             SwitchDot.Position = UDim2.new(1, -16, 0.5, -6)
         else
-            SwitchBg.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+            SwitchBg.BackgroundColor3 = currentBg.Stroke
             SwitchDot.Position = UDim2.new(0, 2, 0.5, -6)
         end
         callback(state)
     end)
+    
+    table.insert(AllToggles, {
+        Button = SwitchBg,
+        GetState = function() return state end
+    })
 end
 
 local function CreateSlider(parentSec, text, defaultVal, minVal, maxVal, isDecimal, callback)
@@ -625,22 +839,24 @@ local function CreateSlider(parentSec, text, defaultVal, minVal, maxVal, isDecim
     
     local BarBg = Instance.new("Frame")
     BarBg.Parent = SliderFrame
-    BarBg.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+    BarBg.BackgroundColor3 = bgPreset.Stroke
     BarBg.Position = UDim2.new(0, 0, 0, 16)
     BarBg.Size = UDim2.new(1, 0, 0, 6)
     Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 3)
     
     local Fill = Instance.new("Frame")
     Fill.Parent = BarBg
-    Fill.BackgroundColor3 = Color3.fromRGB(220, 35, 45)
+    Fill.BackgroundColor3 = GetThemeAccentColor()
     local startPercent = (defaultVal - minVal) / (maxVal - minVal)
-    Fill.Size = UDim2.new(startPercent, 0, 1, 0)
+    Fill.Size = UDim2.new(math.clamp(startPercent, 0, 1), 0, 1, 0)
     Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 3)
+    table.insert(AllSliderFills, Fill)
     
     local Handle = Instance.new("TextButton")
     Handle.Parent = BarBg
     Handle.Text = ""
-    Handle.Position = UDim2.new(startPercent, -5, 0.5, -5)
+    Handle.Position = UDim2.new(math.clamp(startPercent, 0, 1), -5, 0.5, -5)
     Handle.Size = UDim2.new(0, 10, 0, 10)
     Handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", Handle).CornerRadius = UDim.new(1, 0)
@@ -701,7 +917,8 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
 
     local MainBtn = Instance.new("TextButton")
     MainBtn.Parent = DropFrame
-    MainBtn.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+    MainBtn.BackgroundColor3 = bgPreset.Stroke
     MainBtn.Position = UDim2.new(0, 0, 0, 16)
     MainBtn.Size = UDim2.new(1, 0, 0, 22)
     MainBtn.Font = Enum.Font.SourceSansBold
@@ -713,12 +930,12 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
 
     local ListFrame = Instance.new("ScrollingFrame")
     ListFrame.Parent = DropFrame
-    ListFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 30)
+    ListFrame.BackgroundColor3 = bgPreset.Header
     ListFrame.Position = UDim2.new(0, 0, 0, 40)
     ListFrame.Size = UDim2.new(1, 0, 0, listHeight)
     ListFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 22 + 4)
     ListFrame.ScrollBarThickness = 3
-    ListFrame.ScrollBarImageColor3 = Color3.fromRGB(220, 35, 45)
+    ListFrame.ScrollBarImageColor3 = GetThemeAccentColor()
     ListFrame.BorderSizePixel = 0
     ListFrame.Visible = false
     ListFrame.ZIndex = 25
@@ -728,8 +945,11 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     ListFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
     Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0, 4)
     local ListStroke = Instance.new("UIStroke", ListFrame)
-    ListStroke.Color = Color3.fromRGB(220, 35, 45)
+    ListStroke.Color = GetThemeAccentColor()
     ListStroke.Thickness = 1
+    
+    table.insert(AllDropdownStrokes, ListStroke)
+    table.insert(AllDropdownScrollbars, ListFrame)
 
     local ListLayout = Instance.new("UIListLayout", ListFrame)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -2451,6 +2671,10 @@ CreateToggle(SecESP, "Weapon Chams (Held Knife & Gun)", false, function(st)
     end
 end)
 
+CreateDropdown(SecESP, "Weapon Chams Color", ColorOptionNames, _G.SelectedWeaponChamColor, function(col)
+    _G.SelectedWeaponChamColor = col
+end)
+
 CreateToggle(SecESP, "Dropped Gun ESP (Glow & Box)", false, function(st)
     _G.DroppedGunEspActive = st
     if not st then
@@ -2460,6 +2684,10 @@ CreateToggle(SecESP, "Dropped Gun ESP (Glow & Box)", false, function(st)
             end
         end
     end
+end)
+
+CreateDropdown(SecESP, "Dropped Gun Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(col)
+    _G.SelectedDroppedGunColor = col
 end)
 
 local SecHitVisuals = CreateSection(Tabs["Visuals"], "HvH Hit Visuals & Audio")
@@ -2777,6 +3005,9 @@ CreateToggle(SecCombat, "Camera Lock Aimbot", false, function(st) _G.CameraAimAc
 CreateDropdown(SecCombat, "Aim Target Bone", {"Head", "Torso"}, "Head", function(b) _G.AimBone = b end)
 CreateToggle(SecCombat, "Show FOV Circle", true, function(st) _G.ShowFOVCircle = st end)
 CreateSlider(SecCombat, "FOV Circle Radius", _G.FOVCircleRadius, 40, 350, false, function(val) _G.FOVCircleRadius = val end)
+CreateDropdown(SecCombat, "FOV Circle Color", FOVColorOptionNames, _G.SelectedFOVColor, function(b) _G.SelectedFOVColor = b end)
+CreateSlider(SecCombat, "FOV Transparency", math.round((_G.FOVTransparency or 0) * 100), 0, 90, false, function(val) _G.FOVTransparency = val / 100 end)
+CreateSlider(SecCombat, "FOV Thickness", _G.FOVThickness or 1.2, 1, 5, false, function(val) _G.FOVThickness = val end)
 CreateSlider(SecCombat, "Aimbot Smoothness", _G.AimSmoothness, 1, 10, false, function(val) _G.AimSmoothness = val end)
 CreateToggle(SecCombat, "Always Aim (No Click Req)", false, function(st) _G.AlwaysAim = st end)
 CreateToggle(SecCombat, "Real Invisible Silent Aim", false, function(st) _G.RealSilentAimActive = st end)
@@ -2813,16 +3044,79 @@ CreateSlider(SecRageHvH, "Orbit Distance", _G.OrbitDistance, 8, 25, false, funct
 CreateToggle(SecRageHvH, "Kill Trash Talker (Chat)", false, function(st) _G.KillTrashTalkActive = st end)
 
 -- 5. SETTINGS TAB
-local SecColors = CreateSection(Tabs["Settings"], "Theme & Menu")
-local ColorInfo = Instance.new("TextLabel")
-ColorInfo.Parent = SecColors
-ColorInfo.BackgroundTransparency = 1
-ColorInfo.Size = UDim2.new(1, 0, 0, 40)
-ColorInfo.Font = Enum.Font.SourceSans
-ColorInfo.Text = "Umbrella MM2 Edition Supremacy v11.0 Loaded. HvH Visuals and Movement Suite Activated."
-ColorInfo.TextColor3 = Color3.fromRGB(150, 155, 165)
-ColorInfo.TextSize = 12
-ColorInfo.TextWrapped = true
+local SecTheme = CreateSection(Tabs["Settings"], "Menu Theme & Appearance")
+CreateDropdown(SecTheme, "Menu Accent Color", ColorOptionNames, _G.SelectedThemeColor, function(val)
+    _G.SelectedThemeColor = val
+    ApplyMenuTheme()
+end)
+
+CreateDropdown(SecTheme, "Menu Background Theme", MenuBgOptionNames, _G.SelectedMenuBgTheme, function(val)
+    _G.SelectedMenuBgTheme = val
+    ApplyMenuTheme()
+end)
+
+CreateSlider(SecTheme, "Menu Transparency", math.round((_G.MenuTransparency or 0) * 100), 0, 85, false, function(val)
+    _G.MenuTransparency = val / 100
+    ApplyMenuTheme()
+end)
+
+CreateSlider(SecTheme, "Section Transparency", math.round((_G.SectionTransparency or 0) * 100), 0, 85, false, function(val)
+    _G.SectionTransparency = val / 100
+    ApplyMenuTheme()
+end)
+
+CreateToggle(SecTheme, "Rainbow Sync (RGB Everything)", _G.RGBSyncActive, function(st)
+    _G.RGBSyncActive = st
+    if not st then ApplyMenuTheme() end
+end)
+
+local SecCombatColors = CreateSection(Tabs["Settings"], "Aimbot & FOV Colors")
+CreateDropdown(SecCombatColors, "FOV Circle Color", FOVColorOptionNames, _G.SelectedFOVColor, function(val)
+    _G.SelectedFOVColor = val
+end)
+
+CreateSlider(SecCombatColors, "FOV Transparency", math.round((_G.FOVTransparency or 0) * 100), 0, 90, false, function(val)
+    _G.FOVTransparency = val / 100
+end)
+
+CreateSlider(SecCombatColors, "FOV Circle Thickness", _G.FOVThickness or 1.2, 1, 5, false, function(val)
+    _G.FOVThickness = val
+end)
+
+local SecVisualColors = CreateSection(Tabs["Settings"], "ESP & Chams Custom Colors")
+CreateDropdown(SecVisualColors, "Weapon Chams Color", ColorOptionNames, _G.SelectedWeaponChamColor, function(val)
+    _G.SelectedWeaponChamColor = val
+end)
+
+CreateDropdown(SecVisualColors, "Dropped Gun ESP Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(val)
+    _G.SelectedDroppedGunColor = val
+end)
+
+CreateDropdown(SecVisualColors, "Murderer ESP Color", ColorOptionNames, _G.SelectedMurdererColor, function(val)
+    _G.SelectedMurdererColor = val
+    if UpdateRoleColors then UpdateRoleColors() end
+    ClearAllChams()
+end)
+
+CreateDropdown(SecVisualColors, "Sheriff ESP Color", ColorOptionNames, _G.SelectedSheriffColor, function(val)
+    _G.SelectedSheriffColor = val
+    if UpdateRoleColors then UpdateRoleColors() end
+    ClearAllChams()
+end)
+
+CreateDropdown(SecVisualColors, "Innocent ESP Color", ColorOptionNames, _G.SelectedInnocentColor, function(val)
+    _G.SelectedInnocentColor = val
+    if UpdateRoleColors then UpdateRoleColors() end
+    ClearAllChams()
+end)
+
+CreateSlider(SecVisualColors, "Chams Fill Transparency", math.round((_G.ChamsFillTransparency or 0.35) * 100), 0, 90, false, function(val)
+    _G.ChamsFillTransparency = val / 100
+end)
+
+CreateSlider(SecVisualColors, "Chams Outline Transparency", math.round((_G.ChamsOutlineTransparency or 0) * 100), 0, 90, false, function(val)
+    _G.ChamsOutlineTransparency = val / 100
+end)
 
 SwitchTab("Main")
 
@@ -2852,6 +3146,7 @@ task.spawn(function()
         HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 30)) % 360
     end)
     
+    ApplyMenuTheme()
     MainFrame.Visible = true
 end)
 
@@ -2865,15 +3160,18 @@ local RoleColors = {
     Innocent = Color3.fromRGB(30, 255, 100)
 }
 
-local ChamColorPresets = {
-    ["Neon Pink"] = Color3.fromRGB(255, 20, 147),
-    ["Blood Red"] = Color3.fromRGB(255, 35, 45),
-    ["Cyber Cyan"] = Color3.fromRGB(0, 255, 255),
-    ["Gold Glow"] = Color3.fromRGB(255, 215, 0),
-    ["Lime Green"] = Color3.fromRGB(50, 255, 50),
-    ["Electric Purple"] = Color3.fromRGB(180, 50, 255),
-    ["Rainbow RGB"] = Color3.fromRGB(255, 255, 255)
-}
+function UpdateRoleColors()
+    RoleColors.Murderer = (_G.SelectedMurdererColor == "Rainbow RGB" and _G.RainbowColor) 
+        or (ColorPresets[_G.SelectedMurdererColor] or Color3.fromRGB(255, 35, 45))
+    RoleColors.Sheriff  = (_G.SelectedSheriffColor == "Rainbow RGB" and _G.RainbowColor) 
+        or (ColorPresets[_G.SelectedSheriffColor] or Color3.fromRGB(30, 140, 255))
+    RoleColors.Innocent = (_G.SelectedInnocentColor == "Rainbow RGB" and _G.RainbowColor) 
+        or (ColorPresets[_G.SelectedInnocentColor] or Color3.fromRGB(30, 255, 100))
+    RoleColors.Hero     = Color3.fromRGB(255, 215, 0)
+end
+UpdateRoleColors()
+
+local ChamColorPresets = ColorPresets
 
 local function ClearAllChams()
     for _, player in ipairs(Players:GetPlayers()) do
@@ -2908,8 +3206,8 @@ local function ApplyHighlightCham(targetInstance, color, chamName, isOutlineOnly
     hl.Adornee = targetInstance
     hl.FillColor = color
     hl.OutlineColor = color
-    hl.FillTransparency = isOutlineOnly and 1 or 0.35
-    hl.OutlineTransparency = 0
+    hl.FillTransparency = isOutlineOnly and 1 or (_G.ChamsFillTransparency or 0.35)
+    hl.OutlineTransparency = _G.ChamsOutlineTransparency or 0
     return hl
 end
 
@@ -2927,7 +3225,7 @@ local function ApplyBoxCham(part, color, chamName)
         box.Parent = part
     end
     box.Color3 = color
-    box.Transparency = 0.35
+    box.Transparency = _G.ChamsFillTransparency or 0.35
     return box
 end
 
@@ -3149,12 +3447,17 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Visible = true
         local r = _G.FOVCircleRadius or 130
         FOVCircle.Size = UDim2.new(0, r * 2, 0, r * 2)
-        if _G.RGBSyncActive then
-            local hue = (tick() * 0.4) % 1
-            fovStroke.Color = Color3.fromHSV(hue, 1, 1)
+        local fovCol
+        if _G.SelectedFOVColor == "Rainbow RGB" or _G.RGBSyncActive then
+            fovCol = _G.RainbowColor or Color3.fromRGB(220, 35, 45)
+        elseif _G.SelectedFOVColor == "Theme Match" then
+            fovCol = GetThemeAccentColor()
         else
-            fovStroke.Color = Color3.fromRGB(220, 35, 45)
+            fovCol = ColorPresets[_G.SelectedFOVColor] or Color3.fromRGB(220, 35, 45)
         end
+        fovStroke.Color = fovCol
+        fovStroke.Transparency = _G.FOVTransparency or 0
+        fovStroke.Thickness = _G.FOVThickness or 1.2
     else
         FOVCircle.Visible = false
     end
@@ -3165,11 +3468,45 @@ RunService.RenderStepped:Connect(function()
     UpdateHeadDots()
     
     -- Радужный синхрон интерфейса
-    if _G.RGBSyncActive then
-        local hue = (tick() * 0.3) % 1
-        local rgbCol = Color3.fromHSV(hue, 0.85, 1)
+    local hue = (tick() * 0.3) % 1
+    _G.RainbowColor = Color3.fromHSV(hue, 0.85, 1)
+    
+    if _G.SelectedThemeColor == "Rainbow RGB" or _G.RGBSyncActive then
+        local rgbCol = _G.RainbowColor
         UIStrokeMain.Color = rgbCol
         HeaderLine.BackgroundColor3 = rgbCol
+        Badge.TextColor3 = rgbCol
+        for _, circle in ipairs(UmbrellaCircles) do
+            circle.BackgroundColor3 = rgbCol
+        end
+        for _, stroke in ipairs(AllDropdownStrokes) do
+            stroke.Color = rgbCol
+        end
+        for _, fill in ipairs(AllSliderFills) do
+            fill.BackgroundColor3 = rgbCol
+        end
+        for _, toggleData in ipairs(AllToggles) do
+            if toggleData.GetState() then
+                toggleData.Button.BackgroundColor3 = rgbCol
+            end
+        end
+        for _, title in ipairs(AllSectionTitles) do
+            title.TextColor3 = rgbCol
+        end
+        for _, scroller in ipairs(AllSectionScrollbars) do
+            scroller.ScrollBarImageColor3 = rgbCol
+        end
+        for _, tabScroller in pairs(Tabs) do
+            tabScroller.ScrollBarImageColor3 = rgbCol
+        end
+        if CurrentActiveTab and TabButtons[CurrentActiveTab] then
+            local stroke = TabButtons[CurrentActiveTab]:FindFirstChildOfClass("UIStroke")
+            if stroke then stroke.Color = rgbCol end
+        end
+    end
+    
+    if _G.SelectedMurdererColor == "Rainbow RGB" or _G.SelectedSheriffColor == "Rainbow RGB" or _G.SelectedInnocentColor == "Rainbow RGB" then
+        UpdateRoleColors()
     end
 end)
 
@@ -3577,7 +3914,9 @@ task.spawn(function()
         if _G.WeaponChamsActive then
             local isBox = (_G.ChamsStyle == "Boxes")
             local isOutline = (_G.ChamsStyle == "Outline Only")
-            local wColor = Color3.fromRGB(255, 215, 0)
+            local wColor = (_G.SelectedWeaponChamColor == "Rainbow RGB" and _G.RainbowColor) 
+                or (_G.SelectedWeaponChamColor == "Theme Match" and GetThemeAccentColor())
+                or (ColorPresets[_G.SelectedWeaponChamColor] or Color3.fromRGB(255, 200, 30))
             for _, player in ipairs(Players:GetPlayers()) do
                 if player.Character then
                     for _, tool in ipairs(player.Character:GetChildren()) do
@@ -3610,7 +3949,9 @@ task.spawn(function()
         if _G.DroppedGunEspActive then
             local isBox = (_G.ChamsStyle == "Boxes")
             local isOutline = (_G.ChamsStyle == "Outline Only")
-            local gunCol = Color3.fromRGB(0, 255, 255)
+            local gunCol = (_G.SelectedDroppedGunColor == "Rainbow RGB" and _G.RainbowColor) 
+                or (_G.SelectedDroppedGunColor == "Theme Match" and GetThemeAccentColor())
+                or (ColorPresets[_G.SelectedDroppedGunColor] or Color3.fromRGB(0, 240, 255))
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj.Name == "GunDrop" and obj:IsA("BasePart") then
                     if isBox then
