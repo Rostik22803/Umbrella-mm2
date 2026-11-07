@@ -763,6 +763,10 @@ _G.WeatherActive = false
 _G.SelectedWeather = "Snow"
 _G.WeatherDensity = 150
 _G.PlayerTrailActive = false
+_G.FootRopeActive = false
+_G.SelectedRopeColor = "Blood Red"
+_G.RopeLifetime = 0.9
+_G.RopeWidth = 0.35
 _G.CustomFOVActive = false
 _G.CustomFOVValue = 70
 _G.BlurActive = false
@@ -1064,82 +1068,91 @@ Lighting.ChildAdded:Connect(function(child)
     end
 end)
 
--- 2. СИСТЕМА ПОГОДЫ (SMOOTH ATTACHMENT SNOW & RAIN) И ТРЕЙЛА
-local WeatherAttachment = nil
+-- 2. СИСТЕМА ПОГОДЫ (BASEPART VOLUME SNOW & RAIN) И ВЕРЕВОЧКИ ИЗ-ПОД НОГ (FOOT ROPE TRAIL)
+local WeatherAnchor = nil
 local WeatherEmitter = nil
 
 local function RemoveWeatherEffect()
     if WeatherEmitter then WeatherEmitter:Destroy() WeatherEmitter = nil end
-    if WeatherAttachment then WeatherAttachment:Destroy() WeatherAttachment = nil end
-    local existing = Camera:FindFirstChild("Umbrella_WeatherAtt")
-    if existing then existing:Destroy() end
+    if WeatherAnchor then WeatherAnchor:Destroy() WeatherAnchor = nil end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "Umbrella_WeatherAnchor" then obj:Destroy() end
+    end
 end
 
 local function ApplyWeatherEffect(weatherType)
     RemoveWeatherEffect()
     if not _G.WeatherActive then return end
     
-    -- Аттачмент крепится прямо к Camera (ноль задержек, ноль лагов, не коллидит с крышами)
-    WeatherAttachment = Instance.new("Attachment")
-    WeatherAttachment.Name = "Umbrella_WeatherAtt"
-    WeatherAttachment.Position = Vector3.new(0, 14, 0)
-    WeatherAttachment.Parent = Camera
+    -- Создаем BasePart в workspace (в Roblox частицы рендерятся ТОЛЬКО внутри реального BasePart)
+    WeatherAnchor = Instance.new("Part")
+    WeatherAnchor.Name = "Umbrella_WeatherAnchor"
+    WeatherAnchor.Transparency = 1
+    WeatherAnchor.CanCollide = false
+    WeatherAnchor.CanTouch = false
+    WeatherAnchor.CanQuery = false
+    WeatherAnchor.CastShadow = false
+    WeatherAnchor.Anchored = true
+    WeatherAnchor.Size = Vector3.new(85, 1, 85)
+    WeatherAnchor.CFrame = Camera.CFrame * CFrame.new(0, 20, 0)
+    WeatherAnchor.Parent = workspace
     
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "Umbrella_WeatherEmitter"
-    emitter.Parent = WeatherAttachment
+    emitter.Shape = Enum.ParticleEmitterShape.Box
+    emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+    emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+    emitter.Parent = WeatherAnchor
     
     local count = _G.WeatherDensity or 150
     
     if weatherType == "Snow" then
-        -- Мягкие реалистичные хлопья снега
         emitter.Texture = "rbxassetid://1095708"
         emitter.Rate = count
-        emitter.Speed = NumberRange.new(7, 15)
-        emitter.Lifetime = NumberRange.new(3.5, 6)
+        emitter.Speed = NumberRange.new(7, 16)
+        emitter.Lifetime = NumberRange.new(3.5, 6.5)
         emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.35),
-            NumberSequenceKeypoint.new(0.5, 0.3),
-            NumberSequenceKeypoint.new(1, 0.15)
+            NumberSequenceKeypoint.new(0, 0.4),
+            NumberSequenceKeypoint.new(0.5, 0.35),
+            NumberSequenceKeypoint.new(1, 0.2)
         })
         emitter.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.15),
+            NumberSequenceKeypoint.new(0, 0.1),
             NumberSequenceKeypoint.new(0.8, 0.2),
             NumberSequenceKeypoint.new(1, 1)
         })
-        emitter.Color = ColorSequence.new(Color3.fromRGB(240, 248, 255))
+        emitter.Color = ColorSequence.new(Color3.fromRGB(245, 248, 255))
         emitter.Acceleration = Vector3.new(2, -9, 1.5)
         emitter.SpreadAngle = Vector2.new(180, 180)
         emitter.RotSpeed = NumberRange.new(-60, 60)
+        emitter.LightEmission = 0.4
         emitter.Orientation = Enum.ParticleOrientation.FacingCamera
         
     elseif weatherType == "Rain" then
-        -- Реалистичные вертикальные струи дождя (VelocityParallel)
         emitter.Texture = "rbxassetid://258128463"
         emitter.Rate = count * 1.5
         emitter.Speed = NumberRange.new(65, 95)
         emitter.Lifetime = NumberRange.new(0.4, 0.8)
         emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.12),
+            NumberSequenceKeypoint.new(0, 0.15),
             NumberSequenceKeypoint.new(1, 0.08)
         })
-        emitter.Transparency = NumberSequence.new(0.25)
+        emitter.Transparency = NumberSequence.new(0.2)
         emitter.Color = ColorSequence.new(Color3.fromRGB(180, 215, 255))
         emitter.Acceleration = Vector3.new(0, -140, 0)
         emitter.SpreadAngle = Vector2.new(15, 15)
         emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
         
     elseif weatherType == "Blood Rain" then
-        -- Кровавый ливень (HvH Style)
         emitter.Texture = "rbxassetid://258128463"
         emitter.Rate = count * 1.5
         emitter.Speed = NumberRange.new(65, 95)
         emitter.Lifetime = NumberRange.new(0.4, 0.8)
         emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.12),
+            NumberSequenceKeypoint.new(0, 0.15),
             NumberSequenceKeypoint.new(1, 0.08)
         })
-        emitter.Transparency = NumberSequence.new(0.2)
+        emitter.Transparency = NumberSequence.new(0.15)
         emitter.Color = ColorSequence.new(Color3.fromRGB(255, 25, 40))
         emitter.Acceleration = Vector3.new(0, -140, 0)
         emitter.SpreadAngle = Vector2.new(15, 15)
@@ -1147,6 +1160,78 @@ local function ApplyWeatherEffect(weatherType)
     end
     
     WeatherEmitter = emitter
+end
+
+-- ВЕРЕВОЧКА ИЗ-ПОД НОГ (FOOT ROPE TRAIL ПО ЗЕМЛЕ)
+local FootRopeTrail = nil
+local FootRopeAtt0 = nil
+local FootRopeAtt1 = nil
+
+local function RemoveFootRope()
+    if FootRopeTrail then FootRopeTrail:Destroy() FootRopeTrail = nil end
+    if FootRopeAtt0 then FootRopeAtt0:Destroy() FootRopeAtt0 = nil end
+    if FootRopeAtt1 then FootRopeAtt1:Destroy() FootRopeAtt1 = nil end
+    if LocalPlayer.Character then
+        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if obj.Name == "Umbrella_FootRope" or obj.Name == "Umbrella_RopeAtt0" or obj.Name == "Umbrella_RopeAtt1" then
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+local RopeColorPresets = {
+    ["Blood Red"]      = Color3.fromRGB(220, 25, 35),
+    ["Purple HvH"]     = Color3.fromRGB(160, 30, 240),
+    ["Cyber Cyan"]     = Color3.fromRGB(20, 220, 255),
+    ["Electric Green"] = Color3.fromRGB(40, 255, 90),
+    ["Pure White"]     = Color3.fromRGB(255, 255, 255),
+    ["Gold Glow"]      = Color3.fromRGB(255, 215, 0)
+}
+
+local function ApplyFootRope()
+    RemoveFootRope()
+    if not _G.FootRopeActive then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Две точки прямо на уровне подошв / пола (-2.95 стадса вниз)
+    FootRopeAtt0 = Instance.new("Attachment")
+    FootRopeAtt0.Name = "Umbrella_RopeAtt0"
+    FootRopeAtt0.Position = Vector3.new(-0.25, -2.95, 0)
+    FootRopeAtt0.Parent = hrp
+    
+    FootRopeAtt1 = Instance.new("Attachment")
+    FootRopeAtt1.Name = "Umbrella_RopeAtt1"
+    FootRopeAtt1.Position = Vector3.new(0.25, -2.95, 0)
+    FootRopeAtt1.Parent = hrp
+    
+    FootRopeTrail = Instance.new("Trail")
+    FootRopeTrail.Name = "Umbrella_FootRope"
+    FootRopeTrail.Attachment0 = FootRopeAtt0
+    FootRopeTrail.Attachment1 = FootRopeAtt1
+    FootRopeTrail.Lifetime = _G.RopeLifetime or 0.9
+    FootRopeTrail.MinLength = 0.04
+    FootRopeTrail.WidthScale = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, _G.RopeWidth or 0.35),
+        NumberSequenceKeypoint.new(1, 0.02)
+    })
+    
+    local col = RopeColorPresets[_G.SelectedRopeColor] or Color3.fromRGB(220, 25, 35)
+    FootRopeTrail.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, col),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(math.floor(col.R * 80), math.floor(col.G * 80), math.floor(col.B * 80)))
+    })
+    FootRopeTrail.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.05),
+        NumberSequenceKeypoint.new(0.8, 0.3),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    FootRopeTrail.LightEmission = 0.95
+    FootRopeTrail.FaceCamera = true
+    FootRopeTrail.Parent = hrp
 end
 
 local CharacterTrail = nil
@@ -1204,10 +1289,9 @@ local function ApplyCharacterTrail()
 end
 
 LocalPlayer.CharacterAdded:Connect(function(char)
-    if _G.PlayerTrailActive then
-        task.wait(0.5)
-        ApplyCharacterTrail()
-    end
+    task.wait(0.5)
+    if _G.FootRopeActive then ApplyFootRope() end
+    if _G.PlayerTrailActive then ApplyCharacterTrail() end
 end)
 
 -- Вспышка экрана при попадании (Screen Flash)
@@ -1307,11 +1391,23 @@ RunService.RenderStepped:Connect(function()
     end
     
     -- Кастомный FOV камеры
+        -- Кастомный FOV камеры
     if _G.CustomFOVActive then
         Camera.FieldOfView = _G.CustomFOVValue
     end
     
-
+    -- Привязка объема погоды к координатам камеры
+    if _G.WeatherActive and WeatherAnchor and WeatherAnchor.Parent then
+        local camPos = Camera.CFrame.Position
+        WeatherAnchor.CFrame = CFrame.new(camPos.X, camPos.Y + 20, camPos.Z)
+    end
+    
+    -- Радужный цикл для веревочки из-под ног (Rainbow RGB)
+    if _G.FootRopeActive and FootRopeTrail and FootRopeTrail.Parent and _G.SelectedRopeColor == "Rainbow RGB" then
+        local hue = (tick() * 0.6) % 1
+        local rgbCol = Color3.fromHSV(hue, 1, 1)
+        FootRopeTrail.Color = ColorSequence.new(rgbCol)
+    end
 end)
 
 -- 1. MAIN TAB
@@ -1406,8 +1502,8 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-local SecWeatherAndFX = CreateSection(Tabs["Visuals"], "Weather & Atmospheric FX")
-CreateToggle(SecWeatherAndFX, "Weather Effects (Snow / Rain)", false, function(st)
+local SecWeatherAndFX = CreateSection(Tabs["Visuals"], "Weather & Ground Rope FX")
+CreateToggle(SecWeatherAndFX, "Weather Effects (Snow/Rain)", false, function(st)
     _G.WeatherActive = st
     if st then
         ApplyWeatherEffect(_G.SelectedWeather)
@@ -1427,7 +1523,36 @@ CreateSlider(SecWeatherAndFX, "Weather Intensity", _G.WeatherDensity, 50, 400, f
         WeatherEmitter.Rate = (_G.SelectedWeather == "Snow") and val or (val * 1.5)
     end
 end)
-CreateToggle(SecWeatherAndFX, "Player Neon Trail", false, function(st)
+CreateToggle(SecWeatherAndFX, "Foot Rope Trail (Под ногами)", false, function(st)
+    _G.FootRopeActive = st
+    if st then
+        ApplyFootRope()
+    else
+        RemoveFootRope()
+    end
+end)
+CreateDropdown(SecWeatherAndFX, "Rope Color Preset", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
+    _G.SelectedRopeColor = selected
+    if _G.FootRopeActive then
+        ApplyFootRope()
+    end
+end)
+CreateSlider(SecWeatherAndFX, "Rope Length (Tail)", _G.RopeLifetime, 0.3, 2.5, true, function(val)
+    _G.RopeLifetime = val
+    if FootRopeTrail and FootRopeTrail.Parent then
+        FootRopeTrail.Lifetime = val
+    end
+end)
+CreateSlider(SecWeatherAndFX, "Rope Thickness", _G.RopeWidth, 0.1, 1.0, true, function(val)
+    _G.RopeWidth = val
+    if FootRopeTrail and FootRopeTrail.Parent then
+        FootRopeTrail.WidthScale = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, val),
+            NumberSequenceKeypoint.new(1, 0.02)
+        })
+    end
+end)
+CreateToggle(SecWeatherAndFX, "Player Neon Trail (Body)", false, function(st)
     _G.PlayerTrailActive = st
     if st then
         ApplyCharacterTrail()
