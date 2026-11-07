@@ -14,29 +14,96 @@ local UIStrokeMain = Instance.new("UIStroke")
 -- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+if not LocalPlayer then
+    pcall(function()
+        LocalPlayer = Players:GetPropertyChangedSignal("LocalPlayer"):Wait() or Players.PlayerAdded:Wait()
+    end)
+    if not LocalPlayer then
+        LocalPlayer = Players.LocalPlayer
+    end
+end
+
+local Camera = workspace.CurrentCamera or workspace:WaitForChild("Camera", 5)
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
 
--- Безопасное получение CoreGui / PlayerGui
-local ParentGui = game:GetService("CoreGui")
-if not pcall(function() local x = ParentGui.Name end) then
-    ParentGui = LocalPlayer:WaitForChild("PlayerGui")
+-- 100% безопасное получение контейнера для GUI под любой инжектор / чит
+local function ResolveGuiParent()
+    if typeof(gethui) == "function" then
+        local s, res = pcall(gethui)
+        if s and res then return res end
+    end
+    
+    local coreGui = nil
+    pcall(function() coreGui = game:GetService("CoreGui") end)
+    if coreGui then
+        local canWrite = pcall(function()
+            local test = Instance.new("Folder")
+            test.Name = "Umbrella_Check"
+            test.Parent = coreGui
+            test:Destroy()
+        end)
+        if canWrite then
+            return coreGui
+        end
+    end
+    
+    if LocalPlayer then
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        if pg then return pg end
+    end
+    
+    return nil
 end
 
--- Удаляем предыдущие копии
-for _, old in ipairs(ParentGui:GetChildren()) do
-    if old.Name == "Umbrella_MM2_Edition" then
-        old:Destroy()
-    end
+local ParentGui = ResolveGuiParent()
+
+-- Безопасное удаление старых копий без краша
+if ParentGui then
+    pcall(function()
+        for _, old in ipairs(ParentGui:GetChildren()) do
+            if old.Name == "Umbrella_MM2_Edition" then
+                old:Destroy()
+            end
+        end
+    end)
+end
+
+if LocalPlayer then
+    pcall(function()
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if pg and pg ~= ParentGui then
+            for _, old in ipairs(pg:GetChildren()) do
+                if old.Name == "Umbrella_MM2_Edition" then
+                    old:Destroy()
+                end
+            end
+        end
+    end)
 end
 
 ScreenGui.Name = "Umbrella_MM2_Edition"
-ScreenGui.Parent = ParentGui
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local isParented = false
+if ParentGui then
+    isParented = pcall(function()
+        ScreenGui.Parent = ParentGui
+    end)
+end
+
+if not isParented or not ScreenGui.Parent then
+    pcall(function()
+        local pg = LocalPlayer and (LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5))
+        if pg then
+            ScreenGui.Parent = pg
+        end
+    end)
+end
 
 ------------------------------------------------------------------------
 -- 8-СЕГМЕНТНЫЙ ЗОНТ UMBRELLA
@@ -3228,30 +3295,58 @@ SwitchTab("Main")
 -- ЛОГИКА АНИМАЦИИ ЗАГРУЗКИ
 ------------------------------------------------------------------------
 task.spawn(function()
-    local spinConn = RunService.RenderStepped:Connect(function(dt)
-        LoadingLogoHolder.Rotation = (LoadingLogoHolder.Rotation + (dt * 200)) % 360
-        HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 90)) % 360
+    pcall(function()
+        local spinConn = RunService.RenderStepped:Connect(function(dt)
+            if LoadingLogoHolder and LoadingLogoHolder.Parent then
+                LoadingLogoHolder.Rotation = (LoadingLogoHolder.Rotation + (dt * 200)) % 360
+            end
+            if HeaderLogoHolder and HeaderLogoHolder.Parent then
+                HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 90)) % 360
+            end
+        end)
+        
+        local fillTween = TweenService:Create(ProgressBarFill, TweenInfo.new(1.0, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
+        fillTween:Play()
+        fillTween.Completed:Wait()
+        task.wait(0.1)
+        
+        local fadeOut = TweenService:Create(LoadingFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundTransparency = 1})
+        fadeOut:Play()
+        fadeOut.Completed:Wait()
+        
+        if LoadingFrame and LoadingFrame.Parent then LoadingFrame:Destroy() end
+        if spinConn then spinConn:Disconnect() end
     end)
-    
-    local fillTween = TweenService:Create(ProgressBarFill, TweenInfo.new(1.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
-    fillTween:Play()
-    fillTween.Completed:Wait()
-    
-    task.wait(0.2)
-    
-    local fadeOut = TweenService:Create(LoadingFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {BackgroundTransparency = 1})
-    fadeOut:Play()
-    fadeOut.Completed:Wait()
-    
-    LoadingFrame:Destroy()
-    spinConn:Disconnect()
     
     RunService.RenderStepped:Connect(function(dt)
-        HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 30)) % 360
+        if HeaderLogoHolder and HeaderLogoHolder.Parent then
+            HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 30)) % 360
+        end
     end)
     
-    ApplyMenuTheme()
+    pcall(ApplyMenuTheme)
     MainFrame.Visible = true
+end)
+
+-- Гарантированный таймер-страховка (Failsafe)
+task.delay(1.2, function()
+    if MainFrame and not MainFrame.Visible then
+        pcall(function()
+            if LoadingFrame and LoadingFrame.Parent then
+                LoadingFrame:Destroy()
+            end
+        end)
+        pcall(ApplyMenuTheme)
+        MainFrame.Visible = true
+    end
+end)
+
+-- Глобальный бинд на открытие/закрытие меню (Insert / RightShift)
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+    end
 end)
 
 ------------------------------------------------------------------------
@@ -4891,94 +4986,182 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- 2. REAL INVISIBLE SILENT AIM (MM2 Specialized Hook for Shoot/Stab/Throw Remotes & Index/Namecall)
-local Mouse = LocalPlayer:GetMouse()
+local Mouse = LocalPlayer and LocalPlayer:GetMouse()
 local OldIndex = nil
-OldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
-    if _G.RealSilentAimActive and not checkcaller() then
-        if typeof(self) == "Instance" and (self:IsA("Mouse") or self:IsA("PlayerMouse")) then
-            if key == "Hit" or key == "Target" or key == "UnitRay" then
-                local target = GetClosestTarget()
-                if target and target.Character then
-                    local bone = GetAimbotBone(target.Character)
-                    if bone then
-                        local predPos = GetPredictedPosition(bone)
-                        if key == "Hit" then
-                            return CFrame.new(predPos)
-                        elseif key == "Target" then
-                            return bone
-                        elseif key == "UnitRay" then
-                            local camPos = Camera.CFrame.Position
-                            return Ray.new(camPos, (predPos - camPos).Unit)
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return OldIndex(self, key)
-end))
-
 local OldNamecall = nil
-OldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
+
+pcall(function()
+    local hasHook = typeof(hookmetamethod) == "function"
+    local hasNewc = typeof(newcclosure) == "function"
+    local hasCheckcaller = typeof(checkcaller) == "function"
+    local hasNamecall = typeof(getnamecallmethod) == "function"
     
-    if _G.RealSilentAimActive and not checkcaller() then
-        local m = method:lower()
-        if m == "fireserver" or m == "invokeserver" then
-            local selfName = tostring(self):lower()
-            if selfName == "shootgun" or selfName == "shoot" or selfName == "shootserver" 
-               or selfName == "throwknife" or selfName == "throw" or selfName == "knifeserver" 
-               or selfName == "slash" or selfName == "stab" or selfName == "stabserver" then
-                
-                local target = GetClosestTarget()
-                if target and target.Character then
-                    local bone = GetAimbotBone(target.Character)
-                    if bone then
-                        local predPos = GetPredictedPosition(bone)
-                        
-                        -- MM2 ShootGun specific argument handling:
-                        local modified = false
-                        if #args >= 2 and typeof(args[1]) == "number" and (typeof(args[2]) == "Vector3" or typeof(args[2]) == "CFrame") then
-                            if typeof(args[2]) == "Vector3" then
-                                args[2] = predPos
-                            else
-                                args[2] = CFrame.new(args[2].Position, predPos)
-                            end
-                            modified = true
-                        end
-                        
-                        if not modified then
-                            for i, arg in ipairs(args) do
-                                if typeof(arg) == "Vector3" then
-                                    args[i] = predPos
-                                    modified = true
-                                elseif typeof(arg) == "CFrame" then
-                                    args[i] = CFrame.new(arg.Position, predPos)
-                                    modified = true
+    local function safeCheckcaller()
+        if hasCheckcaller then
+            local s, res = pcall(checkcaller)
+            return s and res
+        end
+        return false
+    end
+    
+    local function safeWrap(fn)
+        if hasNewc then
+            local s, res = pcall(newcclosure, fn)
+            if s and res then return res end
+        end
+        return fn
+    end
+
+    if hasHook then
+        pcall(function()
+            OldIndex = hookmetamethod(game, "__index", safeWrap(function(self, key)
+                if _G.RealSilentAimActive and not safeCheckcaller() then
+                    if typeof(self) == "Instance" and (self:IsA("Mouse") or self:IsA("PlayerMouse")) then
+                        if key == "Hit" or key == "Target" or key == "UnitRay" then
+                            local target = GetClosestTarget()
+                            if target and target.Character then
+                                local bone = GetAimbotBone(target.Character)
+                                if bone then
+                                    local predPos = GetPredictedPosition(bone)
+                                    if key == "Hit" then
+                                        return CFrame.new(predPos)
+                                    elseif key == "Target" then
+                                        return bone
+                                    elseif key == "UnitRay" then
+                                        local camPos = Camera.CFrame.Position
+                                        return Ray.new(camPos, (predPos - camPos).Unit)
+                                    end
                                 end
                             end
                         end
-                        
-                        if not modified and #args == 0 then
-                            args[1] = 1
-                            args[2] = predPos
-                        end
-                        
-                        local muzzlePos = GetWeaponMuzzlePos()
-                        CreateBulletTracer(muzzlePos, predPos)
-                        Create3DHitEffect(predPos)
-                        OnHitRegistered(target, predPos, bone.Name or "Torso")
-                        
-                        return OldNamecall(self, unpack(args))
                     end
                 end
-            end
-        end
+                return OldIndex(self, key)
+            end))
+        end)
+
+        pcall(function()
+            OldNamecall = hookmetamethod(game, "__namecall", safeWrap(function(self, ...)
+                local method = hasNamecall and getnamecallmethod() or ""
+                local args = {...}
+                
+                if _G.RealSilentAimActive and not safeCheckcaller() then
+                    local m = tostring(method):lower()
+                    if m == "fireserver" or m == "invokeserver" then
+                        local selfName = tostring(self):lower()
+                        if selfName == "shootgun" or selfName == "shoot" or selfName == "shootserver" 
+                           or selfName == "throwknife" or selfName == "throw" or selfName == "knifeserver" 
+                           or selfName == "slash" or selfName == "stab" or selfName == "stabserver" then
+                            
+                            local target = GetClosestTarget()
+                            if target and target.Character then
+                                local bone = GetAimbotBone(target.Character)
+                                if bone then
+                                    local predPos = GetPredictedPosition(bone)
+                                    
+                                    local modified = false
+                                    if #args >= 2 and typeof(args[1]) == "number" and (typeof(args[2]) == "Vector3" or typeof(args[2]) == "CFrame") then
+                                        if typeof(args[2]) == "Vector3" then
+                                            args[2] = predPos
+                                        else
+                                            args[2] = CFrame.new(args[2].Position, predPos)
+                                        end
+                                        modified = true
+                                    end
+                                    
+                                    if not modified then
+                                        for i, arg in ipairs(args) do
+                                            if typeof(arg) == "Vector3" then
+                                                args[i] = predPos
+                                                modified = true
+                                            elseif typeof(arg) == "CFrame" then
+                                                args[i] = CFrame.new(arg.Position, predPos)
+                                                modified = true
+                                            end
+                                        end
+                                    end
+                                    
+                                    if not modified and #args == 0 then
+                                        args[1] = 1
+                                        args[2] = predPos
+                                    end
+                                    
+                                    local muzzlePos = GetWeaponMuzzlePos()
+                                    CreateBulletTracer(muzzlePos, predPos)
+                                    Create3DHitEffect(predPos)
+                                    OnHitRegistered(target, predPos, bone.Name or "Torso")
+                                    
+                                    return OldNamecall(self, unpack(args))
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                return OldNamecall(self, ...)
+            end))
+        end)
+    elseif typeof(getrawmetatable) == "function" then
+        pcall(function()
+            local gmt = getrawmetatable(game)
+            if typeof(setreadonly) == "function" then pcall(setreadonly, gmt, false) end
+            local oldIndex = gmt.__index
+            local oldNamecall = gmt.__namecall
+            
+            gmt.__index = safeWrap(function(self, key)
+                if _G.RealSilentAimActive and not safeCheckcaller() then
+                    if typeof(self) == "Instance" and (self:IsA("Mouse") or self:IsA("PlayerMouse")) then
+                        if key == "Hit" or key == "Target" or key == "UnitRay" then
+                            local target = GetClosestTarget()
+                            if target and target.Character then
+                                local bone = GetAimbotBone(target.Character)
+                                if bone then
+                                    local predPos = GetPredictedPosition(bone)
+                                    if key == "Hit" then return CFrame.new(predPos)
+                                    elseif key == "Target" then return bone
+                                    elseif key == "UnitRay" then
+                                        local camPos = Camera.CFrame.Position
+                                        return Ray.new(camPos, (predPos - camPos).Unit)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                return oldIndex(self, key)
+            end)
+            
+            gmt.__namecall = safeWrap(function(self, ...)
+                local method = hasNamecall and getnamecallmethod() or ""
+                local args = {...}
+                if _G.RealSilentAimActive and not safeCheckcaller() then
+                    local m = tostring(method):lower()
+                    if m == "fireserver" or m == "invokeserver" then
+                        local selfName = tostring(self):lower()
+                        if selfName:find("shoot") or selfName:find("knife") or selfName:find("throw") then
+                            local target = GetClosestTarget()
+                            if target and target.Character then
+                                local bone = GetAimbotBone(target.Character)
+                                if bone then
+                                    local predPos = GetPredictedPosition(bone)
+                                    for i, arg in ipairs(args) do
+                                        if typeof(arg) == "Vector3" then args[i] = predPos
+                                        elseif typeof(arg) == "CFrame" then args[i] = CFrame.new(arg.Position, predPos) end
+                                    end
+                                    local muzzlePos = GetWeaponMuzzlePos()
+                                    CreateBulletTracer(muzzlePos, predPos)
+                                    Create3DHitEffect(predPos)
+                                    return oldNamecall(self, unpack(args))
+                                end
+                            end
+                        end
+                    end
+                end
+                return oldNamecall(self, ...)
+            end)
+        end)
     end
-    
-    return OldNamecall(self, ...)
-end))
+end)
 
 local isMinimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
