@@ -758,6 +758,14 @@ _G.ColorCorrectionActive = false
 _G.SaturationBoost = 1.2
 _G.ContrastBoost = 0.3
 
+-- Weather, Particles & Camera FX
+_G.WeatherActive = false
+_G.SelectedWeather = "Snow"
+_G.CustomFOVActive = false
+_G.CustomFOVValue = 70
+_G.BlurActive = false
+_G.BlurSize = 6
+
 _G.JitterActive = false
 _G.JitterRange = 45
 _G.NetworkFakeLagActive = false
@@ -894,6 +902,346 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+------------------------------------------------------------------------
+-- WORLD, WEATHER, FOG & SKYBOX VISUALS ENGINE
+------------------------------------------------------------------------
+local OriginalLighting = {
+    FogColor = Lighting.FogColor,
+    FogStart = Lighting.FogStart,
+    FogEnd = Lighting.FogEnd,
+    ClockTime = Lighting.ClockTime,
+    Ambient = Lighting.Ambient,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    Brightness = Lighting.Brightness,
+    ExposureCompensation = Lighting.ExposureCompensation,
+    GlobalShadows = Lighting.GlobalShadows,
+    FieldOfView = Camera.FieldOfView
+}
+
+local FogColorPresets = {
+    ["Blood Red"]      = Color3.fromRGB(220, 20, 30),
+    ["Purple Night"]   = Color3.fromRGB(135, 30, 220),
+    ["Cyber Cyan"]     = Color3.fromRGB(20, 210, 245),
+    ["Midnight Black"] = Color3.fromRGB(8, 8, 12),
+    ["Neon Green"]     = Color3.fromRGB(30, 240, 80),
+    ["Toxic Orange"]   = Color3.fromRGB(255, 110, 20),
+    ["Deep Violet"]    = Color3.fromRGB(75, 15, 130),
+    ["Pure White"]     = Color3.fromRGB(245, 245, 255)
+}
+
+local SkyPresets = {
+    ["Purple Galaxy"] = {
+        Bk = "rbxassetid://159454299",
+        Dn = "rbxassetid://159454296",
+        Ft = "rbxassetid://159454293",
+        Lf = "rbxassetid://159454286",
+        Rt = "rbxassetid://159454300",
+        Up = "rbxassetid://159454288"
+    },
+    ["Red Blood Moon"] = {
+        Bk = "rbxassetid://401664839",
+        Dn = "rbxassetid://401664862",
+        Ft = "rbxassetid://401664960",
+        Lf = "rbxassetid://401664881",
+        Rt = "rbxassetid://401664901",
+        Up = "rbxassetid://401664936"
+    },
+    ["Cyberpunk City"] = {
+        Bk = "rbxassetid://271042516",
+        Dn = "rbxassetid://271077243",
+        Ft = "rbxassetid://271042556",
+        Lf = "rbxassetid://271042310",
+        Rt = "rbxassetid://271042467",
+        Up = "rbxassetid://271077958"
+    },
+    ["Dark Space"] = {
+        Bk = "rbxassetid://600830446",
+        Dn = "rbxassetid://600831635",
+        Ft = "rbxassetid://600832720",
+        Lf = "rbxassetid://600886090",
+        Rt = "rbxassetid://600833862",
+        Up = "rbxassetid://600835177"
+    },
+    ["Pure Void (Black)"] = {
+        Bk = "rbxassetid://1544482705",
+        Dn = "rbxassetid://1544482705",
+        Ft = "rbxassetid://1544482705",
+        Lf = "rbxassetid://1544482705",
+        Rt = "rbxassetid://1544482705",
+        Up = "rbxassetid://1544482705"
+    }
+}
+
+local AmbientPresets = {
+    ["Blood Red"]       = Color3.fromRGB(160, 20, 30),
+    ["Purple Twilight"] = Color3.fromRGB(120, 30, 190),
+    ["Cold Cyan"]       = Color3.fromRGB(30, 130, 170),
+    ["Night Warm"]      = Color3.fromRGB(150, 95, 45),
+    ["Pure White"]      = Color3.fromRGB(255, 255, 255)
+}
+
+-- 1. НАДЕЖНАЯ СИСТЕМА КАСТОМНОГО СКАЙБОКСА (Удаляет родной Sky и обнуляет плотность Atmosphere)
+local BackupOriginalSky = nil
+local CustomSkyInstance = nil
+
+local function ApplySkyPreset(presetName)
+    local preset = SkyPresets[presetName]
+    if not preset then return end
+    
+    -- Бэкапим и удаляем все остальные Sky в Lighting
+    for _, child in ipairs(Lighting:GetChildren()) do
+        if child:IsA("Sky") and child.Name ~= "Umbrella_CustomSky" then
+            if not BackupOriginalSky then
+                pcall(function() BackupOriginalSky = child:Clone() end)
+            end
+            child:Destroy()
+        end
+    end
+    
+    -- Обнуляем плотность и дымку Atmosphere (Atmosphere скрывает Skybox в MM2)
+    for _, atmo in ipairs(Lighting:GetChildren()) do
+        if atmo:IsA("Atmosphere") then
+            atmo.Density = 0
+            atmo.Haze = 0
+            atmo.Glare = 0
+        end
+    end
+    
+    -- Отключаем облака если есть
+    pcall(function()
+        local clouds = workspace:FindFirstChildOfClass("Clouds") or (workspace.Terrain and workspace.Terrain:FindFirstChildOfClass("Clouds"))
+        if clouds then clouds.Enabled = false end
+    end)
+    
+    local sky = Lighting:FindFirstChild("Umbrella_CustomSky")
+    if not sky then
+        sky = Instance.new("Sky")
+        sky.Name = "Umbrella_CustomSky"
+        sky.Parent = Lighting
+    end
+    
+    sky.SkyboxBk = preset.Bk
+    sky.SkyboxDn = preset.Dn
+    sky.SkyboxFt = preset.Ft
+    sky.SkyboxLf = preset.Lf
+    sky.SkyboxRt = preset.Rt
+    sky.SkyboxUp = preset.Up
+    sky.CelestialBodiesShown = false
+    sky.StarCount = 3000
+    sky.SunAngularSize = 0
+    sky.MoonAngularSize = 0
+    
+    CustomSkyInstance = sky
+end
+
+local function RemoveSkyPreset()
+    if CustomSkyInstance then
+        CustomSkyInstance:Destroy()
+        CustomSkyInstance = nil
+    end
+    for _, child in ipairs(Lighting:GetChildren()) do
+        if child.Name == "Umbrella_CustomSky" then child:Destroy() end
+    end
+    if BackupOriginalSky then
+        pcall(function() BackupOriginalSky:Clone().Parent = Lighting end)
+    end
+    for _, atmo in ipairs(Lighting:GetChildren()) do
+        if atmo:IsA("Atmosphere") then
+            atmo.Density = 0.3
+        end
+    end
+end
+
+-- Авто-защита от сброса неба картой MM2
+Lighting.ChildAdded:Connect(function(child)
+    if _G.CustomSkyActive and child:IsA("Sky") and child.Name ~= "Umbrella_CustomSky" then
+        task.wait()
+        child:Destroy()
+        ApplySkyPreset(_G.SelectedSkyPreset)
+    end
+end)
+
+-- 2. СИСТЕМА ПОГОДЫ (СНЕГОПАД, КРОВАВЫЙ ДОЖДЬ, ИСКРЫ)
+local WeatherContainer = nil
+local WeatherEmitter = nil
+
+local function RemoveWeatherEffect()
+    if WeatherContainer then
+        WeatherContainer:Destroy()
+        WeatherContainer = nil
+        WeatherEmitter = nil
+    end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "Umbrella_WeatherBox" then obj:Destroy() end
+    end
+end
+
+local function ApplyWeatherEffect(effectType)
+    RemoveWeatherEffect()
+    if not _G.WeatherActive then return end
+    
+    WeatherContainer = Instance.new("Part")
+    WeatherContainer.Name = "Umbrella_WeatherBox"
+    WeatherContainer.Transparency = 1
+    WeatherContainer.CanCollide = false
+    WeatherContainer.CanTouch = false
+    WeatherContainer.CanQuery = false
+    WeatherContainer.Anchored = true
+    WeatherContainer.Size = Vector3.new(70, 2, 70)
+    WeatherContainer.Parent = workspace
+    
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Name = "WeatherParticles"
+    emitter.Parent = WeatherContainer
+    
+    if effectType == "Snow" then
+        -- Реалистичный мягкий падающий снег
+        emitter.Texture = "rbxassetid://1095708"
+        emitter.Rate = 180
+        emitter.Speed = NumberRange.new(5, 12)
+        emitter.Lifetime = NumberRange.new(4, 7)
+        emitter.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.45),
+            NumberSequenceKeypoint.new(0.5, 0.4),
+            NumberSequenceKeypoint.new(1, 0.2)
+        })
+        emitter.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.15),
+            NumberSequenceKeypoint.new(0.8, 0.2),
+            NumberSequenceKeypoint.new(1, 1)
+        })
+        emitter.Color = ColorSequence.new(Color3.fromRGB(240, 248, 255))
+        emitter.Acceleration = Vector3.new(2, -7.5, 1.5)
+        emitter.SpreadAngle = Vector2.new(20, 20)
+        emitter.EmissionDirection = Enum.NormalId.Bottom
+        emitter.RotSpeed = NumberRange.new(-60, 60)
+        
+    elseif effectType == "Blood Rain" then
+        -- Кровавый ливень
+        emitter.Texture = "rbxassetid://258128463"
+        emitter.Rate = 320
+        emitter.Speed = NumberRange.new(50, 75)
+        emitter.Lifetime = NumberRange.new(0.7, 1.3)
+        emitter.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.18),
+            NumberSequenceKeypoint.new(1, 0.1)
+        })
+        emitter.Transparency = NumberSequence.new(0.15)
+        emitter.Color = ColorSequence.new(Color3.fromRGB(255, 25, 40))
+        emitter.Acceleration = Vector3.new(0, -95, 0)
+        emitter.EmissionDirection = Enum.NormalId.Bottom
+        
+    elseif effectType == "Rising Embers" then
+        -- Летающий пепел и искры
+        emitter.Texture = "rbxassetid://258128463"
+        emitter.Rate = 90
+        emitter.Speed = NumberRange.new(3, 8)
+        emitter.Lifetime = NumberRange.new(2.5, 5)
+        emitter.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.35),
+            NumberSequenceKeypoint.new(1, 0.05)
+        })
+        emitter.Color = ColorSequence.new(Color3.fromRGB(255, 90, 20))
+        emitter.LightEmission = 1
+        emitter.Acceleration = Vector3.new(0, 6, 0)
+        emitter.SpreadAngle = Vector2.new(35, 35)
+        emitter.EmissionDirection = Enum.NormalId.Top
+    end
+    
+    WeatherEmitter = emitter
+end
+
+-- 3. ПОСТОБРАБОТКА (COLOR CORRECTION & BLUR)
+local ColorCorrectionInstance = nil
+local function UpdateColorCorrection()
+    if _G.ColorCorrectionActive then
+        if not ColorCorrectionInstance or not ColorCorrectionInstance.Parent then
+            ColorCorrectionInstance = Lighting:FindFirstChild("Umbrella_ColorCorrection")
+            if not ColorCorrectionInstance then
+                ColorCorrectionInstance = Instance.new("ColorCorrectionEffect")
+                ColorCorrectionInstance.Name = "Umbrella_ColorCorrection"
+                ColorCorrectionInstance.Parent = Lighting
+            end
+        end
+        ColorCorrectionInstance.Saturation = _G.SaturationBoost
+        ColorCorrectionInstance.Contrast = _G.ContrastBoost
+    else
+        if ColorCorrectionInstance then
+            ColorCorrectionInstance:Destroy()
+            ColorCorrectionInstance = nil
+        end
+        local existing = Lighting:FindFirstChild("Umbrella_ColorCorrection")
+        if existing then existing:Destroy() end
+    end
+end
+
+local BlurInstance = nil
+local function UpdateBlur()
+    if _G.BlurActive then
+        if not BlurInstance or not BlurInstance.Parent then
+            BlurInstance = Lighting:FindFirstChild("Umbrella_Blur")
+            if not BlurInstance then
+                BlurInstance = Instance.new("BlurEffect")
+                BlurInstance.Name = "Umbrella_Blur"
+                BlurInstance.Parent = Lighting
+            end
+        end
+        BlurInstance.Size = _G.BlurSize
+    else
+        if BlurInstance then
+            BlurInstance:Destroy()
+            BlurInstance = nil
+        end
+        local existing = Lighting:FindFirstChild("Umbrella_Blur")
+        if existing then existing:Destroy() end
+    end
+end
+
+-- РЕНДЕР ЦИКЛ ОСВЕЩЕНИЯ, ТУМАНА, ПОГОДЫ И FOV
+RunService.RenderStepped:Connect(function()
+    -- Туман
+    if _G.FogColorActive then
+        Lighting.FogColor = FogColorPresets[_G.SelectedFogColor] or Color3.fromRGB(220, 20, 30)
+        Lighting.FogStart = _G.FogStart
+        Lighting.FogEnd = _G.FogEnd
+    end
+    
+    -- Время суток
+    if _G.TimeOfDayActive then
+        Lighting.ClockTime = _G.TimeOfDayValue
+    end
+    
+    -- Окружающий свет
+    if _G.AmbientActive then
+        local col = AmbientPresets[_G.SelectedAmbient] or Color3.fromRGB(160, 20, 30)
+        Lighting.Ambient = col
+        Lighting.OutdoorAmbient = col
+    end
+    
+    -- Fullbright
+    if _G.FullbrightActive then
+        Lighting.Brightness = 2.5
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
+    end
+    
+    -- Кастомный FOV камеры
+    if _G.CustomFOVActive then
+        Camera.FieldOfView = _G.CustomFOVValue
+    end
+    
+    -- Привязка частиц погоды к камере
+    if _G.WeatherActive and WeatherContainer and WeatherContainer.Parent then
+        local camPos = Camera.CFrame.Position
+        if _G.SelectedWeather == "Rising Embers" then
+            WeatherContainer.CFrame = CFrame.new(camPos.X, camPos.Y - 14, camPos.Z)
+        else
+            WeatherContainer.CFrame = CFrame.new(camPos.X, camPos.Y + 20, camPos.Z)
+        end
+    end
+end)
+
 -- 1. MAIN TAB
 local SecMovement = CreateSection(Tabs["Main"], "Movement Mods")
 CreateToggle(SecMovement, "Speedhack", false, function(st) _G.SpeedActive = st end)
@@ -986,11 +1334,40 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-CreateDropdown(SecModels, "Select Model", {"donkey", "cute girl", "pig", "angel", "demon"}, "donkey", function(selected)
-    _G.SelectedCustomModel = selected
-    if _G.CustomModelsActive then
-        ApplyCustomModel(selected)
+local SecWeather = CreateSection(Tabs["Visuals"], "Weather FX & Camera")
+CreateToggle(SecWeather, "Weather Particles (Snow/Rain)", false, function(st)
+    _G.WeatherActive = st
+    if st then
+        ApplyWeatherEffect(_G.SelectedWeather)
+    else
+        RemoveWeatherEffect()
     end
+end)
+CreateDropdown(SecWeather, "Weather Type", {"Snow", "Blood Rain", "Rising Embers"}, "Snow", function(selected)
+    _G.SelectedWeather = selected
+    if _G.WeatherActive then
+        ApplyWeatherEffect(selected)
+    end
+end)
+CreateToggle(SecWeather, "Custom Camera FOV", false, function(st)
+    _G.CustomFOVActive = st
+    if not st then
+        Camera.FieldOfView = OriginalLighting.FieldOfView or 70
+    end
+end)
+CreateSlider(SecWeather, "Field of View", _G.CustomFOVValue, 60, 120, false, function(val)
+    _G.CustomFOVValue = val
+    if _G.CustomFOVActive then
+        Camera.FieldOfView = val
+    end
+end)
+CreateToggle(SecWeather, "Screen Depth Blur", false, function(st)
+    _G.BlurActive = st
+    UpdateBlur()
+end)
+CreateSlider(SecWeather, "Blur Intensity", _G.BlurSize, 1, 25, false, function(val)
+    _G.BlurSize = val
+    UpdateBlur()
 end)
 
 local SecWorldFog = CreateSection(Tabs["Visuals"], "World Fog & Atmosphere")
@@ -1060,6 +1437,22 @@ end)
 CreateSlider(SecSkyLighting, "Contrast Boost", _G.ContrastBoost, 0, 2, true, function(val)
     _G.ContrastBoost = val
     UpdateColorCorrection()
+end)
+
+local SecModels = CreateSection(Tabs["Visuals"], "Custom Models Switcher")
+CreateToggle(SecModels, "Enable Custom Model", false, function(st)
+    _G.CustomModelsActive = st
+    if st then
+        ApplyCustomModel(_G.SelectedCustomModel)
+    else
+        RemoveCustomModel()
+    end
+end)
+CreateDropdown(SecModels, "Select Model", {"donkey", "cute girl", "pig", "angel", "demon"}, "donkey", function(selected)
+    _G.SelectedCustomModel = selected
+    if _G.CustomModelsActive then
+        ApplyCustomModel(selected)
+    end
 end)
 
 -- 3. COMBAT TAB
@@ -1232,163 +1625,6 @@ RunService.RenderStepped:Connect(function()
         end
     else
         AwallIndicator.Visible = false
-    end
-end)
-
-------------------------------------------------------------------------
--- WORLD, FOG & SKYBOX VISUALS ENGINE
-------------------------------------------------------------------------
-local OriginalLighting = {
-    FogColor = Lighting.FogColor,
-    FogStart = Lighting.FogStart,
-    FogEnd = Lighting.FogEnd,
-    ClockTime = Lighting.ClockTime,
-    Ambient = Lighting.Ambient,
-    OutdoorAmbient = Lighting.OutdoorAmbient,
-    Brightness = Lighting.Brightness,
-    ExposureCompensation = Lighting.ExposureCompensation,
-    GlobalShadows = Lighting.GlobalShadows
-}
-
-local FogColorPresets = {
-    ["Blood Red"]      = Color3.fromRGB(220, 20, 30),
-    ["Purple Night"]   = Color3.fromRGB(135, 30, 220),
-    ["Cyber Cyan"]     = Color3.fromRGB(20, 210, 245),
-    ["Midnight Black"] = Color3.fromRGB(8, 8, 12),
-    ["Neon Green"]     = Color3.fromRGB(30, 240, 80),
-    ["Toxic Orange"]   = Color3.fromRGB(255, 110, 20),
-    ["Deep Violet"]    = Color3.fromRGB(75, 15, 130),
-    ["Pure White"]     = Color3.fromRGB(245, 245, 255)
-}
-
-local SkyPresets = {
-    ["Purple Galaxy"] = {
-        Bk = "rbxassetid://159454299",
-        Dn = "rbxassetid://159454296",
-        Ft = "rbxassetid://159454293",
-        Lf = "rbxassetid://159454286",
-        Rt = "rbxassetid://159454300",
-        Up = "rbxassetid://159454288"
-    },
-    ["Red Blood Moon"] = {
-        Bk = "rbxassetid://401664839",
-        Dn = "rbxassetid://401664862",
-        Ft = "rbxassetid://401664960",
-        Lf = "rbxassetid://401664881",
-        Rt = "rbxassetid://401664901",
-        Up = "rbxassetid://401664936"
-    },
-    ["Cyberpunk City"] = {
-        Bk = "rbxassetid://271042516",
-        Dn = "rbxassetid://271077243",
-        Ft = "rbxassetid://271042556",
-        Lf = "rbxassetid://271042310",
-        Rt = "rbxassetid://271042467",
-        Up = "rbxassetid://271077958"
-    },
-    ["Dark Space"] = {
-        Bk = "rbxassetid://600830446",
-        Dn = "rbxassetid://600831635",
-        Ft = "rbxassetid://600832720",
-        Lf = "rbxassetid://600886090",
-        Rt = "rbxassetid://600833862",
-        Up = "rbxassetid://600835177"
-    },
-    ["Pure Void (Black)"] = {
-        Bk = "rbxassetid://1544482705",
-        Dn = "rbxassetid://1544482705",
-        Ft = "rbxassetid://1544482705",
-        Lf = "rbxassetid://1544482705",
-        Rt = "rbxassetid://1544482705",
-        Up = "rbxassetid://1544482705"
-    }
-}
-
-local AmbientPresets = {
-    ["Blood Red"]       = Color3.fromRGB(160, 20, 30),
-    ["Purple Twilight"] = Color3.fromRGB(120, 30, 190),
-    ["Cold Cyan"]       = Color3.fromRGB(30, 130, 170),
-    ["Night Warm"]      = Color3.fromRGB(150, 95, 45),
-    ["Pure White"]      = Color3.fromRGB(255, 255, 255)
-}
-
-local CustomSkyInstance = nil
-local function ApplySkyPreset(presetName)
-    local preset = SkyPresets[presetName]
-    if not preset then return end
-    
-    if not CustomSkyInstance or not CustomSkyInstance.Parent then
-        CustomSkyInstance = Lighting:FindFirstChild("Umbrella_CustomSky")
-        if not CustomSkyInstance then
-            CustomSkyInstance = Instance.new("Sky")
-            CustomSkyInstance.Name = "Umbrella_CustomSky"
-            CustomSkyInstance.Parent = Lighting
-        end
-    end
-    
-    CustomSkyInstance.SkyboxBk = preset.Bk
-    CustomSkyInstance.SkyboxDn = preset.Dn
-    CustomSkyInstance.SkyboxFt = preset.Ft
-    CustomSkyInstance.SkyboxLf = preset.Lf
-    CustomSkyInstance.SkyboxRt = preset.Rt
-    CustomSkyInstance.SkyboxUp = preset.Up
-    CustomSkyInstance.CelestialBodiesShown = false
-end
-
-local function RemoveSkyPreset()
-    if CustomSkyInstance then
-        CustomSkyInstance:Destroy()
-        CustomSkyInstance = nil
-    end
-    local existing = Lighting:FindFirstChild("Umbrella_CustomSky")
-    if existing then existing:Destroy() end
-end
-
-local ColorCorrectionInstance = nil
-local function UpdateColorCorrection()
-    if _G.ColorCorrectionActive then
-        if not ColorCorrectionInstance or not ColorCorrectionInstance.Parent then
-            ColorCorrectionInstance = Lighting:FindFirstChild("Umbrella_ColorCorrection")
-            if not ColorCorrectionInstance then
-                ColorCorrectionInstance = Instance.new("ColorCorrectionEffect")
-                ColorCorrectionInstance.Name = "Umbrella_ColorCorrection"
-                ColorCorrectionInstance.Parent = Lighting
-            end
-        end
-        ColorCorrectionInstance.Saturation = _G.SaturationBoost
-        ColorCorrectionInstance.Contrast = _G.ContrastBoost
-    else
-        if ColorCorrectionInstance then
-            ColorCorrectionInstance:Destroy()
-            ColorCorrectionInstance = nil
-        end
-        local existing = Lighting:FindFirstChild("Umbrella_ColorCorrection")
-        if existing then existing:Destroy() end
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if _G.FogColorActive then
-        Lighting.FogColor = FogColorPresets[_G.SelectedFogColor] or Color3.fromRGB(220, 20, 30)
-        Lighting.FogStart = _G.FogStart
-        Lighting.FogEnd = _G.FogEnd
-    end
-    
-    if _G.TimeOfDayActive then
-        Lighting.ClockTime = _G.TimeOfDayValue
-    end
-    
-    if _G.AmbientActive then
-        local col = AmbientPresets[_G.SelectedAmbient] or Color3.fromRGB(160, 20, 30)
-        Lighting.Ambient = col
-        Lighting.OutdoorAmbient = col
-    end
-    
-    if _G.FullbrightActive then
-        Lighting.Brightness = 2.5
-        Lighting.ClockTime = 14
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
     end
 end)
 
