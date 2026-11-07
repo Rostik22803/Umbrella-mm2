@@ -133,8 +133,8 @@ Instance.new("UICorner", ProgressBarFill).CornerRadius = UDim.new(1, 0)
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(14, 15, 19)
-MainFrame.Position = UDim2.new(0.5, -360, 0.5, -240)
-MainFrame.Size = UDim2.new(0, 720, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -375, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 750, 0, 500)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.ClipsDescendants = false
@@ -418,19 +418,27 @@ local function CreateTabPage(name)
     Page.Name = name .. "Page"
     Page.Parent = ContentArea
     Page.BackgroundTransparency = 1
-    Page.Position = UDim2.new(0, 12, 0, 12)
-    Page.Size = UDim2.new(1, -24, 1, -24)
+    Page.Position = UDim2.new(0, 10, 0, 10)
+    Page.Size = UDim2.new(1, -20, 1, -20)
     Page.Visible = false
-    Page.ScrollBarThickness = 4
+    Page.ScrollBarThickness = 5
     Page.ScrollBarImageColor3 = Color3.fromRGB(220, 35, 45)
     Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    Page.BorderSizePixel = 0
+    Page.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    Page.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    Page.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
     
     local Grid = Instance.new("UIGridLayout")
     Grid.Parent = Page
-    Grid.CellSize = UDim2.new(0, 260, 0, 270)
-    Grid.CellPadding = UDim2.new(0, 12, 0, 12)
+    Grid.CellSize = UDim2.new(0, 275, 0, 290)
+    Grid.CellPadding = UDim2.new(0, 14, 0, 14)
     Grid.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    Grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Page.CanvasSize = UDim2.new(0, 0, 0, Grid.AbsoluteContentSize.Y + 28)
+    end)
     
     Tabs[name] = Page
     return Page
@@ -500,7 +508,7 @@ local function CreateSection(parentPage, title)
     local Section = Instance.new("Frame")
     Section.Parent = parentPage
     Section.BackgroundColor3 = Color3.fromRGB(18, 19, 25)
-    Section.Size = UDim2.new(0, 260, 0, 270)
+    Section.Size = UDim2.new(0, 275, 0, 290)
     
     Instance.new("UICorner", Section).CornerRadius = UDim.new(0, 8)
     local Stroke = Instance.new("UIStroke")
@@ -526,16 +534,28 @@ local function CreateSection(parentPage, title)
     SecLine.Position = UDim2.new(0, 10, 0, 26)
     SecLine.Size = UDim2.new(1, -20, 0, 1)
     
-    local SecContainer = Instance.new("Frame")
+    local SecContainer = Instance.new("ScrollingFrame")
     SecContainer.Parent = Section
     SecContainer.BackgroundTransparency = 1
-    SecContainer.Position = UDim2.new(0, 10, 0, 30)
-    SecContainer.Size = UDim2.new(1, -20, 1, -35)
+    SecContainer.Position = UDim2.new(0, 8, 0, 30)
+    SecContainer.Size = UDim2.new(1, -12, 1, -34)
+    SecContainer.ScrollBarThickness = 3
+    SecContainer.ScrollBarImageColor3 = Color3.fromRGB(220, 35, 45)
+    SecContainer.BorderSizePixel = 0
+    SecContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    SecContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    SecContainer.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    SecContainer.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    SecContainer.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
     
     local Layout = Instance.new("UIListLayout")
     Layout.Parent = SecContainer
     Layout.SortOrder = Enum.SortOrder.LayoutOrder
-    Layout.Padding = UDim.new(0, 5)
+    Layout.Padding = UDim.new(0, 6)
+    
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        SecContainer.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 10)
+    end)
     
     return SecContainer
 end
@@ -659,10 +679,13 @@ local function CreateSlider(parentSec, text, defaultVal, minVal, maxVal, isDecim
 end
 
 local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
+    local maxVisibleItems = math.min(#options, 6)
+    local listHeight = maxVisibleItems * 22 + 4
+
     local DropFrame = Instance.new("Frame")
     DropFrame.Parent = parentSec
     DropFrame.BackgroundTransparency = 1
-    DropFrame.Size = UDim2.new(1, 0, 0, 42)
+    DropFrame.Size = UDim2.new(1, -4, 0, 42)
     DropFrame.ZIndex = 5
 
     local Label = Instance.new("TextLabel")
@@ -682,19 +705,27 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     MainBtn.Position = UDim2.new(0, 0, 0, 16)
     MainBtn.Size = UDim2.new(1, 0, 0, 22)
     MainBtn.Font = Enum.Font.SourceSansBold
-    MainBtn.Text = "  " .. defaultOpt .. "  ▼"
+    MainBtn.Text = "  " .. tostring(defaultOpt) .. "  ▼"
     MainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     MainBtn.TextSize = 12
     MainBtn.TextXAlignment = Enum.TextXAlignment.Left
     Instance.new("UICorner", MainBtn).CornerRadius = UDim.new(0, 4)
 
-    local ListFrame = Instance.new("Frame")
+    local ListFrame = Instance.new("ScrollingFrame")
     ListFrame.Parent = DropFrame
     ListFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 30)
     ListFrame.Position = UDim2.new(0, 0, 0, 40)
-    ListFrame.Size = UDim2.new(1, 0, 0, #options * 22 + 4)
+    ListFrame.Size = UDim2.new(1, 0, 0, listHeight)
+    ListFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 22 + 4)
+    ListFrame.ScrollBarThickness = 3
+    ListFrame.ScrollBarImageColor3 = Color3.fromRGB(220, 35, 45)
+    ListFrame.BorderSizePixel = 0
     ListFrame.Visible = false
-    ListFrame.ZIndex = 10
+    ListFrame.ZIndex = 25
+    ListFrame.ClipsDescendants = true
+    ListFrame.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    ListFrame.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
+    ListFrame.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
     Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0, 4)
     local ListStroke = Instance.new("UIStroke", ListFrame)
     ListStroke.Color = Color3.fromRGB(220, 35, 45)
@@ -703,29 +734,43 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     local ListLayout = Instance.new("UIListLayout", ListFrame)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ListLayout.Padding = UDim.new(0, 2)
+    
+    ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ListFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 4)
+    end)
 
+    local currentSelected = tostring(defaultOpt)
     local isExpanded = false
     MainBtn.MouseButton1Click:Connect(function()
         isExpanded = not isExpanded
         ListFrame.Visible = isExpanded
+        if isExpanded then
+            DropFrame.Size = UDim2.new(1, -4, 0, 42 + listHeight + 4)
+            MainBtn.Text = "  " .. currentSelected .. "  ▲"
+        else
+            DropFrame.Size = UDim2.new(1, -4, 0, 42)
+            MainBtn.Text = "  " .. currentSelected .. "  ▼"
+        end
     end)
 
     for i, optName in ipairs(options) do
         local OptBtn = Instance.new("TextButton")
         OptBtn.Parent = ListFrame
         OptBtn.BackgroundTransparency = 1
-        OptBtn.Size = UDim2.new(1, 0, 0, 20)
+        OptBtn.Size = UDim2.new(1, -6, 0, 20)
         OptBtn.Font = Enum.Font.SourceSans
         OptBtn.Text = "  " .. optName
         OptBtn.TextColor3 = Color3.fromRGB(200, 205, 215)
         OptBtn.TextSize = 12
         OptBtn.TextXAlignment = Enum.TextXAlignment.Left
-        OptBtn.ZIndex = 11
+        OptBtn.ZIndex = 26
 
         OptBtn.MouseButton1Click:Connect(function()
+            currentSelected = tostring(optName)
             MainBtn.Text = "  " .. optName .. "  ▼"
             isExpanded = false
             ListFrame.Visible = false
+            DropFrame.Size = UDim2.new(1, -4, 0, 42)
             callback(optName)
         end)
     end
