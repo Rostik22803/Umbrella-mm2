@@ -758,13 +758,16 @@ _G.ColorCorrectionActive = false
 _G.SaturationBoost = 1.2
 _G.ContrastBoost = 0.3
 
--- Weather, Particles & Camera FX
+-- Weather & Camera Visual FX
 _G.WeatherActive = false
 _G.SelectedWeather = "Snow"
+_G.WeatherDensity = 150
+_G.PlayerTrailActive = false
 _G.CustomFOVActive = false
 _G.CustomFOVValue = 70
 _G.BlurActive = false
 _G.BlurSize = 6
+_G.KillFlashActive = true
 
 _G.JitterActive = false
 _G.JitterRange = 45
@@ -1061,49 +1064,43 @@ Lighting.ChildAdded:Connect(function(child)
     end
 end)
 
--- 2. СИСТЕМА ПОГОДЫ (СНЕГОПАД, КРОВАВЫЙ ДОЖДЬ, ИСКРЫ)
-local WeatherContainer = nil
+-- 2. СИСТЕМА ПОГОДЫ (SMOOTH ATTACHMENT SNOW & RAIN) И ТРЕЙЛА
+local WeatherAttachment = nil
 local WeatherEmitter = nil
 
 local function RemoveWeatherEffect()
-    if WeatherContainer then
-        WeatherContainer:Destroy()
-        WeatherContainer = nil
-        WeatherEmitter = nil
-    end
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "Umbrella_WeatherBox" then obj:Destroy() end
-    end
+    if WeatherEmitter then WeatherEmitter:Destroy() WeatherEmitter = nil end
+    if WeatherAttachment then WeatherAttachment:Destroy() WeatherAttachment = nil end
+    local existing = Camera:FindFirstChild("Umbrella_WeatherAtt")
+    if existing then existing:Destroy() end
 end
 
-local function ApplyWeatherEffect(effectType)
+local function ApplyWeatherEffect(weatherType)
     RemoveWeatherEffect()
     if not _G.WeatherActive then return end
     
-    WeatherContainer = Instance.new("Part")
-    WeatherContainer.Name = "Umbrella_WeatherBox"
-    WeatherContainer.Transparency = 1
-    WeatherContainer.CanCollide = false
-    WeatherContainer.CanTouch = false
-    WeatherContainer.CanQuery = false
-    WeatherContainer.Anchored = true
-    WeatherContainer.Size = Vector3.new(70, 2, 70)
-    WeatherContainer.Parent = workspace
+    -- Аттачмент крепится прямо к Camera (ноль задержек, ноль лагов, не коллидит с крышами)
+    WeatherAttachment = Instance.new("Attachment")
+    WeatherAttachment.Name = "Umbrella_WeatherAtt"
+    WeatherAttachment.Position = Vector3.new(0, 14, 0)
+    WeatherAttachment.Parent = Camera
     
     local emitter = Instance.new("ParticleEmitter")
-    emitter.Name = "WeatherParticles"
-    emitter.Parent = WeatherContainer
+    emitter.Name = "Umbrella_WeatherEmitter"
+    emitter.Parent = WeatherAttachment
     
-    if effectType == "Snow" then
-        -- Реалистичный мягкий падающий снег
+    local count = _G.WeatherDensity or 150
+    
+    if weatherType == "Snow" then
+        -- Мягкие реалистичные хлопья снега
         emitter.Texture = "rbxassetid://1095708"
-        emitter.Rate = 180
-        emitter.Speed = NumberRange.new(5, 12)
-        emitter.Lifetime = NumberRange.new(4, 7)
+        emitter.Rate = count
+        emitter.Speed = NumberRange.new(7, 15)
+        emitter.Lifetime = NumberRange.new(3.5, 6)
         emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.45),
-            NumberSequenceKeypoint.new(0.5, 0.4),
-            NumberSequenceKeypoint.new(1, 0.2)
+            NumberSequenceKeypoint.new(0, 0.35),
+            NumberSequenceKeypoint.new(0.5, 0.3),
+            NumberSequenceKeypoint.new(1, 0.15)
         })
         emitter.Transparency = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 0.15),
@@ -1111,44 +1108,127 @@ local function ApplyWeatherEffect(effectType)
             NumberSequenceKeypoint.new(1, 1)
         })
         emitter.Color = ColorSequence.new(Color3.fromRGB(240, 248, 255))
-        emitter.Acceleration = Vector3.new(2, -7.5, 1.5)
-        emitter.SpreadAngle = Vector2.new(20, 20)
-        emitter.EmissionDirection = Enum.NormalId.Bottom
+        emitter.Acceleration = Vector3.new(2, -9, 1.5)
+        emitter.SpreadAngle = Vector2.new(180, 180)
         emitter.RotSpeed = NumberRange.new(-60, 60)
+        emitter.Orientation = Enum.ParticleOrientation.FacingCamera
         
-    elseif effectType == "Blood Rain" then
-        -- Кровавый ливень
+    elseif weatherType == "Rain" then
+        -- Реалистичные вертикальные струи дождя (VelocityParallel)
         emitter.Texture = "rbxassetid://258128463"
-        emitter.Rate = 320
-        emitter.Speed = NumberRange.new(50, 75)
-        emitter.Lifetime = NumberRange.new(0.7, 1.3)
+        emitter.Rate = count * 1.5
+        emitter.Speed = NumberRange.new(65, 95)
+        emitter.Lifetime = NumberRange.new(0.4, 0.8)
         emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.18),
-            NumberSequenceKeypoint.new(1, 0.1)
+            NumberSequenceKeypoint.new(0, 0.12),
+            NumberSequenceKeypoint.new(1, 0.08)
         })
-        emitter.Transparency = NumberSequence.new(0.15)
+        emitter.Transparency = NumberSequence.new(0.25)
+        emitter.Color = ColorSequence.new(Color3.fromRGB(180, 215, 255))
+        emitter.Acceleration = Vector3.new(0, -140, 0)
+        emitter.SpreadAngle = Vector2.new(15, 15)
+        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
+        
+    elseif weatherType == "Blood Rain" then
+        -- Кровавый ливень (HvH Style)
+        emitter.Texture = "rbxassetid://258128463"
+        emitter.Rate = count * 1.5
+        emitter.Speed = NumberRange.new(65, 95)
+        emitter.Lifetime = NumberRange.new(0.4, 0.8)
+        emitter.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.12),
+            NumberSequenceKeypoint.new(1, 0.08)
+        })
+        emitter.Transparency = NumberSequence.new(0.2)
         emitter.Color = ColorSequence.new(Color3.fromRGB(255, 25, 40))
-        emitter.Acceleration = Vector3.new(0, -95, 0)
-        emitter.EmissionDirection = Enum.NormalId.Bottom
-        
-    elseif effectType == "Rising Embers" then
-        -- Летающий пепел и искры
-        emitter.Texture = "rbxassetid://258128463"
-        emitter.Rate = 90
-        emitter.Speed = NumberRange.new(3, 8)
-        emitter.Lifetime = NumberRange.new(2.5, 5)
-        emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.35),
-            NumberSequenceKeypoint.new(1, 0.05)
-        })
-        emitter.Color = ColorSequence.new(Color3.fromRGB(255, 90, 20))
-        emitter.LightEmission = 1
-        emitter.Acceleration = Vector3.new(0, 6, 0)
-        emitter.SpreadAngle = Vector2.new(35, 35)
-        emitter.EmissionDirection = Enum.NormalId.Top
+        emitter.Acceleration = Vector3.new(0, -140, 0)
+        emitter.SpreadAngle = Vector2.new(15, 15)
+        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
     end
     
     WeatherEmitter = emitter
+end
+
+local CharacterTrail = nil
+local TrailAtt0 = nil
+local TrailAtt1 = nil
+
+local function RemoveCharacterTrail()
+    if CharacterTrail then CharacterTrail:Destroy() CharacterTrail = nil end
+    if TrailAtt0 then TrailAtt0:Destroy() TrailAtt0 = nil end
+    if TrailAtt1 then TrailAtt1:Destroy() TrailAtt1 = nil end
+    if LocalPlayer.Character then
+        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if obj.Name == "Umbrella_Trail" or obj.Name == "Umbrella_TrailAtt0" or obj.Name == "Umbrella_TrailAtt1" then
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+local function ApplyCharacterTrail()
+    RemoveCharacterTrail()
+    if not _G.PlayerTrailActive then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    TrailAtt0 = Instance.new("Attachment")
+    TrailAtt0.Name = "Umbrella_TrailAtt0"
+    TrailAtt0.Position = Vector3.new(0, 1.2, 0)
+    TrailAtt0.Parent = hrp
+    
+    TrailAtt1 = Instance.new("Attachment")
+    TrailAtt1.Name = "Umbrella_TrailAtt1"
+    TrailAtt1.Position = Vector3.new(0, -1.2, 0)
+    TrailAtt1.Parent = hrp
+    
+    CharacterTrail = Instance.new("Trail")
+    CharacterTrail.Name = "Umbrella_Trail"
+    CharacterTrail.Attachment0 = TrailAtt0
+    CharacterTrail.Attachment1 = TrailAtt1
+    CharacterTrail.Lifetime = 0.55
+    CharacterTrail.MinLength = 0.05
+    CharacterTrail.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 35, 45)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 10, 20))
+    })
+    CharacterTrail.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    CharacterTrail.LightEmission = 0.8
+    CharacterTrail.FaceCamera = true
+    CharacterTrail.Parent = hrp
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if _G.PlayerTrailActive then
+        task.wait(0.5)
+        ApplyCharacterTrail()
+    end
+end)
+
+-- Вспышка экрана при попадании (Screen Flash)
+local FlashFrame = Instance.new("Frame")
+FlashFrame.Name = "Umbrella_Flash"
+FlashFrame.Parent = ScreenGui
+FlashFrame.BackgroundColor3 = Color3.fromRGB(220, 35, 45)
+FlashFrame.BackgroundTransparency = 1
+FlashFrame.Size = UDim2.new(1, 0, 1, 0)
+FlashFrame.ZIndex = 1
+
+local function TriggerScreenFlash()
+    if not _G.KillFlashActive then return end
+    FlashFrame.BackgroundTransparency = 0.75
+    task.spawn(function()
+        for i = 1, 6 do
+            task.wait(0.02)
+            FlashFrame.BackgroundTransparency = 0.75 + (0.25 * (i / 6))
+        end
+        FlashFrame.BackgroundTransparency = 1
+    end)
 end
 
 -- 3. ПОСТОБРАБОТКА (COLOR CORRECTION & BLUR)
@@ -1231,15 +1311,7 @@ RunService.RenderStepped:Connect(function()
         Camera.FieldOfView = _G.CustomFOVValue
     end
     
-    -- Привязка частиц погоды к камере
-    if _G.WeatherActive and WeatherContainer and WeatherContainer.Parent then
-        local camPos = Camera.CFrame.Position
-        if _G.SelectedWeather == "Rising Embers" then
-            WeatherContainer.CFrame = CFrame.new(camPos.X, camPos.Y - 14, camPos.Z)
-        else
-            WeatherContainer.CFrame = CFrame.new(camPos.X, camPos.Y + 20, camPos.Z)
-        end
-    end
+
 end)
 
 -- 1. MAIN TAB
@@ -1334,8 +1406,8 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-local SecWeather = CreateSection(Tabs["Visuals"], "Weather FX & Camera")
-CreateToggle(SecWeather, "Weather Particles (Snow/Rain)", false, function(st)
+local SecWeatherAndFX = CreateSection(Tabs["Visuals"], "Weather & Atmospheric FX")
+CreateToggle(SecWeatherAndFX, "Weather Effects (Snow / Rain)", false, function(st)
     _G.WeatherActive = st
     if st then
         ApplyWeatherEffect(_G.SelectedWeather)
@@ -1343,31 +1415,48 @@ CreateToggle(SecWeather, "Weather Particles (Snow/Rain)", false, function(st)
         RemoveWeatherEffect()
     end
 end)
-CreateDropdown(SecWeather, "Weather Type", {"Snow", "Blood Rain", "Rising Embers"}, "Snow", function(selected)
+CreateDropdown(SecWeatherAndFX, "Weather Type", {"Snow", "Rain", "Blood Rain"}, "Snow", function(selected)
     _G.SelectedWeather = selected
     if _G.WeatherActive then
         ApplyWeatherEffect(selected)
     end
 end)
-CreateToggle(SecWeather, "Custom Camera FOV", false, function(st)
+CreateSlider(SecWeatherAndFX, "Weather Intensity", _G.WeatherDensity, 50, 400, false, function(val)
+    _G.WeatherDensity = val
+    if _G.WeatherActive and WeatherEmitter then
+        WeatherEmitter.Rate = (_G.SelectedWeather == "Snow") and val or (val * 1.5)
+    end
+end)
+CreateToggle(SecWeatherAndFX, "Player Neon Trail", false, function(st)
+    _G.PlayerTrailActive = st
+    if st then
+        ApplyCharacterTrail()
+    else
+        RemoveCharacterTrail()
+    end
+end)
+CreateToggle(SecWeatherAndFX, "Custom Camera FOV", false, function(st)
     _G.CustomFOVActive = st
     if not st then
         Camera.FieldOfView = OriginalLighting.FieldOfView or 70
     end
 end)
-CreateSlider(SecWeather, "Field of View", _G.CustomFOVValue, 60, 120, false, function(val)
+CreateSlider(SecWeatherAndFX, "Field of View", _G.CustomFOVValue, 60, 120, false, function(val)
     _G.CustomFOVValue = val
     if _G.CustomFOVActive then
         Camera.FieldOfView = val
     end
 end)
-CreateToggle(SecWeather, "Screen Depth Blur", false, function(st)
+CreateToggle(SecWeatherAndFX, "Screen Depth Blur", false, function(st)
     _G.BlurActive = st
     UpdateBlur()
 end)
-CreateSlider(SecWeather, "Blur Intensity", _G.BlurSize, 1, 25, false, function(val)
+CreateSlider(SecWeatherAndFX, "Blur Intensity", _G.BlurSize, 1, 25, false, function(val)
     _G.BlurSize = val
     UpdateBlur()
+end)
+CreateToggle(SecWeatherAndFX, "Hit / Kill Screen Flash", true, function(st)
+    _G.KillFlashActive = st
 end)
 
 local SecWorldFog = CreateSection(Tabs["Visuals"], "World Fog & Atmosphere")
@@ -1795,6 +1884,7 @@ local function OnHitRegistered(targetPlayer, hitPos, partName)
     
     PlayHitSound()
     ShowScreenHitmarker()
+    TriggerScreenFlash()
     CreateBulletTracer(startPos, hitPos)
     Create3DHitEffect(hitPos)
     AddHitLog(targetName, role, partName or "Torso", dist)
@@ -1883,34 +1973,87 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 2. FLY HACK (Свободный 3D полет с регулировкой скорости)
+-- 2. PRO FLY HACK (Идеально плавный полет через BodyVelocity + BodyGyro + Noclip)
+local flyBV = nil
+local flyBG = nil
+
+local function StopSmoothFly()
+    if flyBV then flyBV:Destroy() flyBV = nil end
+    if flyBG then flyBG:Destroy() flyBG = nil end
+    if LocalPlayer.Character then
+        for _, p in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if p.Name == "Umbrella_FlyVelocity" or p.Name == "Umbrella_FlyGyro" then
+                p:Destroy()
+            end
+        end
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+        end
+    end
+end
+
+local function StartSmoothFly()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+    
+    StopSmoothFly()
+    
+    flyBV = Instance.new("BodyVelocity")
+    flyBV.Name = "Umbrella_FlyVelocity"
+    flyBV.Velocity = Vector3.new(0, 0, 0)
+    flyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    flyBV.Parent = hrp
+    
+    flyBG = Instance.new("BodyGyro")
+    flyBG.Name = "Umbrella_FlyGyro"
+    flyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    flyBG.P = 9e4
+    flyBG.CFrame = hrp.CFrame
+    flyBG.Parent = hrp
+end
+
 RunService.RenderStepped:Connect(function()
     if _G.FlyActive and LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hrp and humanoid then
-            humanoid.PlatformStand = true
-            local flyDir = Vector3.new(0, 0, 0)
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hrp and hum then
+            if not flyBV or not flyBV.Parent or not flyBG or not flyBG.Parent then
+                StartSmoothFly()
+            end
             
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then flyDir = flyDir + Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then flyDir = flyDir - Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then flyDir = flyDir - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then flyDir = flyDir + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then flyDir = flyDir + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then flyDir = flyDir - Vector3.new(0, 1, 0) end
+            -- Держит персонажа ровно по направлению камеры без заваливания
+            flyBG.CFrame = Camera.CFrame
             
-            if flyDir.Magnitude > 0 then
-                hrp.Velocity = flyDir.Unit * _G.FlySpeed
+            local camCF = Camera.CFrame
+            local moveDir = Vector3.new(0, 0, 0)
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+            
+            if moveDir.Magnitude > 0 then
+                flyBV.Velocity = moveDir.Unit * _G.FlySpeed
             else
-                hrp.Velocity = Vector3.new(0, 0, 0)
+                flyBV.Velocity = Vector3.new(0, 0, 0)
+            end
+            
+            -- Автоматический noclip во время полета сквозь любые препятствия
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
         end
     else
-        if LocalPlayer.Character then
-            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.PlatformStand then
-                humanoid.PlatformStand = false
-            end
+        if flyBV or flyBG then
+            StopSmoothFly()
         end
     end
 end)
