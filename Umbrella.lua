@@ -789,6 +789,8 @@ _G.MurdererRepelActive = false
 
 _G.CustomModelsActive = false
 _G.SelectedCustomModel = "angel"
+_G.CustomModelScale = 1.0
+_G.CustomModelHeightOffset = 0.0
 
 -- Custom Weapons (Knife & Gun Skins / 3D Models)
 _G.CustomKnifeActive = false
@@ -1069,7 +1071,34 @@ local function ApplyCustomModel(modelName)
             
             if primary then
                 newModel.PrimaryPart = primary
-                newModel:PivotTo(hrp.CFrame)
+                
+                -- Auto-normalize oversized models (Tung Tung Sahur, La Vaca Saturnita, etc.) to standard player height
+                local successBox, modelSize = pcall(function()
+                    local _, sz = newModel:GetBoundingBox()
+                    return sz
+                end)
+                
+                if successBox and modelSize and modelSize.Y > 0 then
+                    local targetNormalHeight = 5.3 -- Standard player character height
+                    if modelSize.Y > targetNormalHeight then
+                        local autoFactor = targetNormalHeight / modelSize.Y
+                        pcall(function()
+                            newModel:ScaleTo(autoFactor)
+                        end)
+                    end
+                end
+                
+                -- User Scale multiplier from slider
+                local userMultiplier = _G.CustomModelScale or 1.0
+                if userMultiplier ~= 1.0 then
+                    pcall(function()
+                        newModel:ScaleTo(userMultiplier)
+                    end)
+                end
+                
+                -- Position at HRP with height offset
+                local yOffset = _G.CustomModelHeightOffset or 0
+                newModel:PivotTo(hrp.CFrame * CFrame.new(0, yOffset, 0))
                 
                 -- Configure all parts: Massless = true, CanCollide = false, CanQuery = false, CanTouch = false
                 for _, part in ipairs(newModel:GetDescendants()) do
@@ -2704,6 +2733,18 @@ CreateDropdown(SecModels, "Select Model", {"angel", "spiderman", "donkey", "pig"
     _G.SelectedCustomModel = selected
     if _G.CustomModelsActive then
         ApplyCustomModel(selected)
+    end
+end)
+CreateSlider(SecModels, "Model Scale Size", _G.CustomModelScale, 0.3, 2.5, true, function(val)
+    _G.CustomModelScale = val
+    if _G.CustomModelsActive then
+        ApplyCustomModel(_G.SelectedCustomModel)
+    end
+end)
+CreateSlider(SecModels, "Height Offset (Y)", _G.CustomModelHeightOffset, -3.0, 3.0, true, function(val)
+    _G.CustomModelHeightOffset = val
+    if _G.CustomModelsActive then
+        ApplyCustomModel(_G.SelectedCustomModel)
     end
 end)
 
