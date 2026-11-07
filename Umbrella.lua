@@ -268,81 +268,64 @@ local fovStroke = Instance.new("UIStroke", FOVCircle)
 fovStroke.Color = Color3.fromRGB(220, 35, 45)
 fovStroke.Thickness = 1.2
 
--- 2. ADVANCED CUSTOM HVH CROSSHAIR (КАСТОМНЫЙ ПРИЦЕЛ)
-local CrosshairContainer = Instance.new("Frame")
-CrosshairContainer.Name = "Umbrella_Crosshair_Root"
-CrosshairContainer.Parent = ScreenGui
-CrosshairContainer.AnchorPoint = Vector2.new(0.5, 0.5)
-CrosshairContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
-CrosshairContainer.Size = UDim2.new(0, 0, 0, 0)
-CrosshairContainer.BackgroundTransparency = 1
-CrosshairContainer.BorderSizePixel = 0
-CrosshairContainer.Visible = false
+-- 2. CUSTOM HVH CROSSHAIR (КАСТОМНЫЙ ПРИЦЕЛ)
+local CrosshairCenter = Instance.new("Frame")
+CrosshairCenter.Name = "Umbrella_Crosshair"
+CrosshairCenter.Parent = ScreenGui
+CrosshairCenter.AnchorPoint = Vector2.new(0.5, 0.5)
+CrosshairCenter.Position = UDim2.new(0.5, 0, 0.5, 0)
+CrosshairCenter.Size = UDim2.new(0, 4, 0, 4)
+CrosshairCenter.BackgroundColor3 = Color3.fromRGB(255, 45, 55)
+CrosshairCenter.BorderSizePixel = 0
+CrosshairCenter.Visible = false
 
-local CrosshairRotFrame = Instance.new("Frame")
-CrosshairRotFrame.Name = "Crosshair_RotFrame"
-CrosshairRotFrame.Parent = CrosshairContainer
-CrosshairRotFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-CrosshairRotFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-CrosshairRotFrame.Size = UDim2.new(0, 0, 0, 0)
-CrosshairRotFrame.BackgroundTransparency = 1
-CrosshairRotFrame.BorderSizePixel = 0
+local chDotCorner = Instance.new("UICorner", CrosshairCenter)
+chDotCorner.CornerRadius = UDim.new(1, 0)
 
-local CrosshairDot = Instance.new("Frame")
-CrosshairDot.Name = "Crosshair_CenterDot"
-CrosshairDot.Parent = CrosshairContainer
-CrosshairDot.AnchorPoint = Vector2.new(0.5, 0.5)
-CrosshairDot.Position = UDim2.new(0.5, 0, 0.5, 0)
-CrosshairDot.Size = UDim2.new(0, 4, 0, 4)
-CrosshairDot.BackgroundColor3 = Color3.fromRGB(255, 45, 55)
-CrosshairDot.BorderSizePixel = 0
-local CrosshairDotCorner = Instance.new("UICorner", CrosshairDot)
-CrosshairDotCorner.CornerRadius = UDim.new(1, 0)
-local CrosshairDotStroke = Instance.new("UIStroke", CrosshairDot)
-CrosshairDotStroke.Color = Color3.fromRGB(0, 0, 0)
-CrosshairDotStroke.Thickness = 1
-CrosshairDotStroke.Transparency = 0
-
-local CrosshairCircle = Instance.new("Frame")
-CrosshairCircle.Name = "Crosshair_CircleRing"
-CrosshairCircle.Parent = CrosshairContainer
-CrosshairCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-CrosshairCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
-CrosshairCircle.Size = UDim2.new(0, 28, 0, 28)
-CrosshairCircle.BackgroundTransparency = 1
-CrosshairCircle.BorderSizePixel = 0
-local CrosshairCircleCorner = Instance.new("UICorner", CrosshairCircle)
-CrosshairCircleCorner.CornerRadius = UDim.new(1, 0)
-local CrosshairCircleStroke = Instance.new("UIStroke", CrosshairCircle)
-CrosshairCircleStroke.Color = Color3.fromRGB(255, 45, 55)
-CrosshairCircleStroke.Thickness = 2
-CrosshairCircleStroke.Transparency = 0
+local chDotStroke = Instance.new("UIStroke", CrosshairCenter)
+chDotStroke.Thickness = 1
+chDotStroke.Color = Color3.fromRGB(0, 0, 0)
+chDotStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+chDotStroke.Enabled = false
 
 local chBars = {}
 local chBarCorners = {}
 local chBarStrokes = {}
 for i = 1, 4 do
     local bar = Instance.new("Frame")
-    bar.Name = "Crosshair_Bar_" .. i
-    bar.Parent = CrosshairRotFrame
-    bar.AnchorPoint = Vector2.new(0.5, 0.5)
+    bar.Parent = CrosshairCenter
     bar.BorderSizePixel = 0
     bar.BackgroundColor3 = Color3.fromRGB(255, 45, 55)
     
-    local corner = Instance.new("UICorner", bar)
-    corner.CornerRadius = UDim.new(0, 0)
-    chBarCorners[i] = corner
+    local c = Instance.new("UICorner", bar)
+    c.CornerRadius = UDim.new(0, 0)
+    chBarCorners[i] = c
     
-    local stroke = Instance.new("UIStroke", bar)
-    stroke.Color = Color3.fromRGB(0, 0, 0)
-    stroke.Thickness = 1
-    stroke.Transparency = 0
-    chBarStrokes[i] = stroke
+    local s = Instance.new("UIStroke", bar)
+    s.Thickness = 1
+    s.Color = Color3.fromRGB(0, 0, 0)
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Enabled = false
+    chBarStrokes[i] = s
     
     chBars[i] = bar
 end
 
-local CrosshairCenter = CrosshairContainer
+local CrosshairRing = Instance.new("Frame")
+CrosshairRing.Name = "CrosshairRing"
+CrosshairRing.Parent = CrosshairCenter
+CrosshairRing.AnchorPoint = Vector2.new(0.5, 0.5)
+CrosshairRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+CrosshairRing.BackgroundTransparency = 1
+CrosshairRing.BorderSizePixel = 0
+CrosshairRing.Visible = false
+Instance.new("UICorner", CrosshairRing).CornerRadius = UDim.new(1, 0)
+
+local CrosshairRingStroke = Instance.new("UIStroke")
+CrosshairRingStroke.Parent = CrosshairRing
+CrosshairRingStroke.Color = Color3.fromRGB(255, 45, 55)
+CrosshairRingStroke.Thickness = 1.5
+CrosshairRingStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 
 
@@ -580,25 +563,10 @@ local HeadDotColorOptionNames = {
     "Rainbow RGB"
 }
 
-local ChamsStyleOptionNames = {
-    "Fill / Glow",
-    "Boxes",
-    "Outline Only"
-}
-
-local CrosshairStyleOptions = {
-    "Classic Cross",
-    "T-Shape",
-    "Dot Only",
-    "Circle Ring",
-    "Cross + Circle",
-    "X-Cross",
-    "Box / Bracket"
-}
-
 local CrosshairColorOptionNames = {
-    "Blood Crimson",
+    "Theme Match",
     "Umbrella Red",
+    "Blood Crimson",
     "Cyber Cyan",
     "Electric Purple",
     "Neon Pink",
@@ -607,14 +575,14 @@ local CrosshairColorOptionNames = {
     "Deep Orange",
     "Sky Blue",
     "Pure White",
-    "Muted Gray",
-    "Theme Match",
+    "Pulsing Glow",
     "Rainbow RGB"
 }
 
-local CrosshairDotShapeOptions = {
-    "Circle",
-    "Square"
+local ChamsStyleOptionNames = {
+    "Fill / Glow",
+    "Boxes",
+    "Outline Only"
 }
 
 _G.SelectedThemeColor = "Umbrella Red"
@@ -1218,33 +1186,32 @@ _G.ShowFOVCircle = true
 _G.FOVCircleRadius = 130
 _G.AlwaysAim = false
 
--- HvH Aesthetics & Crosshair Settings
+-- HvH Aesthetics & Visuals
 _G.CustomCrosshairActive = false
-_G.SelectedCrosshairStyle = "Classic Cross"
+_G.CrosshairStyle = "Classic (+)"
 _G.SelectedCrosshairColor = "Blood Crimson"
-_G.CrosshairSize = 10
+_G.CrosshairSize = 8
 _G.CrosshairThickness = 2
 _G.CrosshairGap = 4
-_G.CrosshairCenterDot = true
-_G.CrosshairDotSize = 3
+_G.CrosshairDot = true
+_G.CrosshairDotSize = 4
 _G.CrosshairDotShape = "Circle"
-_G.CrosshairCircleRadius = 14
-_G.CrosshairCircleThickness = 2
+_G.CrosshairTopLine = true
 _G.CrosshairOutline = true
 _G.CrosshairOutlineThickness = 1
-_G.CrosshairRounded = false
+_G.CrosshairOutlineColor = "Pure Black"
 _G.CrosshairTransparency = 0
-_G.CrosshairRotation = 0
-_G.CrosshairSpin = false
-_G.CrosshairSpinSpeed = 6
-_G.CrosshairPulse = false
-_G.CrosshairPulseSpeed = 4
-_G.CrosshairDynamicGap = false
-_G.CrosshairSpreadFactor = 6
-_G.CrosshairTargetColor = false
+_G.CrosshairRoundedBars = false
 _G.CrosshairFollowMouse = false
-_G.CrosshairOffsetX = 0
-_G.CrosshairOffsetY = 0
+_G.CrosshairSpin = false
+_G.CrosshairSpinSpeed = 5
+_G.CrosshairPulse = false
+_G.CrosshairDynamicSpread = false
+_G.CrosshairSpreadAmount = 6
+_G.CrosshairTargetColor = false
+_G.CrosshairRingActive = false
+_G.CrosshairRingRadius = 14
+_G.CrosshairRingThickness = 1
 _G.SnaplinesActive = false
 _G.HeadDotActive = false
 _G.RGBSyncActive = false
@@ -3138,35 +3105,38 @@ CreateSlider(SecModels, "Rotation Offset (Y)", _G.CustomModelRotation, 0, 360, f
     end
 end)
 
-local SecCrosshair = CreateSection(Tabs["Visuals"], "Advanced Crosshair (Кастомный Прицел)")
+local SecCrosshair = CreateSection(Tabs["Visuals"], "Custom HvH Crosshair Engine")
 CreateToggle(SecCrosshair, "Enable Custom Crosshair", false, function(st) _G.CustomCrosshairActive = st end)
-CreateDropdown(SecCrosshair, "Crosshair Style", CrosshairStyleOptions, _G.SelectedCrosshairStyle, function(val) _G.SelectedCrosshairStyle = val end)
-CreateDropdown(SecCrosshair, "Crosshair Color", CrosshairColorOptionNames, _G.SelectedCrosshairColor, function(val) _G.SelectedCrosshairColor = val end)
-CreateSlider(SecCrosshair, "Crosshair Size (Length)", _G.CrosshairSize, 2, 45, false, function(val) _G.CrosshairSize = val end)
-CreateSlider(SecCrosshair, "Crosshair Thickness", _G.CrosshairThickness, 1, 10, false, function(val) _G.CrosshairThickness = val end)
-CreateSlider(SecCrosshair, "Crosshair Gap", _G.CrosshairGap, 0, 35, false, function(val) _G.CrosshairGap = val end)
-CreateToggle(SecCrosshair, "Show Center Dot", _G.CrosshairCenterDot, function(st) _G.CrosshairCenterDot = st end)
+CreateDropdown(SecCrosshair, "Crosshair Style", {"Classic (+)", "T-Shape", "Dot Only", "Circle Ring", "Cross + Circle", "X-Cross (x)", "Arrow (^)"}, _G.CrosshairStyle, function(val)
+    _G.CrosshairStyle = val
+end)
+CreateDropdown(SecCrosshair, "Crosshair Color", CrosshairColorOptionNames, _G.SelectedCrosshairColor, function(selected)
+    _G.SelectedCrosshairColor = selected
+end)
+CreateSlider(SecCrosshair, "Crosshair Size (Length)", _G.CrosshairSize, 2, 35, false, function(val) _G.CrosshairSize = val end)
+CreateSlider(SecCrosshair, "Crosshair Thickness", _G.CrosshairThickness, 1, 8, false, function(val) _G.CrosshairThickness = val end)
+CreateSlider(SecCrosshair, "Crosshair Gap", _G.CrosshairGap, 0, 25, false, function(val) _G.CrosshairGap = val end)
+CreateSlider(SecCrosshair, "Crosshair Transparency", math.round((_G.CrosshairTransparency or 0) * 100), 0, 90, false, function(val) _G.CrosshairTransparency = val / 100 end)
+CreateToggle(SecCrosshair, "Center Dot", _G.CrosshairDot, function(st) _G.CrosshairDot = st end)
 CreateSlider(SecCrosshair, "Center Dot Size", _G.CrosshairDotSize, 1, 12, false, function(val) _G.CrosshairDotSize = val end)
-CreateDropdown(SecCrosshair, "Center Dot Shape", CrosshairDotShapeOptions, _G.CrosshairDotShape, function(val) _G.CrosshairDotShape = val end)
-CreateSlider(SecCrosshair, "Circle Ring Radius", _G.CrosshairCircleRadius, 4, 45, false, function(val) _G.CrosshairCircleRadius = val end)
-CreateSlider(SecCrosshair, "Circle Ring Thickness", _G.CrosshairCircleThickness, 1, 6, false, function(val) _G.CrosshairCircleThickness = val end)
-CreateToggle(SecCrosshair, "Black Outline / Border", _G.CrosshairOutline, function(st) _G.CrosshairOutline = st end)
+CreateDropdown(SecCrosshair, "Center Dot Shape", {"Circle", "Square"}, _G.CrosshairDotShape, function(val) _G.CrosshairDotShape = val end)
+CreateToggle(SecCrosshair, "Top Line (T-Shape Control)", _G.CrosshairTopLine, function(st) _G.CrosshairTopLine = st end)
+CreateToggle(SecCrosshair, "Rounded Line Caps", _G.CrosshairRoundedBars, function(st) _G.CrosshairRoundedBars = st end)
+CreateToggle(SecCrosshair, "Outline (Border)", _G.CrosshairOutline, function(st) _G.CrosshairOutline = st end)
 CreateSlider(SecCrosshair, "Outline Thickness", _G.CrosshairOutlineThickness, 1, 4, false, function(val) _G.CrosshairOutlineThickness = val end)
-CreateToggle(SecCrosshair, "Rounded Bar Corners", _G.CrosshairRounded, function(st) _G.CrosshairRounded = st end)
-CreateSlider(SecCrosshair, "Transparency (%)", math.round((_G.CrosshairTransparency or 0) * 100), 0, 90, false, function(val) _G.CrosshairTransparency = val / 100 end)
-CreateSlider(SecCrosshair, "Static Rotation Angle", _G.CrosshairRotation, 0, 180, false, function(val) _G.CrosshairRotation = val end)
-CreateToggle(SecCrosshair, "HvH Spin Animation", _G.CrosshairSpin, function(st) _G.CrosshairSpin = st end)
-CreateSlider(SecCrosshair, "Spin Speed", _G.CrosshairSpinSpeed, 1, 35, false, function(val) _G.CrosshairSpinSpeed = val end)
-CreateToggle(SecCrosshair, "Pulse / Breathing Gap", _G.CrosshairPulse, function(st) _G.CrosshairPulse = st end)
-CreateSlider(SecCrosshair, "Pulse Speed", _G.CrosshairPulseSpeed, 1, 12, false, function(val) _G.CrosshairPulseSpeed = val end)
-CreateToggle(SecCrosshair, "Dynamic Movement Spread", _G.CrosshairDynamicGap, function(st) _G.CrosshairDynamicGap = st end)
-CreateSlider(SecCrosshair, "Spread Expansion Factor", _G.CrosshairSpreadFactor, 1, 20, false, function(val) _G.CrosshairSpreadFactor = val end)
-CreateToggle(SecCrosshair, "Target Lock Indicator", _G.CrosshairTargetColor, function(st) _G.CrosshairTargetColor = st end)
+CreateDropdown(SecCrosshair, "Outline Color", {"Pure Black", "Dark Gray", "Deep Crimson", "Inverse"}, _G.CrosshairOutlineColor, function(val) _G.CrosshairOutlineColor = val end)
+CreateToggle(SecCrosshair, "Circle Ring Overlay", _G.CrosshairRingActive, function(st) _G.CrosshairRingActive = st end)
+CreateSlider(SecCrosshair, "Ring Radius", _G.CrosshairRingRadius, 6, 45, false, function(val) _G.CrosshairRingRadius = val end)
+CreateSlider(SecCrosshair, "Ring Thickness", _G.CrosshairRingThickness, 1, 5, false, function(val) _G.CrosshairRingThickness = val end)
 CreateToggle(SecCrosshair, "Follow Mouse Cursor", _G.CrosshairFollowMouse, function(st) _G.CrosshairFollowMouse = st end)
-CreateSlider(SecCrosshair, "Offset X Position", _G.CrosshairOffsetX, -150, 150, false, function(val) _G.CrosshairOffsetX = val end)
-CreateSlider(SecCrosshair, "Offset Y Position", _G.CrosshairOffsetY, -150, 150, false, function(val) _G.CrosshairOffsetY = val end)
+CreateToggle(SecCrosshair, "Spin Animation (Rotation)", _G.CrosshairSpin, function(st) _G.CrosshairSpin = st end)
+CreateSlider(SecCrosshair, "Spin Speed", _G.CrosshairSpinSpeed, 1, 20, false, function(val) _G.CrosshairSpinSpeed = val end)
+CreateToggle(SecCrosshair, "Breathing Pulse", _G.CrosshairPulse, function(st) _G.CrosshairPulse = st end)
+CreateToggle(SecCrosshair, "Dynamic Movement Spread", _G.CrosshairDynamicSpread, function(st) _G.CrosshairDynamicSpread = st end)
+CreateSlider(SecCrosshair, "Movement Spread Amount", _G.CrosshairSpreadAmount, 2, 20, false, function(val) _G.CrosshairSpreadAmount = val end)
+CreateToggle(SecCrosshair, "Target Lock Color React", _G.CrosshairTargetColor, function(st) _G.CrosshairTargetColor = st end)
 
-local SecMoreVisuals = CreateSection(Tabs["Visuals"], "HvH Aesthetics & ESP Dots")
+local SecMoreVisuals = CreateSection(Tabs["Visuals"], "HvH Aesthetics & Extras")
 CreateToggle(SecMoreVisuals, "Head Dot ESP (Точка головы)", false, function(st) _G.HeadDotActive = st end)
 CreateDropdown(SecMoreVisuals, "Head Dot Color", HeadDotColorOptionNames, _G.SelectedHeadDotColor, function(val)
     _G.SelectedHeadDotColor = val
@@ -3480,184 +3450,161 @@ local function UpdateHeadDots()
     end
 end
 
+local crosshairSpinAngle = 0
+local function GetCrosshairColor()
+    if _G.SelectedCrosshairColor == "Rainbow RGB" then
+        local hue = (tick() * 0.6) % 1
+        return Color3.fromHSV(hue, 1, 1)
+    elseif _G.SelectedCrosshairColor == "Pulsing Glow" then
+        local p = (math.sin(tick() * 5) + 1) * 0.5
+        return Color3.fromRGB(math.floor(180 + 75 * p), math.floor(30 + 30 * p), math.floor(40 + 40 * p))
+    elseif _G.SelectedCrosshairColor == "Theme Match" then
+        return GetThemeAccentColor()
+    else
+        return ColorPresets[_G.SelectedCrosshairColor] or RopeColorPresets[_G.SelectedCrosshairColor] or Color3.fromRGB(220, 35, 45)
+    end
+end
+
 local function UpdateCrosshair()
     if not _G.CustomCrosshairActive then
-        CrosshairContainer.Visible = false
+        CrosshairCenter.Visible = false
         return
     end
-    CrosshairContainer.Visible = true
-
-    -- Position calculation (Follow mouse or static center + offsets)
-    local targetX, targetY
+    CrosshairCenter.Visible = true
+    
+    -- Позиция (Центр экрана или привязка к мыши)
     if _G.CrosshairFollowMouse then
         local mPos = UserInputService:GetMouseLocation()
-        targetX = mPos.X
-        targetY = mPos.Y
+        CrosshairCenter.Position = UDim2.new(0, mPos.X, 0, mPos.Y)
     else
-        local vp = Camera.ViewportSize
-        targetX = vp.X * 0.5
-        targetY = vp.Y * 0.5
+        CrosshairCenter.Position = UDim2.new(0.5, 0, 0.5, 0)
     end
-    targetX = targetX + (_G.CrosshairOffsetX or 0)
-    targetY = targetY + (_G.CrosshairOffsetY or 0)
-    CrosshairContainer.Position = UDim2.new(0, math.round(targetX), 0, math.round(targetY))
-
-    -- Target detection for Target Indicator
-    local isTargetLocked = false
-    if _G.CrosshairTargetColor then
-        local ray = Camera:ViewportPointToRay(targetX, targetY)
-        local rayParams = RaycastParams.new()
-        rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-        local ignore = {CrosshairContainer}
-        if LocalPlayer.Character then table.insert(ignore, LocalPlayer.Character) end
-        rayParams.FilterDescendantsInstances = ignore
-        local hitRes = workspace:Raycast(ray.Origin, ray.Direction * 1000, rayParams)
-        if hitRes and hitRes.Instance then
-            local model = hitRes.Instance:FindFirstAncestorOfClass("Model")
-            if model and Players:GetPlayerFromCharacter(model) and model ~= LocalPlayer.Character then
-                isTargetLocked = true
-            end
-        end
-    end
-
-    -- Color calculation
-    local col
-    if isTargetLocked then
-        col = Color3.fromRGB(255, 30, 45)
-    elseif _G.SelectedCrosshairColor == "Rainbow RGB" or _G.RGBSyncActive then
-        local hue = (tick() * 0.6) % 1
-        col = Color3.fromHSV(hue, 1, 1)
-    elseif _G.SelectedCrosshairColor == "Theme Match" then
-        col = GetThemeAccentColor()
-    elseif ColorPresets[_G.SelectedCrosshairColor] then
-        col = ColorPresets[_G.SelectedCrosshairColor]
-    elseif RopeColorPresets[_G.SelectedCrosshairColor] then
-        col = RopeColorPresets[_G.SelectedCrosshairColor]
-    else
-        col = Color3.fromRGB(255, 45, 55)
-    end
-
-    local trans = math.clamp(_G.CrosshairTransparency or 0, 0, 1)
-    local outlineEnabled = (_G.CrosshairOutline ~= false)
-    local outlineThick = _G.CrosshairOutlineThickness or 1
-    local style = _G.SelectedCrosshairStyle or "Classic Cross"
-    local size = _G.CrosshairSize or 10
-    local thickness = _G.CrosshairThickness or 2
-    local gap = _G.CrosshairGap or 4
-
-    -- Dynamic spread calculation based on character movement & velocity
-    if _G.CrosshairDynamicGap and LocalPlayer.Character then
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if root then
-            local vel = root.AssemblyLinearVelocity
-            local moveSpeed = Vector3.new(vel.X, 0, vel.Z).Magnitude
-            local spreadFactor = (_G.CrosshairSpreadFactor or 6) * 0.25
-            if moveSpeed > 1 then
-                gap = gap + math.clamp(moveSpeed * 0.35 * spreadFactor, 1, 25)
-            end
-            if math.abs(vel.Y) > 2 then
-                gap = gap + 4 * spreadFactor
-            end
-        end
-    end
-
-    -- Breathing / Pulse animation
-    if _G.CrosshairPulse then
-        local pSpeed = _G.CrosshairPulseSpeed or 4
-        gap = math.max(0, gap + math.sin(tick() * pSpeed) * 3.5)
-    end
-
-    -- Rotation & Spin
-    local baseRot = _G.CrosshairRotation or 0
+    
+    local style = _G.CrosshairStyle or "Classic (+)"
+    
+    -- Вращение / Spin
     if _G.CrosshairSpin then
-        local sSpeed = _G.CrosshairSpinSpeed or 6
-        baseRot = (tick() * sSpeed * 25) % 360
+        local spd = _G.CrosshairSpinSpeed or 5
+        crosshairSpinAngle = (crosshairSpinAngle + spd * 0.8) % 360
+        CrosshairCenter.Rotation = crosshairSpinAngle
+    elseif style == "X-Cross (x)" then
+        CrosshairCenter.Rotation = 45
+    else
+        CrosshairCenter.Rotation = 0
     end
-    if style == "X-Cross" then
-        baseRot = baseRot + 45
-    end
-    CrosshairRotFrame.Rotation = baseRot
-
-    -- Center Dot configuration
-    if _G.CrosshairCenterDot and style ~= "Circle Ring" then
-        CrosshairDot.Visible = true
-        local dotSize = _G.CrosshairDotSize or 3
-        CrosshairDot.Size = UDim2.new(0, dotSize, 0, dotSize)
-        CrosshairDot.BackgroundColor3 = col
-        CrosshairDot.BackgroundTransparency = trans
-        if _G.CrosshairDotShape == "Square" then
-            CrosshairDotCorner.CornerRadius = UDim.new(0, 0)
-        else
-            CrosshairDotCorner.CornerRadius = UDim.new(1, 0)
+    
+    -- Базовый цвет и реакция на прицеливание в противника (Target Lock)
+    local col = GetCrosshairColor()
+    if _G.CrosshairTargetColor then
+        local checkPos = _G.CrosshairFollowMouse and UserInputService:GetMouseLocation() or Vector2.new(Camera.ViewportSize.X * 0.5, Camera.ViewportSize.Y * 0.5)
+        local unitRay = Camera:ViewportPointToRay(checkPos.X, checkPos.Y)
+        local rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+        if LocalPlayer.Character then
+            rayParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
         end
-        CrosshairDotStroke.Enabled = outlineEnabled
-        CrosshairDotStroke.Thickness = outlineThick
-        CrosshairDotStroke.Transparency = trans
-    else
-        CrosshairDot.Visible = false
+        local hitRes = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
+        if hitRes and hitRes.Instance and hitRes.Instance.Parent then
+            local hitChar = hitRes.Instance.Parent
+            if hitChar:FindFirstChildOfClass("Humanoid") then
+                local p = Players:GetPlayerFromCharacter(hitChar)
+                if p and p ~= LocalPlayer then
+                    col = Color3.fromRGB(40, 255, 90)
+                end
+            end
+        end
     end
-
-    -- Circle Ring configuration
-    if style == "Circle Ring" or style == "Cross + Circle" then
-        CrosshairCircle.Visible = true
-        local cRadius = _G.CrosshairCircleRadius or 14
-        CrosshairCircle.Size = UDim2.new(0, cRadius * 2, 0, cRadius * 2)
-        CrosshairCircleStroke.Color = col
-        CrosshairCircleStroke.Thickness = _G.CrosshairCircleThickness or 2
-        CrosshairCircleStroke.Transparency = trans
-    else
-        CrosshairCircle.Visible = false
+    
+    -- Динамический зазор (Dynamic Gap & Movement Spread)
+    local gap = _G.CrosshairGap or 4
+    if _G.CrosshairDynamicSpread and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local vel = hrp.AssemblyLinearVelocity or hrp.Velocity
+            local spd = Vector3.new(vel.X, 0, vel.Z).Magnitude
+            local factor = math.clamp(spd / 16, 0, 1.5)
+            if math.abs(vel.Y) > 2 then factor = factor + 0.6 end
+            gap = gap + math.floor(factor * (_G.CrosshairSpreadAmount or 6))
+        end
     end
-
-    -- Bars configuration
+    if _G.CrosshairPulse then
+        gap = gap + math.floor((math.sin(tick() * 6) + 1) * 1.5)
+    end
+    
+    local size = _G.CrosshairSize or 8
+    local thick = _G.CrosshairThickness or 2
+    local trans = _G.CrosshairTransparency or 0
+    local rounded = _G.CrosshairRoundedBars or false
+    
+    -- Контур (Outline)
+    local outlineOn = _G.CrosshairOutline == true
+    local outThick = _G.CrosshairOutlineThickness or 1
+    local outCol = Color3.fromRGB(0, 0, 0)
+    if _G.CrosshairOutlineColor == "Dark Gray" then
+        outCol = Color3.fromRGB(40, 40, 45)
+    elseif _G.CrosshairOutlineColor == "Deep Crimson" then
+        outCol = Color3.fromRGB(90, 10, 20)
+    elseif _G.CrosshairOutlineColor == "Inverse" then
+        outCol = Color3.fromRGB(255 - math.floor(col.R * 255), 255 - math.floor(col.G * 255), 255 - math.floor(col.B * 255))
+    end
+    
+    -- Центральная точка (Center Dot)
+    local dotSize = _G.CrosshairDotSize or 4
+    local showDot = (_G.CrosshairDot ~= false) or (style == "Dot Only")
+    CrosshairCenter.Size = UDim2.new(0, dotSize, 0, dotSize)
+    CrosshairCenter.BackgroundColor3 = col
+    CrosshairCenter.BackgroundTransparency = showDot and trans or 1
+    chDotCorner.CornerRadius = (_G.CrosshairDotShape == "Square") and UDim.new(0, 0) or UDim.new(1, 0)
+    chDotStroke.Enabled = showDot and outlineOn
+    chDotStroke.Thickness = outThick
+    chDotStroke.Color = outCol
+    chDotStroke.Transparency = trans
+    
+    -- Видимость линий по стилю
     local showBars = (style ~= "Dot Only" and style ~= "Circle Ring")
-    local cornerRadius = (_G.CrosshairRounded and UDim.new(0, math.max(1, math.floor(thickness / 2)))) or UDim.new(0, 0)
-
+    local showTop = showBars and (style ~= "T-Shape") and (_G.CrosshairTopLine ~= false)
+    local showBottom = showBars and (style ~= "Arrow (^)")
+    local showLeft = showBars
+    local showRight = showBars
+    
+    local halfThick = math.floor(thick / 2)
+    
+    -- Up
+    chBars[1].Visible = showTop
+    chBars[1].Size = UDim2.new(0, thick, 0, size)
+    chBars[1].Position = UDim2.new(0.5, -halfThick, 0, -(gap + size))
+    -- Down
+    chBars[2].Visible = showBottom
+    chBars[2].Size = UDim2.new(0, thick, 0, size)
+    chBars[2].Position = UDim2.new(0.5, -halfThick, 1, gap)
+    -- Left
+    chBars[3].Visible = showLeft
+    chBars[3].Size = UDim2.new(0, size, 0, thick)
+    chBars[3].Position = UDim2.new(0, -(gap + size), 0.5, -halfThick)
+    -- Right
+    chBars[4].Visible = showRight
+    chBars[4].Size = UDim2.new(0, size, 0, thick)
+    chBars[4].Position = UDim2.new(1, gap, 0.5, -halfThick)
+    
     for i = 1, 4 do
-        chBars[i].Visible = showBars
         chBars[i].BackgroundColor3 = col
         chBars[i].BackgroundTransparency = trans
-        chBarCorners[i].CornerRadius = cornerRadius
-        chBarStrokes[i].Enabled = outlineEnabled
-        chBarStrokes[i].Thickness = outlineThick
+        chBarCorners[i].CornerRadius = rounded and UDim.new(0.5, 0) or UDim.new(0, 0)
+        chBarStrokes[i].Enabled = outlineOn
+        chBarStrokes[i].Thickness = outThick
+        chBarStrokes[i].Color = outCol
         chBarStrokes[i].Transparency = trans
     end
-
-    if showBars then
-        if style == "T-Shape" then
-            chBars[1].Visible = false
-        end
-
-        if style == "Box / Bracket" then
-            local halfBox = gap + size
-            -- Top bar
-            chBars[1].Size = UDim2.new(0, size * 2, 0, thickness)
-            chBars[1].Position = UDim2.new(0.5, 0, 0.5, -halfBox)
-            -- Bottom bar
-            chBars[2].Size = UDim2.new(0, size * 2, 0, thickness)
-            chBars[2].Position = UDim2.new(0.5, 0, 0.5, halfBox)
-            -- Left bar
-            chBars[3].Size = UDim2.new(0, thickness, 0, size * 2)
-            chBars[3].Position = UDim2.new(0.5, -halfBox, 0.5, 0)
-            -- Right bar
-            chBars[4].Size = UDim2.new(0, thickness, 0, size * 2)
-            chBars[4].Position = UDim2.new(0.5, halfBox, 0.5, 0)
-        else
-            -- Standard Cross / T-Shape / X-Cross
-            local offsetDist = gap + (size * 0.5)
-            -- Up
-            chBars[1].Size = UDim2.new(0, thickness, 0, size)
-            chBars[1].Position = UDim2.new(0.5, 0, 0.5, -offsetDist)
-            -- Down
-            chBars[2].Size = UDim2.new(0, thickness, 0, size)
-            chBars[2].Position = UDim2.new(0.5, 0, 0.5, offsetDist)
-            -- Left
-            chBars[3].Size = UDim2.new(0, size, 0, thickness)
-            chBars[3].Position = UDim2.new(0.5, -offsetDist, 0.5, 0)
-            -- Right
-            chBars[4].Size = UDim2.new(0, size, 0, thickness)
-            chBars[4].Position = UDim2.new(0.5, offsetDist, 0.5, 0)
-        end
+    
+    -- Кольцо (Circle Ring)
+    local ringActive = (_G.CrosshairRingActive == true) or (style == "Circle Ring") or (style == "Cross + Circle")
+    CrosshairRing.Visible = ringActive
+    if ringActive then
+        local rDiam = (_G.CrosshairRingRadius or 14) * 2
+        CrosshairRing.Size = UDim2.new(0, rDiam, 0, rDiam)
+        CrosshairRingStroke.Color = col
+        CrosshairRingStroke.Thickness = _G.CrosshairRingThickness or 1.5
+        CrosshairRingStroke.Transparency = trans
     end
 end
 
