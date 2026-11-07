@@ -923,23 +923,42 @@ _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
 
 -- Custom Models (English Keys + Roblox Asset IDs)
-local CustomModelAssetIDs = {
-    ["angel"]             = "rbxassetid://12318430407",
-    ["spiderman"]         = "rbxassetid://13803824982",
-    ["donkey"]            = "rbxassetid://15258571412",
-    ["pig"]               = "rbxassetid://12928490816",
-    ["tung tung sahur"]   = "rbxassetid://138151705692565",
-    ["la vaca saturnita"] = "rbxassetid://129565620410132"
+local ModelCandidateList = {
+    ["angel"] = {
+        "rbxassetid://12318430407"
+    },
+    ["spiderman"] = {
+        "rbxassetid://13803824982"
+    },
+    ["pig"] = {
+        "rbxassetid://12928490816",
+        "rbxassetid://3642054273",
+        "rbxassetid://2892055918"
+    },
+    ["donkey"] = {
+        "rbxassetid://6299324098",
+        "rbxassetid://1801346817",
+        "rbxassetid://150272153",
+        "rbxassetid://15258571412"
+    },
+    ["tung tung sahur"] = {
+        "rbxassetid://116615563871570",
+        "rbxassetid://138151705692565",
+        "rbxassetid://128230179587698",
+        "rbxassetid://116724607376773",
+        "rbxassetid://109369994600403"
+    },
+    ["la vaca saturnita"] = {
+        "rbxassetid://129565620410132",
+        "rbxassetid://76127116347738",
+        "rbxassetid://128822862184236",
+        "rbxassetid://74147642842271",
+        "rbxassetid://11986494439",
+        "rbxassetid://35685520"
+    }
 }
 
-local ModelFallbacks = {
-    ["tung tung sahur"]   = "rbxassetid://128230179587698",
-    ["la vaca saturnita"] = "rbxassetid://76127116347738",
-    ["donkey"]            = "rbxassetid://6299324098",
-    ["pig"]               = "rbxassetid://3642054273"
-}
-
--- Load external Lua table from GitHub if available
+-- Load external Lua table from GitHub if available without overriding built-in verified models
 task.spawn(function()
     pcall(function()
         local downloadedLua = game:HttpGet("https://raw.githubusercontent.com/Rostik22803/Umbrella-mm2/refs/heads/main/models.lua")
@@ -947,11 +966,16 @@ task.spawn(function()
             local loadedModels = loadstring(downloadedLua)()
             if typeof(loadedModels) == "table" then
                 for k, v in pairs(loadedModels) do
+                    local key = tostring(k):lower()
                     local strVal = tostring(v)
                     if not strVal:find("rbxassetid://") then
                         strVal = "rbxassetid://" .. strVal
                     end
-                    CustomModelAssetIDs[tostring(k):lower()] = strVal
+                    if not ModelCandidateList[key] then
+                        ModelCandidateList[key] = { strVal }
+                    else
+                        table.insert(ModelCandidateList[key], strVal)
+                    end
                 end
             end
         end
@@ -973,6 +997,25 @@ local function RemoveCustomModel()
             p.Transparency = 0
         end
     end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.PlatformStand = false
+        hum.Sit = false
+    end
+end
+
+local function LoadModelObjects(key)
+    local candidates = ModelCandidateList[key]
+    if not candidates then return nil end
+    for _, assetUrl in ipairs(candidates) do
+        local success, objs = pcall(function()
+            return game:GetObjects(assetUrl)
+        end)
+        if success and objs and #objs > 0 then
+            return objs
+        end
+    end
+    return nil
 end
 
 local function ApplyCustomModel(modelName)
@@ -982,63 +1025,75 @@ local function ApplyCustomModel(modelName)
     RemoveCustomModel()
     
     local key = tostring(modelName):lower()
-    local assetId = CustomModelAssetIDs[key]
-    if not assetId then return end
+    local candidates = ModelCandidateList[key]
+    if not candidates then return end
     
     task.spawn(function()
-        local success, objs = pcall(function()
-            return game:GetObjects(assetId)
-        end)
+        local objs = LoadModelObjects(key)
+        if not objs or #objs == 0 then return end
         
-        if (not success or not objs or #objs == 0) and ModelFallbacks[key] then
-            pcall(function()
-                objs = game:GetObjects(ModelFallbacks[key])
-                if objs and #objs > 0 then success = true end
-            end)
+        local rawObj = objs[1]
+        local newModel = nil
+        
+        if rawObj:IsA("Model") then
+            newModel = rawObj:Clone()
+        else
+            newModel = Instance.new("Model")
+            rawObj:Clone().Parent = newModel
         end
         
-        if success and objs and #objs > 0 then
-            local rawObj = objs[1]
-            local newModel = nil
+        if newModel then
+            newModel.Name = "CustomChangerModel"
             
-            if rawObj:IsA("Model") then
-                newModel = rawObj:Clone()
-            else
-                newModel = Instance.new("Model")
-                rawObj:Clone().Parent = newModel
+            -- Strip any conflicting Humanoids, NPC Scripts, Controllers, Seats that freeze jumping or walking
+            for _, obj in ipairs(newModel:GetDescendants()) do
+                if obj:IsA("LuaSourceContainer") or obj:IsA("Humanoid") or obj:IsA("AnimationController")
+                or obj:IsA("BodyMover") or obj:IsA("Seat") or obj:IsA("TouchTransmitter") then
+                    obj:Destroy()
+                end
             end
             
-            if newModel then
-                newModel.Name = "CustomChangerModel"
+            local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+            if not hrp then return end
+            
+            -- Find or assign primary part
+            local primary = newModel.PrimaryPart or newModel:FindFirstChild("HumanoidRootPart") or newModel:FindFirstChildWhichIsA("BasePart")
+            if not primary then
+                for _, p in ipairs(newModel:GetDescendants()) do
+                    if p:IsA("BasePart") then
+                        primary = p
+                        break
+                    end
+                end
+            end
+            
+            if primary then
+                newModel.PrimaryPart = primary
+                newModel:PivotTo(hrp.CFrame)
                 
-                local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-                if not hrp then return end
+                -- Configure all parts: Massless = true, CanCollide = false, CanQuery = false, CanTouch = false
+                for _, part in ipairs(newModel:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.Anchored = false
+                        part.CanCollide = false
+                        part.CanTouch = false
+                        part.CanQuery = false
+                        part.Massless = true -- CRITICAL: prevents jump and walking physics bugs!
+                        local weld = Instance.new("WeldConstraint")
+                        weld.Part0 = hrp
+                        weld.Part1 = part
+                        weld.Parent = part
+                    end
+                end
                 
                 newModel.Parent = char
                 
-                local primary = newModel.PrimaryPart or newModel:FindFirstChild("HumanoidRootPart") or newModel:FindFirstChildOfClass("BasePart")
-                if primary then
-                    newModel:PivotTo(hrp.CFrame)
-                    for _, part in ipairs(newModel:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.Anchored = false
-                            part.CanCollide = false
-                            part.CanTouch = false
-                            part.CanQuery = false
-                            local weld = Instance.new("WeldConstraint")
-                            weld.Part0 = hrp
-                            weld.Part1 = part
-                            weld.Parent = part
-                        end
-                    end
-                    
-                    -- Hide original parts only after custom model is mounted successfully
-                    for _, p in ipairs(char:GetDescendants()) do
-                        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and not p:IsDescendantOf(newModel) then
-                            p.Transparency = 1
-                        elseif p:IsA("Decal") and not p:IsDescendantOf(newModel) then
-                            p.Transparency = 1
-                        end
+                -- Hide original parts only after custom model is successfully mounted and verified
+                for _, p in ipairs(char:GetDescendants()) do
+                    if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and not p:IsDescendantOf(newModel) then
+                        p.Transparency = 1
+                    elseif p:IsA("Decal") and not p:IsDescendantOf(newModel) then
+                        p.Transparency = 1
                     end
                 end
             end
