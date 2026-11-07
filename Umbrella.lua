@@ -791,7 +791,6 @@ _G.CustomModelsActive = false
 _G.SelectedCustomModel = "angel"
 _G.CustomModelScale = 1.0
 _G.CustomModelHeightOffset = 0.0
-_G.CustomModelYawOffset = 0
 
 -- Custom Weapons (Knife & Gun Skins / 3D Models)
 _G.CustomKnifeActive = false
@@ -945,11 +944,11 @@ local ModelCandidateList = {
         "rbxassetid://15258571412"
     },
     ["tung tung sahur"] = {
-        "rbxassetid://138151705692565", -- 'Tung Tung Tung Sahur' clean Trellis MeshPart (no bones, zero crash)
-        "rbxassetid://94398976707691",  -- 'Tung Tung Sahur' stable model
-        "rbxassetid://109369994600403", -- 'Tung Tung Tung Sahur'
-        "rbxassetid://112342985897325", -- 'tung_tung_tung_sahur'
-        "rbxassetid://71630473252028"   -- 'Tung Tung Tung Sahur'
+        "rbxassetid://116615563871570",
+        "rbxassetid://138151705692565",
+        "rbxassetid://128230179587698",
+        "rbxassetid://116724607376773",
+        "rbxassetid://109369994600403"
     },
     ["la vaca saturnita"] = {
         "rbxassetid://129565620410132",
@@ -960,52 +959,6 @@ local ModelCandidateList = {
         "rbxassetid://35685520"
     }
 }
-
--- Default Yaw rotation adjustments per model (e.g. quadrupeds / inverted root parts)
-local ModelYawOffsets = {
-    ["la vaca saturnita"] = 180,
-}
-
--- Base scale multipliers to ensure models fit character proportions naturally
-local ModelBaseScales = {
-    ["tung tung sahur"] = 0.55,
-    ["la vaca saturnita"] = 0.85,
-}
-
-local function SafeScaleModel(model, scaleFactor)
-    if not model or scaleFactor == 1 or scaleFactor <= 0 then return end
-    local hasBones = false
-    for _, obj in ipairs(model:GetDescendants()) do
-        if obj:IsA("Bone") then
-            hasBones = true
-            pcall(function() obj:Destroy() end)
-        end
-    end
-    local scaled = false
-    if not hasBones then
-        scaled = pcall(function()
-            model:ScaleTo(scaleFactor)
-        end)
-    end
-    if not scaled then
-        local primary = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-        local origin = primary and primary.Position or Vector3.new(0, 0, 0)
-        for _, part in ipairs(model:GetDescendants()) do
-            if part:IsA("BasePart") then
-                pcall(function()
-                    part.Size = part.Size * scaleFactor
-                    local offset = (part.Position - origin) * scaleFactor
-                    part.CFrame = CFrame.new(origin + offset) * (part.CFrame - part.Position)
-                end)
-            end
-            if part:IsA("SpecialMesh") then
-                pcall(function()
-                    part.Scale = part.Scale * scaleFactor
-                end)
-            end
-        end
-    end
-end
 
 -- Load external Lua table from GitHub if available without overriding built-in verified models
 task.spawn(function()
@@ -1067,7 +1020,6 @@ local function LoadModelObjects(key)
     return nil
 end
 
-local currentModelToken = 0
 local function ApplyCustomModel(modelName)
     local char = LocalPlayer.Character
     if not char then return end
@@ -1078,12 +1030,8 @@ local function ApplyCustomModel(modelName)
     local candidates = ModelCandidateList[key]
     if not candidates then return end
     
-    currentModelToken = currentModelToken + 1
-    local thisToken = currentModelToken
-    
     task.spawn(function()
         local objs = LoadModelObjects(key)
-        if thisToken ~= currentModelToken then return end
         if not objs or #objs == 0 then return end
         
         local rawObj = objs[1]
@@ -1099,12 +1047,11 @@ local function ApplyCustomModel(modelName)
         if newModel then
             newModel.Name = "CustomChangerModel"
             
-            -- Strip any conflicting Humanoids, NPC Scripts, Controllers, Seats, Bones, and JointInstances that crash or freeze Roblox
+            -- Strip any conflicting Humanoids, NPC Scripts, Controllers, Seats that freeze jumping or walking
             for _, obj in ipairs(newModel:GetDescendants()) do
                 if obj:IsA("LuaSourceContainer") or obj:IsA("Humanoid") or obj:IsA("AnimationController")
-                or obj:IsA("BodyMover") or obj:IsA("Seat") or obj:IsA("TouchTransmitter")
-                or obj:IsA("Bone") or obj:IsA("JointInstance") then
-                    pcall(function() obj:Destroy() end)
+                or obj:IsA("BodyMover") or obj:IsA("Seat") or obj:IsA("TouchTransmitter") then
+                    obj:Destroy()
                 end
             end
             
@@ -1131,32 +1078,27 @@ local function ApplyCustomModel(modelName)
                     return sz
                 end)
                 
-                if successBox and modelSize and modelSize.Y and modelSize.Y > 0 then
-                    local targetNormalHeight = 5.2 -- Standard player character height
+                if successBox and modelSize and modelSize.Y > 0 then
+                    local targetNormalHeight = 5.3 -- Standard player character height
                     if modelSize.Y > targetNormalHeight then
                         local autoFactor = targetNormalHeight / modelSize.Y
-                        SafeScaleModel(newModel, autoFactor)
+                        pcall(function()
+                            newModel:ScaleTo(autoFactor)
+                        end)
                     end
-                end
-                
-                -- Specific model base scale adjustment if defined
-                if ModelBaseScales[key] then
-                    SafeScaleModel(newModel, ModelBaseScales[key])
                 end
                 
                 -- User Scale multiplier from slider
                 local userMultiplier = _G.CustomModelScale or 1.0
                 if userMultiplier ~= 1.0 then
-                    SafeScaleModel(newModel, userMultiplier)
+                    pcall(function()
+                        newModel:ScaleTo(userMultiplier)
+                    end)
                 end
                 
-                -- Position at HRP with height offset and yaw rotation
+                -- Position at HRP with height offset
                 local yOffset = _G.CustomModelHeightOffset or 0
-                local defaultYaw = ModelYawOffsets[key] or 0
-                local userYaw = _G.CustomModelYawOffset or 0
-                local totalYaw = math.rad((defaultYaw + userYaw) % 360)
-                
-                newModel:PivotTo(hrp.CFrame * CFrame.new(0, yOffset, 0) * CFrame.Angles(0, totalYaw, 0))
+                newModel:PivotTo(hrp.CFrame * CFrame.new(0, yOffset, 0))
                 
                 -- Configure all parts: Massless = true, CanCollide = false, CanQuery = false, CanTouch = false
                 for _, part in ipairs(newModel:GetDescendants()) do
@@ -2801,12 +2743,6 @@ CreateSlider(SecModels, "Model Scale Size", _G.CustomModelScale, 0.3, 2.5, true,
 end)
 CreateSlider(SecModels, "Height Offset (Y)", _G.CustomModelHeightOffset, -3.0, 3.0, true, function(val)
     _G.CustomModelHeightOffset = val
-    if _G.CustomModelsActive then
-        ApplyCustomModel(_G.SelectedCustomModel)
-    end
-end)
-CreateSlider(SecModels, "Rotation Yaw Angle", _G.CustomModelYawOffset, 0, 360, false, function(val)
-    _G.CustomModelYawOffset = val
     if _G.CustomModelsActive then
         ApplyCustomModel(_G.SelectedCustomModel)
     end
