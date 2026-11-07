@@ -2654,6 +2654,21 @@ CreateDropdown(SecESP, "Player Chams Style", ChamsStyleOptionNames, _G.PlayerCha
     _G.PlayerChamsStyle = val
     ClearAllChams()
 end)
+CreateDropdown(SecESP, "Murderer ESP Color", ColorOptionNames, _G.SelectedMurdererColor, function(val)
+    _G.SelectedMurdererColor = val
+    if UpdateRoleColors then UpdateRoleColors() end
+    ClearAllChams()
+end)
+CreateDropdown(SecESP, "Sheriff ESP Color", ColorOptionNames, _G.SelectedSheriffColor, function(val)
+    _G.SelectedSheriffColor = val
+    if UpdateRoleColors then UpdateRoleColors() end
+    ClearAllChams()
+end)
+CreateDropdown(SecESP, "Innocent ESP Color", ColorOptionNames, _G.SelectedInnocentColor, function(val)
+    _G.SelectedInnocentColor = val
+    if UpdateRoleColors then UpdateRoleColors() end
+    ClearAllChams()
+end)
 
 CreateToggle(SecESP, "Self Chams (Local & Custom Model)", false, function(st)
     _G.SelfChamsActive = st
@@ -2714,6 +2729,13 @@ CreateDropdown(SecESP, "Dropped Gun Style", ChamsStyleOptionNames, _G.DroppedGun
 end)
 CreateDropdown(SecESP, "Dropped Gun Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(col)
     _G.SelectedDroppedGunColor = col
+end)
+
+CreateSlider(SecESP, "Chams Fill Transparency", math.round((_G.ChamsFillTransparency or 0.35) * 100), 0, 90, false, function(val)
+    _G.ChamsFillTransparency = val / 100
+end)
+CreateSlider(SecESP, "Chams Outline Transparency", math.round((_G.ChamsOutlineTransparency or 0) * 100), 0, 90, false, function(val)
+    _G.ChamsOutlineTransparency = val / 100
 end)
 
 local SecHitVisuals = CreateSection(Tabs["Visuals"], "HvH Hit Visuals & Audio")
@@ -3098,64 +3120,7 @@ CreateToggle(SecTheme, "Rainbow Sync (RGB Everything)", _G.RGBSyncActive, functi
     if not st then ApplyMenuTheme() end
 end)
 
-local SecVisualColors = CreateSection(Tabs["Settings"], "ESP & Chams Custom Colors")
-CreateDropdown(SecVisualColors, "Player Chams Style", ChamsStyleOptionNames, _G.PlayerChamsStyle or "Fill / Glow", function(val)
-    _G.PlayerChamsStyle = val
-    ClearAllChams()
-end)
 
-CreateDropdown(SecVisualColors, "Self Chams Style", ChamsStyleOptionNames, _G.SelfChamsStyle or "Fill / Glow", function(val)
-    _G.SelfChamsStyle = val
-    ClearAllChams()
-end)
-
-CreateDropdown(SecVisualColors, "Weapon Chams Style", ChamsStyleOptionNames, _G.WeaponChamsStyle or "Fill / Glow", function(val)
-    _G.WeaponChamsStyle = val
-    ClearAllChams()
-end)
-
-CreateDropdown(SecVisualColors, "Weapon Chams Color", ColorOptionNames, _G.SelectedWeaponChamColor, function(val)
-    _G.SelectedWeaponChamColor = val
-end)
-
-CreateDropdown(SecVisualColors, "Dropped Gun Style", ChamsStyleOptionNames, _G.DroppedGunChamsStyle or "Fill / Glow", function(val)
-    _G.DroppedGunChamsStyle = val
-    ClearAllChams()
-end)
-
-CreateDropdown(SecVisualColors, "Dropped Gun ESP Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(val)
-    _G.SelectedDroppedGunColor = val
-end)
-
-CreateDropdown(SecVisualColors, "Head Dot Color", HeadDotColorOptionNames, _G.SelectedHeadDotColor, function(val)
-    _G.SelectedHeadDotColor = val
-end)
-
-CreateDropdown(SecVisualColors, "Murderer ESP Color", ColorOptionNames, _G.SelectedMurdererColor, function(val)
-    _G.SelectedMurdererColor = val
-    if UpdateRoleColors then UpdateRoleColors() end
-    ClearAllChams()
-end)
-
-CreateDropdown(SecVisualColors, "Sheriff ESP Color", ColorOptionNames, _G.SelectedSheriffColor, function(val)
-    _G.SelectedSheriffColor = val
-    if UpdateRoleColors then UpdateRoleColors() end
-    ClearAllChams()
-end)
-
-CreateDropdown(SecVisualColors, "Innocent ESP Color", ColorOptionNames, _G.SelectedInnocentColor, function(val)
-    _G.SelectedInnocentColor = val
-    if UpdateRoleColors then UpdateRoleColors() end
-    ClearAllChams()
-end)
-
-CreateSlider(SecVisualColors, "Chams Fill Transparency", math.round((_G.ChamsFillTransparency or 0.35) * 100), 0, 90, false, function(val)
-    _G.ChamsFillTransparency = val / 100
-end)
-
-CreateSlider(SecVisualColors, "Chams Outline Transparency", math.round((_G.ChamsOutlineTransparency or 0) * 100), 0, 90, false, function(val)
-    _G.ChamsOutlineTransparency = val / 100
-end)
 
 SwitchTab("Main")
 
