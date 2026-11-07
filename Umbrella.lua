@@ -791,6 +791,7 @@ _G.CustomModelsActive = false
 _G.SelectedCustomModel = "angel"
 _G.CustomModelScale = 1.0
 _G.CustomModelHeightOffset = 0.0
+_G.CustomModelRotation = 0
 
 -- Custom Weapons (Knife & Gun Skins / 3D Models)
 _G.CustomKnifeActive = false
@@ -943,13 +944,6 @@ local ModelCandidateList = {
         "rbxassetid://150272153",
         "rbxassetid://15258571412"
     },
-    ["tung tung sahur"] = {
-        "rbxassetid://116615563871570",
-        "rbxassetid://138151705692565",
-        "rbxassetid://128230179587698",
-        "rbxassetid://116724607376773",
-        "rbxassetid://109369994600403"
-    },
     ["la vaca saturnita"] = {
         "rbxassetid://129565620410132",
         "rbxassetid://76127116347738",
@@ -958,6 +952,10 @@ local ModelCandidateList = {
         "rbxassetid://11986494439",
         "rbxassetid://35685520"
     }
+}
+
+local ModelRotationOffsets = {
+    ["la vaca saturnita"] = CFrame.Angles(0, math.rad(180), 0)
 }
 
 -- Load external Lua table from GitHub if available without overriding built-in verified models
@@ -1072,7 +1070,7 @@ local function ApplyCustomModel(modelName)
             if primary then
                 newModel.PrimaryPart = primary
                 
-                -- Auto-normalize oversized models (Tung Tung Sahur, La Vaca Saturnita, etc.) to standard player height
+                -- Auto-normalize oversized models (La Vaca Saturnita, etc.) to standard player height
                 local successBox, modelSize = pcall(function()
                     local _, sz = newModel:GetBoundingBox()
                     return sz
@@ -1096,9 +1094,11 @@ local function ApplyCustomModel(modelName)
                     end)
                 end
                 
-                -- Position at HRP with height offset
+                -- Position at HRP with height offset and rotation (La Vaca Saturnita rotated 180 deg)
                 local yOffset = _G.CustomModelHeightOffset or 0
-                newModel:PivotTo(hrp.CFrame * CFrame.new(0, yOffset, 0))
+                local baseRot = ModelRotationOffsets[key] or CFrame.new()
+                local userRot = (_G.CustomModelRotation and _G.CustomModelRotation ~= 0) and CFrame.Angles(0, math.rad(_G.CustomModelRotation), 0) or CFrame.new()
+                newModel:PivotTo(hrp.CFrame * CFrame.new(0, yOffset, 0) * baseRot * userRot)
                 
                 -- Configure all parts: Massless = true, CanCollide = false, CanQuery = false, CanTouch = false
                 for _, part in ipairs(newModel:GetDescendants()) do
@@ -2729,7 +2729,7 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-CreateDropdown(SecModels, "Select Model", {"angel", "spiderman", "donkey", "pig", "tung tung sahur", "la vaca saturnita"}, _G.SelectedCustomModel, function(selected)
+CreateDropdown(SecModels, "Select Model", {"angel", "spiderman", "donkey", "pig", "la vaca saturnita"}, _G.SelectedCustomModel, function(selected)
     _G.SelectedCustomModel = selected
     if _G.CustomModelsActive then
         ApplyCustomModel(selected)
@@ -2743,6 +2743,12 @@ CreateSlider(SecModels, "Model Scale Size", _G.CustomModelScale, 0.3, 2.5, true,
 end)
 CreateSlider(SecModels, "Height Offset (Y)", _G.CustomModelHeightOffset, -3.0, 3.0, true, function(val)
     _G.CustomModelHeightOffset = val
+    if _G.CustomModelsActive then
+        ApplyCustomModel(_G.SelectedCustomModel)
+    end
+end)
+CreateSlider(SecModels, "Rotation Offset (Y)", _G.CustomModelRotation, 0, 360, false, function(val)
+    _G.CustomModelRotation = val
     if _G.CustomModelsActive then
         ApplyCustomModel(_G.SelectedCustomModel)
     end
