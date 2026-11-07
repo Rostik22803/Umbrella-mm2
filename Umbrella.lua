@@ -745,6 +745,17 @@ _G.MurdererRepelActive = false
 _G.CustomModelsActive = false
 _G.SelectedCustomModel = "donkey"
 
+-- Custom Weapons (Knife & Gun Skins / 3D Models)
+_G.CustomKnifeActive = false
+_G.SelectedKnifeModel = "Luger Blade / Heat"
+_G.CustomGunActive = false
+_G.SelectedGunModel = "Golden Luger"
+_G.CustomWeaponMaterial = "Default"
+_G.CustomWeaponColor = "Original"
+_G.CustomWeaponAura = "None"
+_G.WeaponTrailActive = false
+_G.SelectedWeaponTrailColor = "Rainbow RGB"
+
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
 _G.PredictionActive = false
@@ -977,6 +988,644 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     if _G.CustomModelsActive then
         task.wait(0.5)
         ApplyCustomModel(_G.SelectedCustomModel)
+    end
+end)
+
+------------------------------------------------------------------------
+-- CUSTOM WEAPONS ENGINE (KNIFE & GUN SKINS / 3D MODELS / FX)
+------------------------------------------------------------------------
+local KnifePresets = {
+    ["Default"] = nil,
+    ["Luger Blade / Heat"] = {
+        MeshId = "rbxassetid://105351545",
+        TextureId = "rbxassetid://105351717",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(255, 90, 20)
+    },
+    ["Fang (Serrated Godly)"] = {
+        MeshId = "rbxassetid://116693735",
+        TextureId = "rbxassetid://116693751",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(200, 200, 210)
+    },
+    ["Deathshard (Crystal)"] = {
+        MeshId = "rbxassetid://62350856",
+        TextureId = "rbxassetid://62350868",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Glass,
+        Color = Color3.fromRGB(80, 220, 255)
+    },
+    ["Saw (Buzzsaw Godly)"] = {
+        MeshId = "rbxassetid://170903610",
+        TextureId = "rbxassetid://170903632",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(220, 40, 40)
+    },
+    ["Seer (Emerald Glow)"] = {
+        MeshId = "rbxassetid://156467990",
+        TextureId = "rbxassetid://156468007",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(30, 255, 120)
+    },
+    ["Shark (Predator)"] = {
+        MeshId = "rbxassetid://118281463",
+        TextureId = "rbxassetid://118281482",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(40, 160, 220)
+    },
+    ["Blood Dagger"] = {
+        MeshId = "rbxassetid://51757162",
+        TextureId = "rbxassetid://51757173",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(230, 20, 40)
+    },
+    ["Ghost Blade"] = {
+        MeshId = "rbxassetid://64220952",
+        TextureId = "rbxassetid://64220967",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.ForceField,
+        Color = Color3.fromRGB(220, 240, 255)
+    },
+    ["Shadow Katana"] = {
+        MeshId = "rbxassetid://11442510",
+        TextureId = "rbxassetid://11442524",
+        Scale = Vector3.new(1.15, 1.15, 1.15),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(35, 35, 35)
+    },
+    ["Reaper Scythe"] = {
+        MeshId = "rbxassetid://161048684",
+        TextureId = "rbxassetid://161048700",
+        Scale = Vector3.new(1.05, 1.05, 1.05),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(150, 40, 220)
+    },
+    ["Chroma Rainbow Blade"] = {
+        MeshId = "rbxassetid://121946387",
+        TextureId = "rbxassetid://157019835",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Plasmite Cyber Knife"] = {
+        MeshId = "rbxassetid://121946387",
+        TextureId = "rbxassetid://161369273",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 255, 255)
+    },
+    ["Ice Glacier Dagger"] = {
+        MeshId = "rbxassetid://121946387",
+        TextureId = "rbxassetid://161313071",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Glass,
+        Color = Color3.fromRGB(140, 220, 255)
+    },
+    ["Midnight Dark Knife"] = {
+        MeshId = "rbxassetid://121946387",
+        TextureId = "rbxassetid://161367322",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(130, 20, 255)
+    },
+    ["Lightsaber (Neon Beam)"] = {
+        IsSpecial3D = "Lightsaber",
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 255, 255)
+    }
+}
+
+local GunPresets = {
+    ["Default"] = nil,
+    ["Golden Luger"] = {
+        MeshId = "rbxassetid://95354288",
+        TextureId = "rbxassetid://95387789",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(255, 215, 0)
+    },
+    ["Sci-Fi Laser Revolver"] = {
+        MeshId = "rbxassetid://18268645",
+        TextureId = "rbxassetid://18268656",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 255, 255)
+    },
+    ["Phaser (Plasma Gun)"] = {
+        MeshId = "rbxassetid://69567827",
+        TextureId = "rbxassetid://69567839",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(255, 50, 200)
+    },
+    ["Chroma Luger (Animated RGB)"] = {
+        MeshId = "rbxassetid://95354288",
+        TextureId = "rbxassetid://95387789",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Darkbringer Void Revolver"] = {
+        MeshId = "rbxassetid://97885508",
+        TextureId = "",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(120, 10, 240)
+    },
+    ["Lightbringer Holy Revolver"] = {
+        MeshId = "rbxassetid://97885508",
+        TextureId = "",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(255, 255, 200)
+    },
+    ["Sheriff Classic Revolver"] = {
+        MeshId = "rbxassetid://97885508",
+        TextureId = "",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(255, 205, 50)
+    }
+}
+
+local KnifeModelNames = {
+    "Luger Blade / Heat",
+    "Fang (Serrated Godly)",
+    "Deathshard (Crystal)",
+    "Saw (Buzzsaw Godly)",
+    "Seer (Emerald Glow)",
+    "Shark (Predator)",
+    "Blood Dagger",
+    "Ghost Blade",
+    "Shadow Katana",
+    "Reaper Scythe",
+    "Chroma Rainbow Blade",
+    "Plasmite Cyber Knife",
+    "Ice Glacier Dagger",
+    "Midnight Dark Knife",
+    "Lightsaber (Neon Beam)",
+    "Default"
+}
+
+local GunModelNames = {
+    "Golden Luger",
+    "Sci-Fi Laser Revolver",
+    "Phaser (Plasma Gun)",
+    "Chroma Luger (Animated RGB)",
+    "Darkbringer Void Revolver",
+    "Lightbringer Holy Revolver",
+    "Sheriff Classic Revolver",
+    "Default"
+}
+
+local OriginalWeaponData = {}
+
+local function BackupWeapon(tool)
+    if not tool or OriginalWeaponData[tool] then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+    OriginalWeaponData[tool] = {
+        MeshId = mesh and mesh.MeshId or "",
+        TextureId = mesh and mesh.TextureId or "",
+        Scale = mesh and mesh.Scale or Vector3.new(1, 1, 1),
+        VertexColor = mesh and mesh.VertexColor or Vector3.new(1, 1, 1),
+        Color = handle.Color,
+        Material = handle.Material,
+        Transparency = handle.Transparency
+    }
+end
+
+local function RestoreWeapon(tool)
+    if not tool then return end
+    local customModel = tool:FindFirstChild("CustomWeaponModel")
+    if customModel then customModel:Destroy() end
+    
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    
+    local aura = handle:FindFirstChild("MM2_WeaponAura")
+    if aura then aura:Destroy() end
+    local trail = handle:FindFirstChild("MM2_WeaponTrail")
+    if trail then trail:Destroy() end
+    local a0 = handle:FindFirstChild("MM2_TrailAtt0")
+    if a0 then a0:Destroy() end
+    local a1 = handle:FindFirstChild("MM2_TrailAtt1")
+    if a1 then a1:Destroy() end
+    
+    local data = OriginalWeaponData[tool]
+    if data then
+        handle.Transparency = data.Transparency
+        handle.Color = data.Color
+        handle.Material = data.Material
+        local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+        if mesh then
+            mesh.MeshId = data.MeshId
+            mesh.TextureId = data.TextureId
+            mesh.Scale = data.Scale
+            mesh.VertexColor = data.VertexColor
+        end
+    end
+end
+
+local function ApplyWeaponFX(tool, isKnife, emitterPart)
+    if not emitterPart then return end
+    
+    -- 1. Aura Particle Emitter
+    local existingAura = emitterPart:FindFirstChild("MM2_WeaponAura")
+    if _G.CustomWeaponAura ~= "None" then
+        if not existingAura then
+            existingAura = Instance.new("ParticleEmitter")
+            existingAura.Name = "MM2_WeaponAura"
+            existingAura.Parent = emitterPart
+        end
+        existingAura.LightEmission = 0.9
+        existingAura.LightInfluence = 0
+        existingAura.Drag = 1
+        
+        if _G.CustomWeaponAura == "Fire Flames" then
+            existingAura.Texture = "rbxassetid://243098098"
+            existingAura.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 230, 80)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 100, 20)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 20, 20))
+            })
+            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0.05)})
+            existingAura.Rate = 28
+            existingAura.Speed = NumberRange.new(1.0, 2.0)
+            existingAura.Lifetime = NumberRange.new(0.4, 0.7)
+            existingAura.SpreadAngle = Vector2.new(35, 35)
+        elseif _G.CustomWeaponAura == "Void Smoke" then
+            existingAura.Texture = "rbxassetid://243098098"
+            existingAura.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 5, 80))
+            })
+            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0.1)})
+            existingAura.Rate = 22
+            existingAura.Speed = NumberRange.new(0.8, 1.5)
+            existingAura.Lifetime = NumberRange.new(0.5, 0.8)
+            existingAura.SpreadAngle = Vector2.new(45, 45)
+        elseif _G.CustomWeaponAura == "Cyber Sparks" then
+            existingAura.Texture = "rbxassetid://258129523"
+            existingAura.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+            })
+            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0.02)})
+            existingAura.Rate = 35
+            existingAura.Speed = NumberRange.new(2.0, 4.0)
+            existingAura.Lifetime = NumberRange.new(0.3, 0.5)
+            existingAura.SpreadAngle = Vector2.new(180, 180)
+        elseif _G.CustomWeaponAura == "Golden Haze" then
+            existingAura.Texture = "rbxassetid://258129523"
+            existingAura.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 230, 100)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 170, 0))
+            })
+            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0.05)})
+            existingAura.Rate = 25
+            existingAura.Speed = NumberRange.new(1.0, 2.5)
+            existingAura.Lifetime = NumberRange.new(0.4, 0.6)
+            existingAura.SpreadAngle = Vector2.new(60, 60)
+        elseif _G.CustomWeaponAura == "Blood Drip" then
+            existingAura.Texture = "rbxassetid://243098098"
+            existingAura.Color = ColorSequence.new(Color3.fromRGB(220, 20, 30))
+            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0.05)})
+            existingAura.Rate = 22
+            existingAura.Speed = NumberRange.new(0.5, 1.2)
+            existingAura.Lifetime = NumberRange.new(0.4, 0.7)
+            existingAura.Acceleration = Vector3.new(0, -9, 0)
+        end
+    else
+        if existingAura then existingAura:Destroy() end
+    end
+    
+    -- 2. Blade Trail (for Knife)
+    if isKnife then
+        local existingTrail = emitterPart:FindFirstChild("MM2_WeaponTrail")
+        if _G.WeaponTrailActive then
+            local att0 = emitterPart:FindFirstChild("MM2_TrailAtt0")
+            local att1 = emitterPart:FindFirstChild("MM2_TrailAtt1")
+            if not att0 then
+                att0 = Instance.new("Attachment")
+                att0.Name = "MM2_TrailAtt0"
+                att0.Position = Vector3.new(0, 1.2, 0)
+                att0.Parent = emitterPart
+            end
+            if not att1 then
+                att1 = Instance.new("Attachment")
+                att1.Name = "MM2_TrailAtt1"
+                att1.Position = Vector3.new(0, -0.6, 0)
+                att1.Parent = emitterPart
+            end
+            if not existingTrail then
+                existingTrail = Instance.new("Trail")
+                existingTrail.Name = "MM2_WeaponTrail"
+                existingTrail.Attachment0 = att0
+                existingTrail.Attachment1 = att1
+                existingTrail.FaceCamera = true
+                existingTrail.LightEmission = 0.8
+                existingTrail.WidthScale = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 1),
+                    NumberSequenceKeypoint.new(1, 0)
+                })
+                existingTrail.Parent = emitterPart
+            end
+            existingTrail.Lifetime = 0.35
+            local trailCol = Color3.fromRGB(255, 255, 255)
+            if _G.SelectedWeaponTrailColor == "Rainbow RGB" then
+                trailCol = _G.RainbowColor
+            elseif ChamColorPresets[_G.SelectedWeaponTrailColor] then
+                trailCol = ChamColorPresets[_G.SelectedWeaponTrailColor]
+            end
+            existingTrail.Color = ColorSequence.new(trailCol)
+        else
+            if existingTrail then existingTrail:Destroy() end
+            local a0 = emitterPart:FindFirstChild("MM2_TrailAtt0")
+            if a0 then a0:Destroy() end
+            local a1 = emitterPart:FindFirstChild("MM2_TrailAtt1")
+            if a1 then a1:Destroy() end
+        end
+    end
+end
+
+local function ApplyCustomKnife(tool)
+    if not tool or not _G.CustomKnifeActive then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    
+    BackupWeapon(tool)
+    
+    local preset = KnifePresets[_G.SelectedKnifeModel]
+    if not preset then
+        RestoreWeapon(tool)
+        return
+    end
+    
+    if preset.IsSpecial3D == "Lightsaber" then
+        handle.Transparency = 1
+        local old = tool:FindFirstChild("CustomWeaponModel")
+        if old then old:Destroy() end
+        
+        local model = Instance.new("Model")
+        model.Name = "CustomWeaponModel"
+        
+        local hilt = Instance.new("Part")
+        hilt.Name = "Hilt"
+        hilt.Size = Vector3.new(0.25, 0.9, 0.25)
+        hilt.Material = Enum.Material.Metal
+        hilt.Color = Color3.fromRGB(45, 45, 45)
+        hilt.CanCollide = false
+        hilt.Massless = true
+        hilt.CFrame = handle.CFrame
+        hilt.Parent = model
+        
+        local blade = Instance.new("Part")
+        blade.Name = "Blade"
+        blade.Shape = Enum.PartType.Cylinder
+        blade.Size = Vector3.new(3.0, 0.22, 0.22)
+        blade.Material = Enum.Material.Neon
+        local bladeColor = preset.Color
+        if _G.CustomWeaponColor ~= "Original" and ChamColorPresets[_G.CustomWeaponColor] then
+            bladeColor = ChamColorPresets[_G.CustomWeaponColor]
+        end
+        blade.Color = bladeColor
+        blade.CanCollide = false
+        blade.Massless = true
+        blade.CFrame = handle.CFrame * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.rad(90))
+        blade.Parent = model
+        
+        local w1 = Instance.new("WeldConstraint")
+        w1.Part0 = handle
+        w1.Part1 = hilt
+        w1.Parent = hilt
+        
+        local w2 = Instance.new("WeldConstraint")
+        w2.Part0 = hilt
+        w2.Part1 = blade
+        w2.Parent = blade
+        
+        model.Parent = tool
+        ApplyWeaponFX(tool, true, blade)
+        return
+    end
+    
+    local old = tool:FindFirstChild("CustomWeaponModel")
+    if old then old:Destroy() end
+    handle.Transparency = 0
+    
+    local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+    if not mesh then
+        mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.Parent = handle
+    end
+    
+    mesh.MeshId = preset.MeshId
+    mesh.TextureId = preset.TextureId
+    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    
+    if _G.CustomWeaponMaterial ~= "Default" then
+        if _G.CustomWeaponMaterial == "Neon Glow" then handle.Material = Enum.Material.Neon
+        elseif _G.CustomWeaponMaterial == "ForceField" then handle.Material = Enum.Material.ForceField
+        elseif _G.CustomWeaponMaterial == "Glass" then handle.Material = Enum.Material.Glass
+        elseif _G.CustomWeaponMaterial == "Chrome Metal" then handle.Material = Enum.Material.Metal end
+    elseif preset.Material then
+        handle.Material = preset.Material
+    end
+    
+    if _G.CustomWeaponColor ~= "Original" then
+        if _G.CustomWeaponColor == "Rainbow RGB" then
+            handle.Color = _G.RainbowColor
+            mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+        elseif ChamColorPresets[_G.CustomWeaponColor] then
+            local col = ChamColorPresets[_G.CustomWeaponColor]
+            handle.Color = col
+            mesh.VertexColor = Vector3.new(col.R, col.G, col.B)
+        end
+    elseif preset.IsChroma then
+        handle.Color = _G.RainbowColor
+        mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+    elseif preset.Color then
+        handle.Color = preset.Color
+        mesh.VertexColor = Vector3.new(preset.Color.R, preset.Color.G, preset.Color.B)
+    else
+        mesh.VertexColor = Vector3.new(1, 1, 1)
+    end
+    
+    ApplyWeaponFX(tool, true, handle)
+end
+
+local function ApplyCustomGun(tool)
+    if not tool or not _G.CustomGunActive then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    
+    BackupWeapon(tool)
+    
+    local preset = GunPresets[_G.SelectedGunModel]
+    if not preset then
+        RestoreWeapon(tool)
+        return
+    end
+    
+    local old = tool:FindFirstChild("CustomWeaponModel")
+    if old then old:Destroy() end
+    handle.Transparency = 0
+    
+    local mesh = handle:FindFirstChildOfClass("SpecialMesh")
+    if not mesh then
+        mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.Parent = handle
+    end
+    
+    mesh.MeshId = preset.MeshId
+    mesh.TextureId = preset.TextureId
+    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    
+    if _G.CustomWeaponMaterial ~= "Default" then
+        if _G.CustomWeaponMaterial == "Neon Glow" then handle.Material = Enum.Material.Neon
+        elseif _G.CustomWeaponMaterial == "ForceField" then handle.Material = Enum.Material.ForceField
+        elseif _G.CustomWeaponMaterial == "Glass" then handle.Material = Enum.Material.Glass
+        elseif _G.CustomWeaponMaterial == "Chrome Metal" then handle.Material = Enum.Material.Metal end
+    elseif preset.Material then
+        handle.Material = preset.Material
+    end
+    
+    if _G.CustomWeaponColor ~= "Original" then
+        if _G.CustomWeaponColor == "Rainbow RGB" then
+            handle.Color = _G.RainbowColor
+            mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+        elseif ChamColorPresets[_G.CustomWeaponColor] then
+            local col = ChamColorPresets[_G.CustomWeaponColor]
+            handle.Color = col
+            mesh.VertexColor = Vector3.new(col.R, col.G, col.B)
+        end
+    elseif preset.IsChroma then
+        handle.Color = _G.RainbowColor
+        mesh.VertexColor = Vector3.new(_G.RainbowColor.R, _G.RainbowColor.G, _G.RainbowColor.B)
+    elseif preset.Color then
+        handle.Color = preset.Color
+        mesh.VertexColor = Vector3.new(preset.Color.R, preset.Color.G, preset.Color.B)
+    else
+        mesh.VertexColor = Vector3.new(1, 1, 1)
+    end
+    
+    ApplyWeaponFX(tool, false, handle)
+end
+
+local function GetPlayerKnife()
+    local char = LocalPlayer.Character
+    local bpack = LocalPlayer:FindFirstChild("Backpack")
+    if char then
+        local t = char:FindFirstChild("Knife")
+        if t and t:IsA("Tool") then return t end
+        for _, obj in ipairs(char:GetChildren()) do
+            if obj:IsA("Tool") and (obj:FindFirstChild("KnifeServer") or obj:FindFirstChild("Stab")) then
+                return obj
+            end
+        end
+    end
+    if bpack then
+        local t = bpack:FindFirstChild("Knife")
+        if t and t:IsA("Tool") then return t end
+        for _, obj in ipairs(bpack:GetChildren()) do
+            if obj:IsA("Tool") and (obj:FindFirstChild("KnifeServer") or obj:FindFirstChild("Stab")) then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+local function GetPlayerGun()
+    local char = LocalPlayer.Character
+    local bpack = LocalPlayer:FindFirstChild("Backpack")
+    if char then
+        local t = char:FindFirstChild("Gun") or char:FindFirstChild("Revolver")
+        if t and t:IsA("Tool") then return t end
+        for _, obj in ipairs(char:GetChildren()) do
+            if obj:IsA("Tool") and (obj:FindFirstChild("GunServer") or obj:FindFirstChild("Shoot")) then
+                return obj
+            end
+        end
+    end
+    if bpack then
+        local t = bpack:FindFirstChild("Gun") or bpack:FindFirstChild("Revolver")
+        if t and t:IsA("Tool") then return t end
+        for _, obj in ipairs(bpack:GetChildren()) do
+            if obj:IsA("Tool") and (obj:FindFirstChild("GunServer") or obj:FindFirstChild("Shoot")) then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+local function UpdateCustomWeapons()
+    local knife = GetPlayerKnife()
+    if knife then
+        if _G.CustomKnifeActive then
+            ApplyCustomKnife(knife)
+        else
+            RestoreWeapon(knife)
+        end
+    end
+    
+    local gun = GetPlayerGun()
+    if gun then
+        if _G.CustomGunActive then
+            ApplyCustomGun(gun)
+        else
+            RestoreWeapon(gun)
+        end
+    end
+end
+
+-- Periodically maintain weapon skins & effects
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if _G.CustomKnifeActive or _G.CustomGunActive then
+            UpdateCustomWeapons()
+        end
+    end
+end)
+
+local function HookBackpackAndChar()
+    local bpack = LocalPlayer:FindFirstChild("Backpack")
+    if bpack then
+        bpack.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive) then
+                task.wait(0.1)
+                UpdateCustomWeapons()
+            end
+        end)
+    end
+    if LocalPlayer.Character then
+        LocalPlayer.Character.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive) then
+                task.wait(0.1)
+                UpdateCustomWeapons()
+            end
+        end)
+    end
+end
+
+HookBackpackAndChar()
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    HookBackpackAndChar()
+    if _G.CustomKnifeActive or _G.CustomGunActive then
+        UpdateCustomWeapons()
     end
 end)
 
@@ -1640,13 +2289,55 @@ CreateToggle(SecHitVisuals, "HvH Watermark Display", true, function(st)
     Watermark.Visible = st
 end)
 
-local SecModels = CreateSection(Tabs["Visuals"], "Custom Models Switcher")
-CreateToggle(SecModels, "Enable Custom Model", false, function(st)
-    _G.CustomModelsActive = st
-    if st then
-        ApplyCustomModel(_G.SelectedCustomModel)
-    else
-        RemoveCustomModel()
+local SecCustomWeapons = CreateSection(Tabs["Visuals"], "Custom Weapons (Knife & Gun Skins / 3D Models)")
+CreateToggle(SecCustomWeapons, "Enable Custom Knife", false, function(st)
+    _G.CustomKnifeActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecCustomWeapons, "Knife Model / Skin", KnifeModelNames, _G.SelectedKnifeModel, function(val)
+    _G.SelectedKnifeModel = val
+    if _G.CustomKnifeActive then
+        UpdateCustomWeapons()
+    end
+end)
+CreateToggle(SecCustomWeapons, "Enable Custom Gun", false, function(st)
+    _G.CustomGunActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecCustomWeapons, "Gun Model / Skin", GunModelNames, _G.SelectedGunModel, function(val)
+    _G.SelectedGunModel = val
+    if _G.CustomGunActive then
+        UpdateCustomWeapons()
+    end
+end)
+CreateDropdown(SecCustomWeapons, "Weapon Material", {"Default", "Neon Glow", "ForceField", "Glass", "Chrome Metal"}, _G.CustomWeaponMaterial, function(val)
+    _G.CustomWeaponMaterial = val
+    if _G.CustomKnifeActive or _G.CustomGunActive then
+        UpdateCustomWeapons()
+    end
+end)
+CreateDropdown(SecCustomWeapons, "Weapon Color Tint", {"Original", "Blood Red", "Cyber Cyan", "Neon Pink", "Gold", "Lime Green", "Rainbow RGB"}, _G.CustomWeaponColor, function(val)
+    _G.CustomWeaponColor = val
+    if _G.CustomKnifeActive or _G.CustomGunActive then
+        UpdateCustomWeapons()
+    end
+end)
+CreateDropdown(SecCustomWeapons, "Weapon Aura (FX)", {"None", "Fire Flames", "Void Smoke", "Cyber Sparks", "Golden Haze", "Blood Drip"}, _G.CustomWeaponAura, function(val)
+    _G.CustomWeaponAura = val
+    if _G.CustomKnifeActive or _G.CustomGunActive then
+        UpdateCustomWeapons()
+    end
+end)
+CreateToggle(SecCustomWeapons, "Knife Blade Trail", false, function(st)
+    _G.WeaponTrailActive = st
+    if _G.CustomKnifeActive then
+        UpdateCustomWeapons()
+    end
+end)
+CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red", "Cyber Cyan", "Gold Glow", "Pure White"}, _G.SelectedWeaponTrailColor, function(val)
+    _G.SelectedWeaponTrailColor = val
+    if _G.CustomKnifeActive then
+        UpdateCustomWeapons()
     end
 end)
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
