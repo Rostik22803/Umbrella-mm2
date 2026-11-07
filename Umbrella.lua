@@ -945,12 +945,11 @@ local ModelCandidateList = {
         "rbxassetid://15258571412"
     },
     ["tung tung sahur"] = {
-        "rbxassetid://116724607376773",
-        "rbxassetid://102178255222743",
-        "rbxassetid://109801118441166",
-        "rbxassetid://109369994600403",
-        "rbxassetid://138151705692565",
-        "rbxassetid://128230179587698"
+        "rbxassetid://138151705692565", -- 'Tung Tung Tung Sahur' clean Trellis MeshPart (no bones, zero crash)
+        "rbxassetid://94398976707691",  -- 'Tung Tung Sahur' stable model
+        "rbxassetid://109369994600403", -- 'Tung Tung Tung Sahur'
+        "rbxassetid://112342985897325", -- 'tung_tung_tung_sahur'
+        "rbxassetid://71630473252028"   -- 'Tung Tung Tung Sahur'
     },
     ["la vaca saturnita"] = {
         "rbxassetid://129565620410132",
@@ -975,9 +974,19 @@ local ModelBaseScales = {
 
 local function SafeScaleModel(model, scaleFactor)
     if not model or scaleFactor == 1 or scaleFactor <= 0 then return end
-    local scaled = pcall(function()
-        model:ScaleTo(scaleFactor)
-    end)
+    local hasBones = false
+    for _, obj in ipairs(model:GetDescendants()) do
+        if obj:IsA("Bone") then
+            hasBones = true
+            pcall(function() obj:Destroy() end)
+        end
+    end
+    local scaled = false
+    if not hasBones then
+        scaled = pcall(function()
+            model:ScaleTo(scaleFactor)
+        end)
+    end
     if not scaled then
         local primary = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
         local origin = primary and primary.Position or Vector3.new(0, 0, 0)
@@ -1090,11 +1099,12 @@ local function ApplyCustomModel(modelName)
         if newModel then
             newModel.Name = "CustomChangerModel"
             
-            -- Strip any conflicting Humanoids, NPC Scripts, Controllers, Seats that freeze jumping or walking
+            -- Strip any conflicting Humanoids, NPC Scripts, Controllers, Seats, Bones, and JointInstances that crash or freeze Roblox
             for _, obj in ipairs(newModel:GetDescendants()) do
                 if obj:IsA("LuaSourceContainer") or obj:IsA("Humanoid") or obj:IsA("AnimationController")
-                or obj:IsA("BodyMover") or obj:IsA("Seat") or obj:IsA("TouchTransmitter") then
-                    obj:Destroy()
+                or obj:IsA("BodyMover") or obj:IsA("Seat") or obj:IsA("TouchTransmitter")
+                or obj:IsA("Bone") or obj:IsA("JointInstance") then
+                    pcall(function() obj:Destroy() end)
                 end
             end
             
