@@ -289,13 +289,7 @@ for i = 1, 4 do
     chBars[i] = bar
 end
 
--- 3. SNAPLINES CONTAINER
-local SnaplinesContainer = Instance.new("Frame")
-SnaplinesContainer.Name = "Umbrella_Snaplines"
-SnaplinesContainer.Parent = ScreenGui
-SnaplinesContainer.BackgroundTransparency = 1
-SnaplinesContainer.Size = UDim2.new(1, 0, 1, 0)
-SnaplinesContainer.ZIndex = 2
+
 
 ------------------------------------------------------------------------
 -- 3. HVH ВИЗУАЛЫ: HIT LOGS, WATERMARK, HITMARKER
@@ -518,6 +512,25 @@ local MenuBgOptionNames = {
     "Dark Violet"
 }
 
+local HeadDotColorOptionNames = {
+    "Role Colors",
+    "Theme Match",
+    "Pure White",
+    "Blood Crimson",
+    "Cyber Cyan",
+    "Electric Purple",
+    "Neon Pink",
+    "Acid Green",
+    "Sunset Gold",
+    "Rainbow RGB"
+}
+
+local ChamsStyleOptionNames = {
+    "Fill / Glow",
+    "Boxes",
+    "Outline Only"
+}
+
 _G.SelectedThemeColor = "Umbrella Red"
 _G.SelectedMenuBgTheme = "Classic Dark"
 _G.MenuTransparency = 0
@@ -525,8 +538,13 @@ _G.SectionTransparency = 0
 _G.SelectedFOVColor = "Umbrella Red"
 _G.FOVTransparency = 0
 _G.FOVThickness = 1.2
+_G.PlayerChamsStyle = "Fill / Glow"
+_G.SelfChamsStyle = "Fill / Glow"
+_G.WeaponChamsStyle = "Fill / Glow"
+_G.DroppedGunChamsStyle = "Fill / Glow"
 _G.SelectedWeaponChamColor = "Sunset Gold"
 _G.SelectedDroppedGunColor = "Cyber Cyan"
+_G.SelectedHeadDotColor = "Role Colors"
 _G.SelectedMurdererColor = "Blood Crimson"
 _G.SelectedSheriffColor = "Sky Blue"
 _G.SelectedInnocentColor = "Acid Green"
@@ -2618,11 +2636,6 @@ CreateToggle(SecUtility, "Murderer Repel Shield (Push Away)", false, function(st
 
 -- 2. VISUALS TAB
 local SecESP = CreateSection(Tabs["Visuals"], "Player ESP & Weapon Chams")
-CreateDropdown(SecESP, "Chams Style", {"Fill / Glow", "Boxes", "Outline Only"}, _G.ChamsStyle, function(val)
-    _G.ChamsStyle = val
-    ClearAllChams()
-end)
-
 CreateToggle(SecESP, "Player Chams (Role Colors)", false, function(st)
     _G.ChamsActive = st
     if not st then
@@ -2637,6 +2650,10 @@ CreateToggle(SecESP, "Player Chams (Role Colors)", false, function(st)
         end
     end
 end)
+CreateDropdown(SecESP, "Player Chams Style", ChamsStyleOptionNames, _G.PlayerChamsStyle, function(val)
+    _G.PlayerChamsStyle = val
+    ClearAllChams()
+end)
 
 CreateToggle(SecESP, "Self Chams (Local & Custom Model)", false, function(st)
     _G.SelfChamsActive = st
@@ -2648,8 +2665,11 @@ CreateToggle(SecESP, "Self Chams (Local & Custom Model)", false, function(st)
         end
     end
 end)
-
-CreateDropdown(SecESP, "Self Chams Color", {"Neon Pink", "Blood Red", "Cyber Cyan", "Gold Glow", "Lime Green", "Electric Purple", "Rainbow RGB"}, _G.SelectedSelfChamColor, function(col)
+CreateDropdown(SecESP, "Self Chams Style", ChamsStyleOptionNames, _G.SelfChamsStyle, function(val)
+    _G.SelfChamsStyle = val
+    ClearAllChams()
+end)
+CreateDropdown(SecESP, "Self Chams Color", ColorOptionNames, _G.SelectedSelfChamColor, function(col)
     _G.SelectedSelfChamColor = col
     if LocalPlayer.Character then
         for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
@@ -2670,7 +2690,10 @@ CreateToggle(SecESP, "Weapon Chams (Held Knife & Gun)", false, function(st)
         end
     end
 end)
-
+CreateDropdown(SecESP, "Weapon Chams Style", ChamsStyleOptionNames, _G.WeaponChamsStyle, function(val)
+    _G.WeaponChamsStyle = val
+    ClearAllChams()
+end)
 CreateDropdown(SecESP, "Weapon Chams Color", ColorOptionNames, _G.SelectedWeaponChamColor, function(col)
     _G.SelectedWeaponChamColor = col
 end)
@@ -2685,7 +2708,10 @@ CreateToggle(SecESP, "Dropped Gun ESP (Glow & Box)", false, function(st)
         end
     end
 end)
-
+CreateDropdown(SecESP, "Dropped Gun Style", ChamsStyleOptionNames, _G.DroppedGunChamsStyle, function(val)
+    _G.DroppedGunChamsStyle = val
+    ClearAllChams()
+end)
 CreateDropdown(SecESP, "Dropped Gun Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(col)
     _G.SelectedDroppedGunColor = col
 end)
@@ -2989,8 +3015,10 @@ CreateDropdown(SecMoreVisuals, "Crosshair Color", {"Blood Red", "Cyber Cyan", "P
 end)
 CreateSlider(SecMoreVisuals, "Crosshair Size", _G.CrosshairSize, 4, 20, false, function(val) _G.CrosshairSize = val end)
 CreateSlider(SecMoreVisuals, "Crosshair Gap", _G.CrosshairGap, 1, 10, false, function(val) _G.CrosshairGap = val end)
-CreateToggle(SecMoreVisuals, "Player Snaplines (Трейсеры)", false, function(st) _G.SnaplinesActive = st end)
 CreateToggle(SecMoreVisuals, "Head Dot ESP (Точка головы)", false, function(st) _G.HeadDotActive = st end)
+CreateDropdown(SecMoreVisuals, "Head Dot Color", HeadDotColorOptionNames, _G.SelectedHeadDotColor, function(val)
+    _G.SelectedHeadDotColor = val
+end)
 CreateToggle(SecMoreVisuals, "Rainbow RGB Menu Sync", false, function(st)
     _G.RGBSyncActive = st
     if not st then
@@ -3070,26 +3098,37 @@ CreateToggle(SecTheme, "Rainbow Sync (RGB Everything)", _G.RGBSyncActive, functi
     if not st then ApplyMenuTheme() end
 end)
 
-local SecCombatColors = CreateSection(Tabs["Settings"], "Aimbot & FOV Colors")
-CreateDropdown(SecCombatColors, "FOV Circle Color", FOVColorOptionNames, _G.SelectedFOVColor, function(val)
-    _G.SelectedFOVColor = val
-end)
-
-CreateSlider(SecCombatColors, "FOV Transparency", math.round((_G.FOVTransparency or 0) * 100), 0, 90, false, function(val)
-    _G.FOVTransparency = val / 100
-end)
-
-CreateSlider(SecCombatColors, "FOV Circle Thickness", _G.FOVThickness or 1.2, 1, 5, false, function(val)
-    _G.FOVThickness = val
-end)
-
 local SecVisualColors = CreateSection(Tabs["Settings"], "ESP & Chams Custom Colors")
+CreateDropdown(SecVisualColors, "Player Chams Style", ChamsStyleOptionNames, _G.PlayerChamsStyle or "Fill / Glow", function(val)
+    _G.PlayerChamsStyle = val
+    ClearAllChams()
+end)
+
+CreateDropdown(SecVisualColors, "Self Chams Style", ChamsStyleOptionNames, _G.SelfChamsStyle or "Fill / Glow", function(val)
+    _G.SelfChamsStyle = val
+    ClearAllChams()
+end)
+
+CreateDropdown(SecVisualColors, "Weapon Chams Style", ChamsStyleOptionNames, _G.WeaponChamsStyle or "Fill / Glow", function(val)
+    _G.WeaponChamsStyle = val
+    ClearAllChams()
+end)
+
 CreateDropdown(SecVisualColors, "Weapon Chams Color", ColorOptionNames, _G.SelectedWeaponChamColor, function(val)
     _G.SelectedWeaponChamColor = val
 end)
 
+CreateDropdown(SecVisualColors, "Dropped Gun Style", ChamsStyleOptionNames, _G.DroppedGunChamsStyle or "Fill / Glow", function(val)
+    _G.DroppedGunChamsStyle = val
+    ClearAllChams()
+end)
+
 CreateDropdown(SecVisualColors, "Dropped Gun ESP Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(val)
     _G.SelectedDroppedGunColor = val
+end)
+
+CreateDropdown(SecVisualColors, "Head Dot Color", HeadDotColorOptionNames, _G.SelectedHeadDotColor, function(val)
+    _G.SelectedHeadDotColor = val
 end)
 
 CreateDropdown(SecVisualColors, "Murderer ESP Color", ColorOptionNames, _G.SelectedMurdererColor, function(val)
@@ -3306,55 +3345,7 @@ local function CheckAwallRay(targetPart)
     return true, 100
 end
 
--- РЕНДЕР СНАПЛАЙНОВ, ТОЧЕК НА ГОЛОВЕ И КАСТОМНОГО ПРИЦЕЛА
-local SnaplinePool = {}
-local function UpdateSnaplines()
-    if not _G.SnaplinesActive then
-        SnaplinesContainer.Visible = false
-        return
-    end
-    SnaplinesContainer.Visible = true
-    
-    local lineIndex = 0
-    local origin = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-            local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hrp and hum and hum.Health > 0 then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                if onScreen and screenPos.Z > 0 then
-                    lineIndex = lineIndex + 1
-                    local line = SnaplinePool[lineIndex]
-                    if not line then
-                        line = Instance.new("Frame")
-                        line.AnchorPoint = Vector2.new(0, 0.5)
-                        line.BorderSizePixel = 0
-                        line.Parent = SnaplinesContainer
-                        SnaplinePool[lineIndex] = line
-                    end
-                    
-                    local role = GetRole(player)
-                    line.BackgroundColor3 = RoleColors[role] or Color3.fromRGB(220, 35, 45)
-                    local target2D = Vector2.new(screenPos.X, screenPos.Y)
-                    local length = (target2D - origin).Magnitude
-                    local angle = math.deg(math.atan2(target2D.Y - origin.Y, target2D.X - origin.X))
-                    
-                    line.Size = UDim2.new(0, length, 0, 1.5)
-                    line.Position = UDim2.new(0, origin.X, 0, origin.Y)
-                    line.Rotation = angle
-                    line.Visible = true
-                end
-            end
-        end
-    end
-    
-    for i = lineIndex + 1, #SnaplinePool do
-        SnaplinePool[i].Visible = false
-    end
-end
-
+-- РЕНДЕР ТОЧЕК НА ГОЛОВЕ И КАСТОМНОГО ПРИЦЕЛА
 local function UpdateHeadDots()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
@@ -3362,8 +3353,17 @@ local function UpdateHeadDots()
             if head then
                 local dot = head:FindFirstChild("MM2_HeadDot")
                 if _G.HeadDotActive then
-                    local role = GetRole(player)
-                    local col = RoleColors[role] or Color3.fromRGB(220, 35, 45)
+                    local col
+                    if _G.SelectedHeadDotColor == "Role Colors" then
+                        local role = GetRole(player)
+                        col = RoleColors[role] or Color3.fromRGB(220, 35, 45)
+                    elseif _G.SelectedHeadDotColor == "Theme Match" then
+                        col = GetThemeAccentColor()
+                    elseif _G.SelectedHeadDotColor == "Rainbow RGB" then
+                        col = _G.RainbowColor or Color3.fromRGB(220, 35, 45)
+                    else
+                        col = ColorPresets[_G.SelectedHeadDotColor] or Color3.fromRGB(220, 35, 45)
+                    end
                     if not dot then
                         dot = Instance.new("SphereHandleAdornment")
                         dot.Name = "MM2_HeadDot"
@@ -3462,8 +3462,7 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Visible = false
     end
     
-    -- Обновление снаплайнов, прицела и точек на голове
-    UpdateSnaplines()
+    -- Обновление прицела и точек на голове
     UpdateCrosshair()
     UpdateHeadDots()
     
@@ -3912,8 +3911,8 @@ task.spawn(function()
     while true do
         task.wait(0.3)
         if _G.WeaponChamsActive then
-            local isBox = (_G.ChamsStyle == "Boxes")
-            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local isBox = (_G.WeaponChamsStyle == "Boxes")
+            local isOutline = (_G.WeaponChamsStyle == "Outline Only")
             local wColor = (_G.SelectedWeaponChamColor == "Rainbow RGB" and _G.RainbowColor) 
                 or (_G.SelectedWeaponChamColor == "Theme Match" and GetThemeAccentColor())
                 or (ColorPresets[_G.SelectedWeaponChamColor] or Color3.fromRGB(255, 200, 30))
@@ -3947,8 +3946,8 @@ task.spawn(function()
     while true do
         task.wait(0.3)
         if _G.DroppedGunEspActive then
-            local isBox = (_G.ChamsStyle == "Boxes")
-            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local isBox = (_G.DroppedGunChamsStyle == "Boxes")
+            local isOutline = (_G.DroppedGunChamsStyle == "Outline Only")
             local gunCol = (_G.SelectedDroppedGunColor == "Rainbow RGB" and _G.RainbowColor) 
                 or (_G.SelectedDroppedGunColor == "Theme Match" and GetThemeAccentColor())
                 or (ColorPresets[_G.SelectedDroppedGunColor] or Color3.fromRGB(0, 240, 255))
@@ -4263,8 +4262,8 @@ task.spawn(function()
     while true do
         task.wait(0.25)
         if _G.ChamsActive then
-            local isBox = (_G.ChamsStyle == "Boxes")
-            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local isBox = (_G.PlayerChamsStyle == "Boxes")
+            local isOutline = (_G.PlayerChamsStyle == "Outline Only")
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
                     local role = GetRole(player)
@@ -4296,8 +4295,8 @@ task.spawn(function()
         task.wait(0.25)
         if _G.SelfChamsActive and LocalPlayer.Character then
             local char = LocalPlayer.Character
-            local isBox = (_G.ChamsStyle == "Boxes")
-            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local isBox = (_G.SelfChamsStyle == "Boxes")
+            local isOutline = (_G.SelfChamsStyle == "Outline Only")
             local selfColor = (_G.SelectedSelfChamColor == "Rainbow RGB" and _G.RainbowColor) or (ChamColorPresets[_G.SelectedSelfChamColor] or Color3.fromRGB(255, 20, 147))
             local customModel = char:FindFirstChild("CustomChangerModel")
             
