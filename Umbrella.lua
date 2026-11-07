@@ -252,6 +252,48 @@ AwallText.Text = "WALL"
 AwallText.TextColor3 = Color3.fromRGB(255, 70, 70)
 AwallText.TextSize = 12
 
+-- 1. FOV CIRCLE (КРУГ ПРИЦЕЛА AIMBOT)
+local FOVCircle = Instance.new("Frame")
+FOVCircle.Name = "Umbrella_FOVCircle"
+FOVCircle.Parent = ScreenGui
+FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVCircle.BackgroundTransparency = 1
+FOVCircle.Visible = false
+Instance.new("UICorner", FOVCircle).CornerRadius = UDim.new(1, 0)
+local fovStroke = Instance.new("UIStroke", FOVCircle)
+fovStroke.Color = Color3.fromRGB(220, 35, 45)
+fovStroke.Thickness = 1.2
+
+-- 2. CUSTOM HVH CROSSHAIR (КАСТОМНЫЙ ПРИЦЕЛ)
+local CrosshairCenter = Instance.new("Frame")
+CrosshairCenter.Name = "Umbrella_Crosshair"
+CrosshairCenter.Parent = ScreenGui
+CrosshairCenter.AnchorPoint = Vector2.new(0.5, 0.5)
+CrosshairCenter.Position = UDim2.new(0.5, 0, 0.5, 0)
+CrosshairCenter.Size = UDim2.new(0, 4, 0, 4)
+CrosshairCenter.BackgroundColor3 = Color3.fromRGB(255, 45, 55)
+CrosshairCenter.BorderSizePixel = 0
+CrosshairCenter.Visible = false
+Instance.new("UICorner", CrosshairCenter).CornerRadius = UDim.new(1, 0)
+
+local chBars = {}
+for i = 1, 4 do
+    local bar = Instance.new("Frame")
+    bar.Parent = CrosshairCenter
+    bar.BorderSizePixel = 0
+    bar.BackgroundColor3 = Color3.fromRGB(255, 45, 55)
+    chBars[i] = bar
+end
+
+-- 3. SNAPLINES CONTAINER
+local SnaplinesContainer = Instance.new("Frame")
+SnaplinesContainer.Name = "Umbrella_Snaplines"
+SnaplinesContainer.Parent = ScreenGui
+SnaplinesContainer.BackgroundTransparency = 1
+SnaplinesContainer.Size = UDim2.new(1, 0, 1, 0)
+SnaplinesContainer.ZIndex = 2
+
 ------------------------------------------------------------------------
 -- 3. HVH ВИЗУАЛЫ: HIT LOGS, WATERMARK, HITMARKER
 ------------------------------------------------------------------------
@@ -693,7 +735,9 @@ end
 -- НАПОЛНЕНИЕ ВКЛАДОК И НАСТРОЙКА HVH ФУНКЦИЙ
 ------------------------------------------------------------------------
 _G.ChamsActive = false
+_G.ChamsStyle = "Fill / Glow"
 _G.SelfChamsActive = false
+_G.SelectedSelfChamColor = "Neon Pink"
 _G.WeaponChamsActive = false
 _G.DroppedGunEspActive = false
 _G.MurdererRepelActive = false
@@ -783,6 +827,22 @@ _G.CustomFOVValue = 70
 _G.BlurActive = false
 _G.BlurSize = 6
 _G.KillFlashActive = true
+
+-- Aimbot Precision & Smoothing Fix
+_G.AimBone = "Head"
+_G.AimSmoothness = 1
+_G.ShowFOVCircle = true
+_G.FOVCircleRadius = 130
+_G.AlwaysAim = false
+
+-- HvH Aesthetics & Visuals
+_G.CustomCrosshairActive = false
+_G.SelectedCrosshairColor = "Blood Red"
+_G.CrosshairSize = 8
+_G.CrosshairGap = 3
+_G.SnaplinesActive = false
+_G.HeadDotActive = false
+_G.RGBSyncActive = false
 
 _G.JitterActive = false
 _G.JitterRange = 45
@@ -1501,42 +1561,66 @@ CreateToggle(SecUtility, "Murderer Repel Shield (Push Away)", false, function(st
 
 -- 2. VISUALS TAB
 local SecESP = CreateSection(Tabs["Visuals"], "Player ESP & Weapon Chams")
-CreateToggle(SecESP, "Role Box Chams (Players)", false, function(st)
+CreateDropdown(SecESP, "Chams Style", {"Fill / Glow", "Boxes", "Outline Only"}, _G.ChamsStyle, function(val)
+    _G.ChamsStyle = val
+    ClearAllChams()
+end)
+
+CreateToggle(SecESP, "Player Chams (Role Colors)", false, function(st)
     _G.ChamsActive = st
     if not st then
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
+            if player.Character then
                 for _, obj in ipairs(player.Character:GetDescendants()) do
-                    if obj.Name == "MM2_BoxCham" then obj:Destroy() end
+                    if obj.Name == "MM2_BoxCham" or obj.Name == "MM2_PlayerHighlight" then
+                        obj:Destroy()
+                    end
                 end
             end
         end
     end
 end)
 
-CreateToggle(SecESP, "Self Chams (Neon Pink)", false, function(st)
+CreateToggle(SecESP, "Self Chams (Local & Custom Model)", false, function(st)
     _G.SelfChamsActive = st
     if not st and LocalPlayer.Character then
         for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if obj.Name == "MM2_SelfCham" then obj:Destroy() end
+            if obj.Name == "MM2_SelfCham" or obj.Name == "MM2_SelfHighlight" then
+                obj:Destroy()
+            end
         end
     end
 end)
 
-CreateToggle(SecESP, "Weapon Chams (Gold Glow)", false, function(st)
+CreateDropdown(SecESP, "Self Chams Color", {"Neon Pink", "Blood Red", "Cyber Cyan", "Gold Glow", "Lime Green", "Electric Purple", "Rainbow RGB"}, _G.SelectedSelfChamColor, function(col)
+    _G.SelectedSelfChamColor = col
+    if LocalPlayer.Character then
+        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if obj.Name == "MM2_SelfCham" or obj.Name == "MM2_SelfHighlight" then
+                obj:Destroy()
+            end
+        end
+    end
+end)
+
+CreateToggle(SecESP, "Weapon Chams (Held Knife & Gun)", false, function(st)
     _G.WeaponChamsActive = st
     if not st then
         for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "MM2_WeaponCham" then obj:Destroy() end
+            if obj.Name == "MM2_WeaponCham" or obj.Name == "MM2_WeaponHighlight" then
+                obj:Destroy()
+            end
         end
     end
 end)
 
-CreateToggle(SecESP, "Dropped Gun ESP (Cyan Highlight)", false, function(st)
+CreateToggle(SecESP, "Dropped Gun ESP (Glow & Box)", false, function(st)
     _G.DroppedGunEspActive = st
     if not st then
         for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "MM2_GunCham" then obj:Destroy() end
+            if obj.Name == "MM2_GunCham" or obj.Name == "MM2_GunHighlight" then
+                obj:Destroy()
+            end
         end
     end
 end)
@@ -1773,9 +1857,31 @@ CreateDropdown(SecModels, "Select Model", {"donkey", "cute girl", "pig", "angel"
     end
 end)
 
+local SecMoreVisuals = CreateSection(Tabs["Visuals"], "HvH Aesthetics & Crosshair")
+CreateToggle(SecMoreVisuals, "Custom HvH Crosshair", false, function(st) _G.CustomCrosshairActive = st end)
+CreateDropdown(SecMoreVisuals, "Crosshair Color", {"Blood Red", "Cyber Cyan", "Purple HvH", "Pure White", "Rainbow RGB"}, "Blood Red", function(selected)
+    _G.SelectedCrosshairColor = selected
+end)
+CreateSlider(SecMoreVisuals, "Crosshair Size", _G.CrosshairSize, 4, 20, false, function(val) _G.CrosshairSize = val end)
+CreateSlider(SecMoreVisuals, "Crosshair Gap", _G.CrosshairGap, 1, 10, false, function(val) _G.CrosshairGap = val end)
+CreateToggle(SecMoreVisuals, "Player Snaplines (Трейсеры)", false, function(st) _G.SnaplinesActive = st end)
+CreateToggle(SecMoreVisuals, "Head Dot ESP (Точка головы)", false, function(st) _G.HeadDotActive = st end)
+CreateToggle(SecMoreVisuals, "Rainbow RGB Menu Sync", false, function(st)
+    _G.RGBSyncActive = st
+    if not st then
+        UIStrokeMain.Color = Color3.fromRGB(220, 35, 45)
+        HeaderLine.BackgroundColor3 = Color3.fromRGB(220, 35, 45)
+    end
+end)
+
 -- 3. COMBAT TAB
 local SecCombat = CreateSection(Tabs["Combat"], "Aimbot & Prediction")
-CreateToggle(SecCombat, "Camera Lock Aimbot (LKM)", false, function(st) _G.CameraAimActive = st end)
+CreateToggle(SecCombat, "Camera Lock Aimbot", false, function(st) _G.CameraAimActive = st end)
+CreateDropdown(SecCombat, "Aim Target Bone", {"Head", "Torso"}, "Head", function(b) _G.AimBone = b end)
+CreateToggle(SecCombat, "Show FOV Circle", true, function(st) _G.ShowFOVCircle = st end)
+CreateSlider(SecCombat, "FOV Circle Radius", _G.FOVCircleRadius, 40, 350, false, function(val) _G.FOVCircleRadius = val end)
+CreateSlider(SecCombat, "Aimbot Smoothness", _G.AimSmoothness, 1, 10, false, function(val) _G.AimSmoothness = val end)
+CreateToggle(SecCombat, "Always Aim (No Click Req)", false, function(st) _G.AlwaysAim = st end)
 CreateToggle(SecCombat, "Real Invisible Silent Aim", false, function(st) _G.RealSilentAimActive = st end)
 CreateToggle(SecCombat, "Movement Velocity Prediction", false, function(st) _G.PredictionActive = st end)
 CreateSlider(SecCombat, "Prediction Time", _G.PredictionAmount, 0.05, 0.5, true, function(val) _G.PredictionAmount = val end)
@@ -1858,8 +1964,79 @@ end)
 local RoleColors = {
     Murderer = Color3.fromRGB(255, 35, 45),
     Sheriff  = Color3.fromRGB(30, 140, 255),
+    Hero     = Color3.fromRGB(255, 215, 0),
     Innocent = Color3.fromRGB(30, 255, 100)
 }
+
+local ChamColorPresets = {
+    ["Neon Pink"] = Color3.fromRGB(255, 20, 147),
+    ["Blood Red"] = Color3.fromRGB(255, 35, 45),
+    ["Cyber Cyan"] = Color3.fromRGB(0, 255, 255),
+    ["Gold Glow"] = Color3.fromRGB(255, 215, 0),
+    ["Lime Green"] = Color3.fromRGB(50, 255, 50),
+    ["Electric Purple"] = Color3.fromRGB(180, 50, 255),
+    ["Rainbow RGB"] = Color3.fromRGB(255, 255, 255)
+}
+
+local function ClearAllChams()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            for _, obj in ipairs(player.Character:GetDescendants()) do
+                if obj.Name == "MM2_BoxCham" or obj.Name == "MM2_PlayerHighlight" or 
+                   obj.Name == "MM2_SelfCham" or obj.Name == "MM2_SelfHighlight" or 
+                   obj.Name == "MM2_WeaponCham" or obj.Name == "MM2_WeaponHighlight" then
+                    obj:Destroy()
+                end
+            end
+        end
+    end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "MM2_GunCham" or obj.Name == "MM2_GunHighlight" or 
+           obj.Name == "MM2_WeaponCham" or obj.Name == "MM2_WeaponHighlight" then
+            obj:Destroy()
+        end
+    end
+end
+
+local function ApplyHighlightCham(targetInstance, color, chamName, isOutlineOnly)
+    if not targetInstance then return nil end
+    local hl = targetInstance:FindFirstChild(chamName)
+    if not hl or not hl:IsA("Highlight") then
+        if hl then hl:Destroy() end
+        hl = Instance.new("Highlight")
+        hl.Name = chamName
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hl.Parent = targetInstance
+    end
+    hl.Adornee = targetInstance
+    hl.FillColor = color
+    hl.OutlineColor = color
+    hl.FillTransparency = isOutlineOnly and 1 or 0.35
+    hl.OutlineTransparency = 0
+    return hl
+end
+
+local function ApplyBoxCham(part, color, chamName)
+    if not part or not part:IsA("BasePart") then return nil end
+    local box = part:FindFirstChild(chamName)
+    if not box or not box:IsA("BoxHandleAdornment") then
+        if box then box:Destroy() end
+        box = Instance.new("BoxHandleAdornment")
+        box.Name = chamName
+        box.Size = part.Size + Vector3.new(0.04, 0.04, 0.04)
+        box.AlwaysOnTop = true
+        box.ZIndex = 5
+        box.Adornee = part
+        box.Parent = part
+    end
+    box.Color3 = color
+    box.Transparency = 0.35
+    return box
+end
+
+local function CreateBoxCham(part, color, chamName)
+    return ApplyBoxCham(part, color, chamName)
+end
 
 local function GetRole(player)
     if not player then return "Innocent" end
@@ -1874,37 +2051,48 @@ local function GetRole(player)
     return "Innocent"
 end
 
-local function CreateBoxCham(part, color, chamName)
-    if part:FindFirstChild(chamName) then return end
-    local box = Instance.new("BoxHandleAdornment")
-    box.Name = chamName
-    box.Size = part.Size + Vector3.new(0.04, 0.04, 0.04)
-    box.AlwaysOnTop = true
-    box.ZIndex = 5
-    box.Adornee = part
-    box.Color3 = color
-    box.Transparency = 0.3
-    box.Parent = part
+-- ФУНКЦИИ ВЫБОРА КОСТИ И ПРЕДИКТА (С ПОЛНЫМ ФИКСОМ НАВОДКИ В НОГИ)
+local function GetAimbotBone(char)
+    if not char then return nil end
+    if _G.AimBone == "Torso" then
+        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+    else
+        return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+    end
 end
 
--- ФУНКЦИЯ РАСЧЕТА ПРЕДИКТА ДВИЖЕНИЯ ЦЕЛИ (Velocity Prediction)
-local function GetPredictedPosition(targetHrp)
-    if not targetHrp then return Vector3.new(0, 0, 0) end
-    if _G.PredictionActive then
-        local vel = targetHrp.Velocity
-        return targetHrp.Position + (vel * _G.PredictionAmount)
+-- ФУНКЦИЯ РАСЧЕТА ПРЕДИКТА (Фильтрация гравитации Y, чтобы прицел не падал в пятки)
+local function GetPredictedPosition(targetPart)
+    if not targetPart then return Vector3.new(0, 0, 0) end
+    local basePos = targetPart.Position
+    
+    -- Фикс: если передали HRP, смещаем вверх на уровень груди/головы (+1.6 стадса)
+    if targetPart.Name == "HumanoidRootPart" or targetPart.Name == "LowerTorso" then
+        basePos = basePos + Vector3.new(0, 1.6, 0)
     end
-    return targetHrp.Position
+    
+    if _G.PredictionActive then
+        local char = targetPart.Parent
+        local root = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or targetPart)
+        if root then
+            local vel = root.Velocity
+            -- Ограничиваем вертикальную скорость, предотвращая смещение в пол
+            local predY = math.clamp(vel.Y, -2, 7)
+            local horizontalVel = Vector3.new(vel.X, predY, vel.Z)
+            return basePos + (horizontalVel * _G.PredictionAmount)
+        end
+    end
+    return basePos
 end
 
 -- ФУНКЦИЯ ПРОВЕРКИ AWALL И РАСЧЕТА ДИСТАНЦИИ
-local function CheckAwallRay(targetHrp)
+local function CheckAwallRay(targetPart)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then 
         return false, 999 
     end
     
     local startPos = Camera.CFrame.Position
-    local endPos = targetHrp and GetPredictedPosition(targetHrp) or (Camera.CFrame.Position + Camera.CFrame.LookVector * 100)
+    local endPos = targetPart and GetPredictedPosition(targetPart) or (Camera.CFrame.Position + Camera.CFrame.LookVector * 100)
     local direction = (endPos - startPos)
     
     local raycastParams = RaycastParams.new()
@@ -1914,7 +2102,7 @@ local function CheckAwallRay(targetHrp)
     local result = workspace:Raycast(startPos, direction, raycastParams)
     
     if result then
-        if targetHrp and result.Instance:IsDescendantOf(targetHrp.Parent) then
+        if targetPart and targetPart.Parent and result.Instance:IsDescendantOf(targetPart.Parent) then
             return true, result.Distance
         else
             return false, result.Distance
@@ -1923,7 +2111,121 @@ local function CheckAwallRay(targetHrp)
     return true, 100
 end
 
--- РЕНДЕР ДИНАМИЧЕСКОГО КВАДРАТА AWALL
+-- РЕНДЕР СНАПЛАЙНОВ, ТОЧЕК НА ГОЛОВЕ И КАСТОМНОГО ПРИЦЕЛА
+local SnaplinePool = {}
+local function UpdateSnaplines()
+    if not _G.SnaplinesActive then
+        SnaplinesContainer.Visible = false
+        return
+    end
+    SnaplinesContainer.Visible = true
+    
+    local lineIndex = 0
+    local origin = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if onScreen and screenPos.Z > 0 then
+                    lineIndex = lineIndex + 1
+                    local line = SnaplinePool[lineIndex]
+                    if not line then
+                        line = Instance.new("Frame")
+                        line.AnchorPoint = Vector2.new(0, 0.5)
+                        line.BorderSizePixel = 0
+                        line.Parent = SnaplinesContainer
+                        SnaplinePool[lineIndex] = line
+                    end
+                    
+                    local role = GetRole(player)
+                    line.BackgroundColor3 = RoleColors[role] or Color3.fromRGB(220, 35, 45)
+                    local target2D = Vector2.new(screenPos.X, screenPos.Y)
+                    local length = (target2D - origin).Magnitude
+                    local angle = math.deg(math.atan2(target2D.Y - origin.Y, target2D.X - origin.X))
+                    
+                    line.Size = UDim2.new(0, length, 0, 1.5)
+                    line.Position = UDim2.new(0, origin.X, 0, origin.Y)
+                    line.Rotation = angle
+                    line.Visible = true
+                end
+            end
+        end
+    end
+    
+    for i = lineIndex + 1, #SnaplinePool do
+        SnaplinePool[i].Visible = false
+    end
+end
+
+local function UpdateHeadDots()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            if head then
+                local dot = head:FindFirstChild("MM2_HeadDot")
+                if _G.HeadDotActive then
+                    local role = GetRole(player)
+                    local col = RoleColors[role] or Color3.fromRGB(220, 35, 45)
+                    if not dot then
+                        dot = Instance.new("SphereHandleAdornment")
+                        dot.Name = "MM2_HeadDot"
+                        dot.Radius = 0.55
+                        dot.AlwaysOnTop = true
+                        dot.ZIndex = 8
+                        dot.Adornee = head
+                        dot.Color3 = col
+                        dot.Transparency = 0.25
+                        dot.Parent = head
+                    else
+                        dot.Color3 = col
+                    end
+                else
+                    if dot then dot:Destroy() end
+                end
+            end
+        end
+    end
+end
+
+local function UpdateCrosshair()
+    if not _G.CustomCrosshairActive then
+        CrosshairCenter.Visible = false
+        return
+    end
+    CrosshairCenter.Visible = true
+    
+    local col = RopeColorPresets[_G.SelectedCrosshairColor] or Color3.fromRGB(255, 45, 55)
+    if _G.SelectedCrosshairColor == "Rainbow RGB" then
+        local hue = (tick() * 0.6) % 1
+        col = Color3.fromHSV(hue, 1, 1)
+    end
+    CrosshairCenter.BackgroundColor3 = col
+    
+    local size = _G.CrosshairSize or 8
+    local gap = _G.CrosshairGap or 3
+    
+    -- Up
+    chBars[1].Size = UDim2.new(0, 2, 0, size)
+    chBars[1].Position = UDim2.new(0.5, -1, 0, -(gap + size))
+    chBars[1].BackgroundColor3 = col
+    -- Down
+    chBars[2].Size = UDim2.new(0, 2, 0, size)
+    chBars[2].Position = UDim2.new(0.5, -1, 1, gap)
+    chBars[2].BackgroundColor3 = col
+    -- Left
+    chBars[3].Size = UDim2.new(0, size, 0, 2)
+    chBars[3].Position = UDim2.new(0, -(gap + size), 0.5, -1)
+    chBars[3].BackgroundColor3 = col
+    -- Right
+    chBars[4].Size = UDim2.new(0, size, 0, 2)
+    chBars[4].Position = UDim2.new(1, gap, 0.5, -1)
+    chBars[4].BackgroundColor3 = col
+end
+
+-- РЕНДЕР ДИНАМИЧЕСКОГО КВАДРАТА AWALL И ВИЗУАЛОВ (FOV, CROSSHAIR, SNAPLINES)
 RunService.RenderStepped:Connect(function()
     if _G.ShowAwallSquare then
         AwallIndicator.Visible = true
@@ -1943,6 +2245,34 @@ RunService.RenderStepped:Connect(function()
         end
     else
         AwallIndicator.Visible = false
+    end
+    
+    -- Отрисовка круга FOV прицела
+    if _G.ShowFOVCircle then
+        FOVCircle.Visible = true
+        local r = _G.FOVCircleRadius or 130
+        FOVCircle.Size = UDim2.new(0, r * 2, 0, r * 2)
+        if _G.RGBSyncActive then
+            local hue = (tick() * 0.4) % 1
+            fovStroke.Color = Color3.fromHSV(hue, 1, 1)
+        else
+            fovStroke.Color = Color3.fromRGB(220, 35, 45)
+        end
+    else
+        FOVCircle.Visible = false
+    end
+    
+    -- Обновление снаплайнов, прицела и точек на голове
+    UpdateSnaplines()
+    UpdateCrosshair()
+    UpdateHeadDots()
+    
+    -- Радужный синхрон интерфейса
+    if _G.RGBSyncActive then
+        local hue = (tick() * 0.3) % 1
+        local rgbCol = Color3.fromHSV(hue, 0.85, 1)
+        UIStrokeMain.Color = rgbCol
+        HeaderLine.BackgroundColor3 = rgbCol
     end
 end)
 
@@ -2346,15 +2676,27 @@ end)
 -- 2. WEAPON CHAMS
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.3)
         if _G.WeaponChamsActive then
+            local isBox = (_G.ChamsStyle == "Boxes")
+            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local wColor = Color3.fromRGB(255, 215, 0)
             for _, player in ipairs(Players:GetPlayers()) do
                 if player.Character then
                     for _, tool in ipairs(player.Character:GetChildren()) do
                         if tool:IsA("Tool") then
-                            local handle = tool:FindFirstChild("Handle")
-                            if handle then
-                                CreateBoxCham(handle, Color3.fromRGB(255, 215, 0), "MM2_WeaponCham")
+                            local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart")
+                            if isBox then
+                                local hl = tool:FindFirstChild("MM2_WeaponHighlight")
+                                if hl then hl:Destroy() end
+                                if handle then
+                                    ApplyBoxCham(handle, wColor, "MM2_WeaponCham")
+                                end
+                            else
+                                if handle and handle:FindFirstChild("MM2_WeaponCham") then
+                                    handle.MM2_WeaponCham:Destroy()
+                                end
+                                ApplyHighlightCham(tool, wColor, "MM2_WeaponHighlight", isOutline)
                             end
                         end
                     end
@@ -2367,11 +2709,22 @@ end)
 -- 3. DROPPED GUN ESP
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.3)
         if _G.DroppedGunEspActive then
+            local isBox = (_G.ChamsStyle == "Boxes")
+            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local gunCol = Color3.fromRGB(0, 255, 255)
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj.Name == "GunDrop" and obj:IsA("BasePart") then
-                    CreateBoxCham(obj, Color3.fromRGB(0, 255, 255), "MM2_GunCham")
+                    if isBox then
+                        local hl = obj:FindFirstChild("MM2_GunHighlight")
+                        if hl then hl:Destroy() end
+                        ApplyBoxCham(obj, gunCol, "MM2_GunCham")
+                    else
+                        local box = obj:FindFirstChild("MM2_GunCham")
+                        if box then box:Destroy() end
+                        ApplyHighlightCham(obj, gunCol, "MM2_GunHighlight", isOutline)
+                    end
                 end
             end
         end
@@ -2670,21 +3023,28 @@ end)
 -- Поток PLAYERS CHAMS
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         if _G.ChamsActive then
+            local isBox = (_G.ChamsStyle == "Boxes")
+            local isOutline = (_G.ChamsStyle == "Outline Only")
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
                     local role = GetRole(player)
-                    local color = RoleColors[role]
-                    for _, part in ipairs(player.Character:GetChildren()) do
-                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                            local existingCham = part:FindFirstChild("MM2_BoxCham")
-                            if existingCham then 
-                                existingCham.Color3 = color 
-                            else 
-                                CreateBoxCham(part, color, "MM2_BoxCham") 
+                    local color = RoleColors[role] or Color3.fromRGB(30, 255, 100)
+                    if isBox then
+                        local hl = player.Character:FindFirstChild("MM2_PlayerHighlight")
+                        if hl then hl:Destroy() end
+                        for _, part in ipairs(player.Character:GetChildren()) do
+                            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                                ApplyBoxCham(part, color, "MM2_BoxCham")
                             end
                         end
+                    else
+                        for _, part in ipairs(player.Character:GetChildren()) do
+                            local box = part:FindFirstChild("MM2_BoxCham")
+                            if box then box:Destroy() end
+                        end
+                        ApplyHighlightCham(player.Character, color, "MM2_PlayerHighlight", isOutline)
                     end
                 end
             end
@@ -2692,20 +3052,45 @@ task.spawn(function()
     end
 end)
 
--- Поток SELF CHAMS
+-- Поток SELF CHAMS (включая кастомные модельки CustomChangerModel)
 task.spawn(function()
     while true do
-        task.wait(0.3)
+        task.wait(0.25)
         if _G.SelfChamsActive and LocalPlayer.Character then
-            local pinkColor = Color3.fromRGB(255, 20, 147)
-            for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    local existingCham = part:FindFirstChild("MM2_SelfCham")
-                    if existingCham then
-                        existingCham.Color3 = pinkColor
-                    else
-                        CreateBoxCham(part, pinkColor, "MM2_SelfCham")
+            local char = LocalPlayer.Character
+            local isBox = (_G.ChamsStyle == "Boxes")
+            local isOutline = (_G.ChamsStyle == "Outline Only")
+            local selfColor = (_G.SelectedSelfChamColor == "Rainbow RGB" and _G.RainbowColor) or (ChamColorPresets[_G.SelectedSelfChamColor] or Color3.fromRGB(255, 20, 147))
+            local customModel = char:FindFirstChild("CustomChangerModel")
+            
+            if isBox then
+                local hlChar = char:FindFirstChild("MM2_SelfHighlight")
+                if hlChar then hlChar:Destroy() end
+                if customModel then
+                    local hlMod = customModel:FindFirstChild("MM2_SelfHighlight")
+                    if hlMod then hlMod:Destroy() end
+                    for _, part in ipairs(customModel:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                            ApplyBoxCham(part, selfColor, "MM2_SelfCham")
+                        end
                     end
+                else
+                    for _, part in ipairs(char:GetChildren()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                            ApplyBoxCham(part, selfColor, "MM2_SelfCham")
+                        end
+                    end
+                end
+            else
+                for _, obj in ipairs(char:GetDescendants()) do
+                    if obj.Name == "MM2_SelfCham" then obj:Destroy() end
+                end
+                if customModel then
+                    local hlChar = char:FindFirstChild("MM2_SelfHighlight")
+                    if hlChar then hlChar:Destroy() end
+                    ApplyHighlightCham(customModel, selfColor, "MM2_SelfHighlight", isOutline)
+                else
+                    ApplyHighlightCham(char, selfColor, "MM2_SelfHighlight", isOutline)
                 end
             end
         end
@@ -2849,7 +3234,9 @@ end)
 local function GetClosestTarget()
     local myRole = GetRole(LocalPlayer)
     local closestPlayer = nil
-    local shortestDistance = math.huge
+    local shortestDist = math.huge
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local targetRole = GetRole(player)
@@ -2859,16 +3246,23 @@ local function GetClosestTarget()
             elseif (myRole == "Sheriff" or myRole == "Innocent") and targetRole == "Murderer" then
                 validTarget = true
             end
+            
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
             if validTarget and humanoid and humanoid.Health > 0 then
-                local targetHrp = player.Character.HumanoidRootPart
-                local isVisible, _ = CheckAwallRay(targetHrp)
-                if isVisible then
-                    local predPos = GetPredictedPosition(targetHrp)
-                    local distance = (LocalPlayer.Character.HumanoidRootPart.Position - predPos).Magnitude
-                    if distance < shortestDistance then
-                        shortestDistance = distance
-                        closestPlayer = player
+                local bone = GetAimbotBone(player.Character)
+                if bone then
+                    local isVisible, _ = CheckAwallRay(bone)
+                    if isVisible then
+                        local predPos = GetPredictedPosition(bone)
+                        local screenPos, onScreen = Camera:WorldToViewportPoint(predPos)
+                        if onScreen and screenPos.Z > 0 then
+                            local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                            local maxAllowed = _G.ShowFOVCircle and _G.FOVCircleRadius or 1200
+                            if mouseDist <= maxAllowed and mouseDist < shortestDist then
+                                shortestDist = mouseDist
+                                closestPlayer = player
+                            end
+                        end
                     end
                 end
             end
@@ -2888,14 +3282,23 @@ local function IsHoldingWeapon()
     return false
 end
 
--- 1. CAMERA LOCK AIMBOT
+-- 1. CAMERA LOCK AIMBOT (С ИДЕАЛЬНОЙ НАВОДКОЙ НА ГОЛОВУ И ПЛАВНОСТЬЮ)
 RunService.RenderStepped:Connect(function()
-    if _G.CameraAimActive and IsHoldingWeapon() then
-        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+    if _G.CameraAimActive and (IsHoldingWeapon() or _G.AlwaysAim) then
+        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or _G.AlwaysAim then
             local target = GetClosestTarget()
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local predPos = GetPredictedPosition(target.Character.HumanoidRootPart)
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, predPos)
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character)
+                if bone then
+                    local predPos = GetPredictedPosition(bone)
+                    local targetCF = CFrame.new(Camera.CFrame.Position, predPos)
+                    if _G.AimSmoothness and _G.AimSmoothness > 1 then
+                        local alpha = math.clamp(1 / _G.AimSmoothness, 0.1, 1)
+                        Camera.CFrame = Camera.CFrame:Lerp(targetCF, alpha)
+                    else
+                        Camera.CFrame = targetCF
+                    end
+                end
             end
         end
     end
@@ -2907,12 +3310,15 @@ local OldIndex = nil
 OldIndex = hookmetamethod(game, "__index", function(self, key)
     if _G.RealSilentAimActive and not checkcaller() and (key == "Hit" or key == "Target") then
         local target = GetClosestTarget()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local predPos = GetPredictedPosition(target.Character.HumanoidRootPart)
-            if key == "Hit" then
-                return CFrame.new(predPos)
-            elseif key == "Target" then
-                return target.Character.HumanoidRootPart
+        if target and target.Character then
+            local bone = GetAimbotBone(target.Character)
+            if bone then
+                local predPos = GetPredictedPosition(bone)
+                if key == "Hit" then
+                    return CFrame.new(predPos)
+                elseif key == "Target" then
+                    return bone
+                end
             end
         end
     end
@@ -2928,8 +3334,9 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local remoteName = self.Name
         if remoteName == "Shoot" or remoteName == "ShootServer" or remoteName == "Stab" or remoteName == "StabServer" or remoteName == "Throw" or remoteName == "KnifeServer" then
             local target = GetClosestTarget()
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                local predPos = GetPredictedPosition(target.Character.HumanoidRootPart)
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character)
+                local predPos = bone and GetPredictedPosition(bone) or (target.Character.PrimaryPart and target.Character.PrimaryPart.Position)
                 for i, arg in ipairs(args) do
                     if typeof(arg) == "Vector3" then
                         args[i] = predPos
