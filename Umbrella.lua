@@ -758,15 +758,26 @@ _G.ColorCorrectionActive = false
 _G.SaturationBoost = 1.2
 _G.ContrastBoost = 0.3
 
--- Weather & Camera Visual FX
-_G.WeatherActive = false
-_G.SelectedWeather = "Snow"
-_G.WeatherDensity = 150
+-- Chinese Hat Visuals
+_G.ChineseHatActive = false
+_G.SelectedHatColor = "Blood Red"
+_G.HatSpinActive = true
+_G.HatHeight = 1.15
+_G.HatScale = 1.2
+
+-- Neon Trails & Ground Rope
 _G.PlayerTrailActive = false
+_G.SelectedTrailColor = "Blood Red"
+_G.TrailLifetime = 0.6
 _G.FootRopeActive = false
 _G.SelectedRopeColor = "Blood Red"
 _G.RopeLifetime = 0.9
 _G.RopeWidth = 0.35
+
+-- Custom Footstep Sounds & Camera FX
+_G.CustomFootstepsActive = false
+_G.SelectedFootstep = "Minecraft Stone"
+_G.FootstepsVolume = 4
 _G.CustomFOVActive = false
 _G.CustomFOVValue = 70
 _G.BlurActive = false
@@ -1068,101 +1079,81 @@ Lighting.ChildAdded:Connect(function(child)
     end
 end)
 
--- 2. СИСТЕМА ПОГОДЫ (BASEPART VOLUME SNOW & RAIN) И ВЕРЕВОЧКИ ИЗ-ПОД НОГ (FOOT ROPE TRAIL)
-local WeatherAnchor = nil
-local WeatherEmitter = nil
+-- 2. HVH КИТАЙСКАЯ ШАПКА (CHINESE HAT), ШЛЕЙФЫ (BODY & ROPE TRAIL) И ЗВУКИ ШАГОВ
+local RopeColorPresets = {
+    ["Blood Red"]      = Color3.fromRGB(220, 25, 35),
+    ["Purple HvH"]     = Color3.fromRGB(160, 30, 240),
+    ["Cyber Cyan"]     = Color3.fromRGB(20, 220, 255),
+    ["Electric Green"] = Color3.fromRGB(40, 255, 90),
+    ["Pure White"]     = Color3.fromRGB(255, 255, 255),
+    ["Gold Glow"]      = Color3.fromRGB(255, 215, 0)
+}
 
-local function RemoveWeatherEffect()
-    if WeatherEmitter then WeatherEmitter:Destroy() WeatherEmitter = nil end
-    if WeatherAnchor then WeatherAnchor:Destroy() WeatherAnchor = nil end
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "Umbrella_WeatherAnchor" then obj:Destroy() end
+-- 1. КИТАЙСКАЯ ШАПКА (CHINESE HAT / ASIAN CONICAL HAT)
+local ChineseHatPart = nil
+local hatRotationAngle = 0
+
+local function RemoveChineseHat()
+    if ChineseHatPart then ChineseHatPart:Destroy() ChineseHatPart = nil end
+    if LocalPlayer.Character then
+        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if obj.Name == "Umbrella_ChineseHat" or obj.Name == "Umbrella_HatWeld" then
+                obj:Destroy()
+            end
+        end
     end
 end
 
-local function ApplyWeatherEffect(weatherType)
-    RemoveWeatherEffect()
-    if not _G.WeatherActive then return end
+local function ApplyChineseHat()
+    RemoveChineseHat()
+    if not _G.ChineseHatActive then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
     
-    -- Создаем BasePart в workspace (в Roblox частицы рендерятся ТОЛЬКО внутри реального BasePart)
-    WeatherAnchor = Instance.new("Part")
-    WeatherAnchor.Name = "Umbrella_WeatherAnchor"
-    WeatherAnchor.Transparency = 1
-    WeatherAnchor.CanCollide = false
-    WeatherAnchor.CanTouch = false
-    WeatherAnchor.CanQuery = false
-    WeatherAnchor.CastShadow = false
-    WeatherAnchor.Anchored = true
-    WeatherAnchor.Size = Vector3.new(85, 1, 85)
-    WeatherAnchor.CFrame = Camera.CFrame * CFrame.new(0, 20, 0)
-    WeatherAnchor.Parent = workspace
+    ChineseHatPart = Instance.new("Part")
+    ChineseHatPart.Name = "Umbrella_ChineseHat"
+    ChineseHatPart.CanCollide = false
+    ChineseHatPart.CanTouch = false
+    ChineseHatPart.CanQuery = false
+    ChineseHatPart.CastShadow = false
+    ChineseHatPart.Anchored = false
+    ChineseHatPart.Material = Enum.Material.Neon
+    ChineseHatPart.Size = Vector3.new(3, 0.8, 3)
+    ChineseHatPart.Transparency = 0.1
     
-    local emitter = Instance.new("ParticleEmitter")
-    emitter.Name = "Umbrella_WeatherEmitter"
-    emitter.Shape = Enum.ParticleEmitterShape.Box
-    emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
-    emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-    emitter.Parent = WeatherAnchor
+    local col = RopeColorPresets[_G.SelectedHatColor] or Color3.fromRGB(220, 25, 35)
+    ChineseHatPart.Color = col
     
-    local count = _G.WeatherDensity or 150
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.FileMesh
+    mesh.MeshId = "rbxassetid://1033714"
+    local s = _G.HatScale or 1.2
+    mesh.Scale = Vector3.new(s * 1.35, s * 0.95, s * 1.35)
+    mesh.Parent = ChineseHatPart
     
-    if weatherType == "Snow" then
-        emitter.Texture = "rbxassetid://1095708"
-        emitter.Rate = count
-        emitter.Speed = NumberRange.new(7, 16)
-        emitter.Lifetime = NumberRange.new(3.5, 6.5)
-        emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.4),
-            NumberSequenceKeypoint.new(0.5, 0.35),
-            NumberSequenceKeypoint.new(1, 0.2)
-        })
-        emitter.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.1),
-            NumberSequenceKeypoint.new(0.8, 0.2),
-            NumberSequenceKeypoint.new(1, 1)
-        })
-        emitter.Color = ColorSequence.new(Color3.fromRGB(245, 248, 255))
-        emitter.Acceleration = Vector3.new(2, -9, 1.5)
-        emitter.SpreadAngle = Vector2.new(180, 180)
-        emitter.RotSpeed = NumberRange.new(-60, 60)
-        emitter.LightEmission = 0.4
-        emitter.Orientation = Enum.ParticleOrientation.FacingCamera
-        
-    elseif weatherType == "Rain" then
-        emitter.Texture = "rbxassetid://258128463"
-        emitter.Rate = count * 1.5
-        emitter.Speed = NumberRange.new(65, 95)
-        emitter.Lifetime = NumberRange.new(0.4, 0.8)
-        emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.15),
-            NumberSequenceKeypoint.new(1, 0.08)
-        })
-        emitter.Transparency = NumberSequence.new(0.2)
-        emitter.Color = ColorSequence.new(Color3.fromRGB(180, 215, 255))
-        emitter.Acceleration = Vector3.new(0, -140, 0)
-        emitter.SpreadAngle = Vector2.new(15, 15)
-        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
-        
-    elseif weatherType == "Blood Rain" then
-        emitter.Texture = "rbxassetid://258128463"
-        emitter.Rate = count * 1.5
-        emitter.Speed = NumberRange.new(65, 95)
-        emitter.Lifetime = NumberRange.new(0.4, 0.8)
-        emitter.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.15),
-            NumberSequenceKeypoint.new(1, 0.08)
-        })
-        emitter.Transparency = NumberSequence.new(0.15)
-        emitter.Color = ColorSequence.new(Color3.fromRGB(255, 25, 40))
-        emitter.Acceleration = Vector3.new(0, -140, 0)
-        emitter.SpreadAngle = Vector2.new(15, 15)
-        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
-    end
+    local glow = Instance.new("Highlight")
+    glow.Name = "HatGlow"
+    glow.FillTransparency = 0.55
+    glow.FillColor = col
+    glow.OutlineColor = Color3.fromRGB(255, 255, 255)
+    glow.OutlineTransparency = 0.2
+    glow.Adornee = ChineseHatPart
+    glow.Parent = ChineseHatPart
     
-    WeatherEmitter = emitter
+    ChineseHatPart.CFrame = head.CFrame * CFrame.new(0, _G.HatHeight or 1.15, 0)
+    ChineseHatPart.Parent = char
+    
+    local weld = Instance.new("Weld")
+    weld.Name = "Umbrella_HatWeld"
+    weld.Part0 = head
+    weld.Part1 = ChineseHatPart
+    weld.C0 = CFrame.new(0, _G.HatHeight or 1.15, 0)
+    weld.Parent = ChineseHatPart
 end
 
--- ВЕРЕВОЧКА ИЗ-ПОД НОГ (FOOT ROPE TRAIL ПО ЗЕМЛЕ)
+-- 2. ВЕРЕВОЧКА ИЗ-ПОД НОГ (FOOT ROPE TRAIL ПО ЗЕМЛЕ)
 local FootRopeTrail = nil
 local FootRopeAtt0 = nil
 local FootRopeAtt1 = nil
@@ -1180,15 +1171,6 @@ local function RemoveFootRope()
     end
 end
 
-local RopeColorPresets = {
-    ["Blood Red"]      = Color3.fromRGB(220, 25, 35),
-    ["Purple HvH"]     = Color3.fromRGB(160, 30, 240),
-    ["Cyber Cyan"]     = Color3.fromRGB(20, 220, 255),
-    ["Electric Green"] = Color3.fromRGB(40, 255, 90),
-    ["Pure White"]     = Color3.fromRGB(255, 255, 255),
-    ["Gold Glow"]      = Color3.fromRGB(255, 215, 0)
-}
-
 local function ApplyFootRope()
     RemoveFootRope()
     if not _G.FootRopeActive then return end
@@ -1197,7 +1179,6 @@ local function ApplyFootRope()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     
-    -- Две точки прямо на уровне подошв / пола (-2.95 стадса вниз)
     FootRopeAtt0 = Instance.new("Attachment")
     FootRopeAtt0.Name = "Umbrella_RopeAtt0"
     FootRopeAtt0.Position = Vector3.new(-0.25, -2.95, 0)
@@ -1234,6 +1215,7 @@ local function ApplyFootRope()
     FootRopeTrail.Parent = hrp
 end
 
+-- 3. НЕОНОВЫЙ ТРЕЙЛ ЗА ТЕЛОМ (BODY NEON TRAIL)
 local CharacterTrail = nil
 local TrailAtt0 = nil
 local TrailAtt1 = nil
@@ -1261,35 +1243,86 @@ local function ApplyCharacterTrail()
     
     TrailAtt0 = Instance.new("Attachment")
     TrailAtt0.Name = "Umbrella_TrailAtt0"
-    TrailAtt0.Position = Vector3.new(0, 1.2, 0)
+    TrailAtt0.Position = Vector3.new(0, 0.9, 0)
     TrailAtt0.Parent = hrp
     
     TrailAtt1 = Instance.new("Attachment")
     TrailAtt1.Name = "Umbrella_TrailAtt1"
-    TrailAtt1.Position = Vector3.new(0, -1.2, 0)
+    TrailAtt1.Position = Vector3.new(0, -1.3, 0)
     TrailAtt1.Parent = hrp
     
     CharacterTrail = Instance.new("Trail")
     CharacterTrail.Name = "Umbrella_Trail"
     CharacterTrail.Attachment0 = TrailAtt0
     CharacterTrail.Attachment1 = TrailAtt1
-    CharacterTrail.Lifetime = 0.55
-    CharacterTrail.MinLength = 0.05
+    CharacterTrail.Lifetime = _G.TrailLifetime or 0.6
+    CharacterTrail.MinLength = 0.04
+    CharacterTrail.WidthScale = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1.3),
+        NumberSequenceKeypoint.new(0.5, 0.85),
+        NumberSequenceKeypoint.new(1, 0.04)
+    })
+    
+    local col = RopeColorPresets[_G.SelectedTrailColor] or Color3.fromRGB(220, 25, 35)
     CharacterTrail.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 35, 45)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 10, 20))
+        ColorSequenceKeypoint.new(0, col),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(math.floor(col.R * 60), math.floor(col.G * 60), math.floor(col.B * 60)))
     })
     CharacterTrail.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(0, 0.1),
+        NumberSequenceKeypoint.new(0.8, 0.35),
         NumberSequenceKeypoint.new(1, 1)
     })
-    CharacterTrail.LightEmission = 0.8
+    CharacterTrail.LightEmission = 1.0
     CharacterTrail.FaceCamera = true
     CharacterTrail.Parent = hrp
 end
 
+-- 4. КАСТОМНЫЕ ЗВУКИ ШАГОВ (CUSTOM FOOTSTEP SOUNDS)
+local FootstepAssets = {
+    ["Minecraft Stone"]      = "rbxassetid://9117824839",
+    ["Concrete Combat Boot"] = "rbxassetid://131070686",
+    ["High Heels Click"]     = "rbxassetid://6357119106",
+    ["Anime Bubble Pop"]     = "rbxassetid://6534947588",
+    ["Squeaky Meme Toy"]     = "rbxassetid://9069609200"
+}
+
+local lastStepTime = 0
+local function ProcessCustomFootsteps()
+    if not _G.CustomFootstepsActive then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+    
+    -- Глушим стандартный звук шагов
+    local defaultRun = hrp:FindFirstChild("Running")
+    if defaultRun and defaultRun:IsA("Sound") then
+        defaultRun.Volume = 0
+    end
+    
+    if hum.MoveDirection.Magnitude > 0.1 and hum.FloorMaterial ~= Enum.Material.Air then
+        local stepInterval = math.clamp(0.36 * (16 / math.max(hum.WalkSpeed, 10)), 0.12, 0.45)
+        local now = tick()
+        if now - lastStepTime >= stepInterval then
+            lastStepTime = now
+            local assetId = FootstepAssets[_G.SelectedFootstep] or FootstepAssets["Minecraft Stone"]
+            local s = Instance.new("Sound")
+            s.SoundId = assetId
+            s.Volume = math.clamp((_G.FootstepsVolume or 4) * 0.25, 0.1, 5)
+            s.Pitch = math.random(95, 105) / 100
+            s.Parent = SoundService
+            s:Play()
+            s.Ended:Connect(function() s:Destroy() end)
+            task.delay(1.5, function() if s and s.Parent then s:Destroy() end end)
+        end
+    end
+end
+
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
+    if _G.ChineseHatActive then ApplyChineseHat() end
     if _G.FootRopeActive then ApplyFootRope() end
     if _G.PlayerTrailActive then ApplyCharacterTrail() end
 end)
@@ -1392,14 +1425,34 @@ RunService.RenderStepped:Connect(function()
     
     -- Кастомный FOV камеры
         -- Кастомный FOV камеры
+        -- Кастомный FOV камеры
     if _G.CustomFOVActive then
         Camera.FieldOfView = _G.CustomFOVValue
     end
     
-    -- Привязка объема погоды к координатам камеры
-    if _G.WeatherActive and WeatherAnchor and WeatherAnchor.Parent then
-        local camPos = Camera.CFrame.Position
-        WeatherAnchor.CFrame = CFrame.new(camPos.X, camPos.Y + 20, camPos.Z)
+    -- Вращение и радужный цвет китайской шапки (Chinese Hat Rotation & RGB)
+    if _G.ChineseHatActive and ChineseHatPart and ChineseHatPart.Parent then
+        local char = LocalPlayer.Character
+        local head = char and char:FindFirstChild("Head")
+        if head then
+            local weld = ChineseHatPart:FindFirstChild("Umbrella_HatWeld")
+            if weld then
+                if _G.HatSpinActive then
+                    hatRotationAngle = (hatRotationAngle + (180 * (1/60))) % 360
+                    weld.C0 = CFrame.new(0, _G.HatHeight or 1.15, 0) * CFrame.Angles(0, math.rad(hatRotationAngle), 0)
+                else
+                    weld.C0 = CFrame.new(0, _G.HatHeight or 1.15, 0)
+                end
+            end
+            
+            if _G.SelectedHatColor == "Rainbow RGB" then
+                local hue = (tick() * 0.5) % 1
+                local rgbCol = Color3.fromHSV(hue, 1, 1)
+                ChineseHatPart.Color = rgbCol
+                local glow = ChineseHatPart:FindFirstChild("HatGlow")
+                if glow then glow.FillColor = rgbCol end
+            end
+        end
     end
     
     -- Радужный цикл для веревочки из-под ног (Rainbow RGB)
@@ -1408,6 +1461,16 @@ RunService.RenderStepped:Connect(function()
         local rgbCol = Color3.fromHSV(hue, 1, 1)
         FootRopeTrail.Color = ColorSequence.new(rgbCol)
     end
+    
+    -- Радужный цикл для неона за телом (Body Trail RGB)
+    if _G.PlayerTrailActive and CharacterTrail and CharacterTrail.Parent and _G.SelectedTrailColor == "Rainbow RGB" then
+        local hue = (tick() * 0.6) % 1
+        local rgbCol = Color3.fromHSV(hue, 1, 1)
+        CharacterTrail.Color = ColorSequence.new(rgbCol)
+    end
+    
+    -- Обработка звуков шагов
+    ProcessCustomFootsteps()
 end)
 
 -- 1. MAIN TAB
@@ -1502,28 +1565,59 @@ CreateToggle(SecModels, "Enable Custom Model", false, function(st)
         RemoveCustomModel()
     end
 end)
-local SecWeatherAndFX = CreateSection(Tabs["Visuals"], "Weather & Ground Rope FX")
-CreateToggle(SecWeatherAndFX, "Weather Effects (Snow/Rain)", false, function(st)
-    _G.WeatherActive = st
+local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
+CreateToggle(SecChineseHat, "Chinese Conical Hat", false, function(st)
+    _G.ChineseHatActive = st
     if st then
-        ApplyWeatherEffect(_G.SelectedWeather)
+        ApplyChineseHat()
     else
-        RemoveWeatherEffect()
+        RemoveChineseHat()
     end
 end)
-CreateDropdown(SecWeatherAndFX, "Weather Type", {"Snow", "Rain", "Blood Rain"}, "Snow", function(selected)
-    _G.SelectedWeather = selected
-    if _G.WeatherActive then
-        ApplyWeatherEffect(selected)
+CreateDropdown(SecChineseHat, "Hat Color Preset", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
+    _G.SelectedHatColor = selected
+    if _G.ChineseHatActive then
+        ApplyChineseHat()
     end
 end)
-CreateSlider(SecWeatherAndFX, "Weather Intensity", _G.WeatherDensity, 50, 400, false, function(val)
-    _G.WeatherDensity = val
-    if _G.WeatherActive and WeatherEmitter then
-        WeatherEmitter.Rate = (_G.SelectedWeather == "Snow") and val or (val * 1.5)
+CreateToggle(SecChineseHat, "Spinning Animation", true, function(st)
+    _G.HatSpinActive = st
+end)
+CreateSlider(SecChineseHat, "Hat Scale", _G.HatScale, 0.8, 2.0, true, function(val)
+    _G.HatScale = val
+    if _G.ChineseHatActive then
+        ApplyChineseHat()
     end
 end)
-CreateToggle(SecWeatherAndFX, "Foot Rope Trail (Под ногами)", false, function(st)
+CreateSlider(SecChineseHat, "Height Offset", _G.HatHeight, 0.6, 2.0, true, function(val)
+    _G.HatHeight = val
+    if _G.ChineseHatActive then
+        ApplyChineseHat()
+    end
+end)
+
+local SecTrails = CreateSection(Tabs["Visuals"], "Neon Trails & Ground Rope")
+CreateToggle(SecTrails, "Body Neon Trail", false, function(st)
+    _G.PlayerTrailActive = st
+    if st then
+        ApplyCharacterTrail()
+    else
+        RemoveCharacterTrail()
+    end
+end)
+CreateDropdown(SecTrails, "Body Trail Color", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
+    _G.SelectedTrailColor = selected
+    if _G.PlayerTrailActive then
+        ApplyCharacterTrail()
+    end
+end)
+CreateSlider(SecTrails, "Body Trail Lifetime", _G.TrailLifetime, 0.2, 2.0, true, function(val)
+    _G.TrailLifetime = val
+    if CharacterTrail and CharacterTrail.Parent then
+        CharacterTrail.Lifetime = val
+    end
+end)
+CreateToggle(SecTrails, "Foot Rope Trail (Под ногами)", false, function(st)
     _G.FootRopeActive = st
     if st then
         ApplyFootRope()
@@ -1531,19 +1625,19 @@ CreateToggle(SecWeatherAndFX, "Foot Rope Trail (Под ногами)", false, fu
         RemoveFootRope()
     end
 end)
-CreateDropdown(SecWeatherAndFX, "Rope Color Preset", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
+CreateDropdown(SecTrails, "Rope Color Preset", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
     _G.SelectedRopeColor = selected
     if _G.FootRopeActive then
         ApplyFootRope()
     end
 end)
-CreateSlider(SecWeatherAndFX, "Rope Length (Tail)", _G.RopeLifetime, 0.3, 2.5, true, function(val)
+CreateSlider(SecTrails, "Rope Length (Tail)", _G.RopeLifetime, 0.3, 2.5, true, function(val)
     _G.RopeLifetime = val
     if FootRopeTrail and FootRopeTrail.Parent then
         FootRopeTrail.Lifetime = val
     end
 end)
-CreateSlider(SecWeatherAndFX, "Rope Thickness", _G.RopeWidth, 0.1, 1.0, true, function(val)
+CreateSlider(SecTrails, "Rope Thickness", _G.RopeWidth, 0.1, 1.0, true, function(val)
     _G.RopeWidth = val
     if FootRopeTrail and FootRopeTrail.Parent then
         FootRopeTrail.WidthScale = NumberSequence.new({
@@ -1552,35 +1646,45 @@ CreateSlider(SecWeatherAndFX, "Rope Thickness", _G.RopeWidth, 0.1, 1.0, true, fu
         })
     end
 end)
-CreateToggle(SecWeatherAndFX, "Player Neon Trail (Body)", false, function(st)
-    _G.PlayerTrailActive = st
-    if st then
-        ApplyCharacterTrail()
-    else
-        RemoveCharacterTrail()
+
+local SecFootsteps = CreateSection(Tabs["Visuals"], "Footsteps Audio & Camera")
+CreateToggle(SecFootsteps, "Custom Footstep Sounds", false, function(st)
+    _G.CustomFootstepsActive = st
+    if not st and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local run = hrp:FindFirstChild("Running")
+            if run and run:IsA("Sound") then run.Volume = 0.65 end
+        end
     end
 end)
-CreateToggle(SecWeatherAndFX, "Custom Camera FOV", false, function(st)
+CreateDropdown(SecFootsteps, "Footstep Sound Type", {"Minecraft Stone", "Concrete Combat Boot", "High Heels Click", "Anime Bubble Pop", "Squeaky Meme Toy"}, "Minecraft Stone", function(selected)
+    _G.SelectedFootstep = selected
+end)
+CreateSlider(SecFootsteps, "Footsteps Volume", _G.FootstepsVolume, 1, 10, false, function(val)
+    _G.FootstepsVolume = val
+end)
+CreateToggle(SecFootsteps, "Custom Camera FOV", false, function(st)
     _G.CustomFOVActive = st
     if not st then
         Camera.FieldOfView = OriginalLighting.FieldOfView or 70
     end
 end)
-CreateSlider(SecWeatherAndFX, "Field of View", _G.CustomFOVValue, 60, 120, false, function(val)
+CreateSlider(SecFootsteps, "Field of View", _G.CustomFOVValue, 60, 120, false, function(val)
     _G.CustomFOVValue = val
     if _G.CustomFOVActive then
         Camera.FieldOfView = val
     end
 end)
-CreateToggle(SecWeatherAndFX, "Screen Depth Blur", false, function(st)
+CreateToggle(SecFootsteps, "Screen Depth Blur", false, function(st)
     _G.BlurActive = st
     UpdateBlur()
 end)
-CreateSlider(SecWeatherAndFX, "Blur Intensity", _G.BlurSize, 1, 25, false, function(val)
+CreateSlider(SecFootsteps, "Blur Intensity", _G.BlurSize, 1, 25, false, function(val)
     _G.BlurSize = val
     UpdateBlur()
 end)
-CreateToggle(SecWeatherAndFX, "Hit / Kill Screen Flash", true, function(st)
+CreateToggle(SecFootsteps, "Hit / Kill Screen Flash", true, function(st)
     _G.KillFlashActive = st
 end)
 
