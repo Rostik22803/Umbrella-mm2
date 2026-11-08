@@ -121,190 +121,158 @@ local KnifePresets = Weapons.KnifePresets
 local GunPresets = Weapons.GunPresets
 local KnifeModelNames = Weapons.KnifeModelNames
 local GunModelNames = Weapons.GunModelNames
+local CustomGunModelNames = Weapons.CustomGunModelNames or {}
+local CustomMeleeModelNames = Weapons.CustomMeleeModelNames or {}
 local ModelCandidateList = Weapons.ModelCandidateList
 local ApplyCustomModel = Weapons.ApplyCustomModel
 local RemoveCustomModel = Weapons.RemoveCustomModel
 
 local ApplyChineseHat = Visuals.ApplyChineseHat
 local RemoveChineseHat = Visuals.RemoveChineseHat
-local ApplyFootRope = Visuals.ApplyFootRope
-local RemoveFootRope = Visuals.RemoveFootRope
 local ApplyCharacterTrail = Visuals.ApplyCharacterTrail
 local RemoveCharacterTrail = Visuals.RemoveCharacterTrail
+local ApplyFootstepRope = Visuals.ApplyFootstepRope
+local RemoveFootstepRope = Visuals.RemoveFootstepRope
+local UpdateColorCorrection = Visuals.UpdateColorCorrection
 local ApplySkyPreset = Visuals.ApplySkyPreset
 local RemoveSkyPreset = Visuals.RemoveSkyPreset
-local ApplyAtmosphere = Visuals.ApplyAtmosphere
-local UpdateColorCorrection = Visuals.UpdateColorCorrection
-local UpdateBlur = Visuals.UpdateBlur
+local OriginalLighting = Visuals.OriginalLighting
 
-local Players = Core.Services.Players
-local ScreenGui = UI.ScreenGui
-local Watermark = UI.Watermark
 local AwallIndicator = UI.AwallIndicator
-local HeaderLine = UI.HeaderLine
+local Watermark = UI.Watermark
 local UIStrokeMain = UI.UIStrokeMain
-local Camera = Core.Camera
-local LocalPlayer = Core.LocalPlayer
-local Lighting = Core.Services.Lighting
-local OriginalLighting = Visuals.OriginalLighting or {
-    FieldOfView = 70,
-    FogColor = Color3.fromRGB(128, 128, 128),
-    FogStart = 0,
-    FogEnd = 1000,
-    ClockTime = 14,
-    Ambient = Color3.fromRGB(128, 128, 128),
-    OutdoorAmbient = Color3.fromRGB(128, 128, 128),
-    Brightness = 1,
-    GlobalShadows = true
-}
-local UpdateCustomWeapons = Weapons.UpdateCustomWeapons
-local UpdateRoleColors = Core.UpdateRoleColors
+local HeaderLine = UI.HeaderLine
 
+------------------------------------------------------------------------
+-- ПОСТРОЕНИЕ ВКЛАДОК МЕНЮ
+------------------------------------------------------------------------
 
--- Populate Tabs & Attach UI Controls
 -- 1. MAIN TAB
-local SecMovement = CreateSection(Tabs["Main"], "Movement Mods")
-CreateToggle(SecMovement, "Speedhack", false, function(st) _G.SpeedActive = st end)
-CreateSlider(SecMovement, "Walk Speed", _G.SpeedValue, 16, 150, false, function(val) _G.SpeedValue = val end)
-CreateToggle(SecMovement, "Bhop (Auto Jump)", false, function(st) _G.BhopActive = st end)
-CreateToggle(SecMovement, "Infinite Jump (Fly Air)", false, function(st) _G.InfiniteJumpActive = st end)
-CreateToggle(SecMovement, "Spinbot", false, function(st) _G.SpinbotActive = st end)
-CreateSlider(SecMovement, "Spin Speed", _G.SpinSpeed, 10, 100, false, function(val) _G.SpinSpeed = val end)
-CreateToggle(SecMovement, "Noclip (Pass Wall)", false, function(st) _G.NoclipActive = st end)
+local SecLocal = CreateSection(Tabs["Main"], "Local Player Supremacy")
+CreateToggle(SecLocal, "Noclip Engine", false, function(st) _G.NoclipActive = st end)
+CreateToggle(SecLocal, "Anti-Fling Physics Shield", false, function(st) _G.AntiFlingActive = st end)
+CreateToggle(SecLocal, "Infinite Jump (No Cooldown)", false, function(st) _G.InfiniteJumpActive = st end)
+CreateToggle(SecLocal, "Auto Pickup Dropped Gun", false, function(st) _G.AutoPickupActive = st end)
+CreateDropdown(SecLocal, "Pickup Mode", {"Teleport", "Distance Touch"}, "Teleport", function(m) _G.PickupMode = m end)
+CreateToggle(SecLocal, "Speed Engine (WalkSpeed)", false, function(st) _G.SpeedActive = st end)
+CreateSlider(SecLocal, "Speed Value", _G.SpeedValue, 16, 120, false, function(val) _G.SpeedValue = val end)
+CreateToggle(SecLocal, "Bunny Hop (Bhop)", false, function(st) _G.BhopActive = st end)
+CreateToggle(SecLocal, "Spinbot 360 Engine", false, function(st) _G.SpinbotActive = st end)
+CreateSlider(SecLocal, "Spin Speed", _G.SpinSpeed, 5, 80, false, function(val) _G.SpinSpeed = val end)
 
-local SecHvHMovement = CreateSection(Tabs["Main"], "HvH Advanced Movement")
-CreateToggle(SecHvHMovement, "Auto-Strafe (Air Control)", false, function(st) _G.AutoStrafeActive = st end)
-CreateToggle(SecHvHMovement, "Fly (Free 3D Flight)", false, function(st) _G.FlyActive = st end)
-CreateSlider(SecHvHMovement, "Fly Speed", _G.FlySpeed, 15, 150, false, function(val) _G.FlySpeed = val end)
-CreateToggle(SecHvHMovement, "Fast Stop (Instant Decel)", false, function(st) _G.FastStopActive = st end)
-CreateToggle(SecHvHMovement, "High Jump Boost", false, function(st) _G.HighJumpActive = st end)
-CreateSlider(SecHvHMovement, "Jump Boost Power", _G.JumpBoostPower, 50, 250, false, function(val) _G.JumpBoostPower = val end)
-CreateToggle(SecHvHMovement, "Long Jump (Lunge Boost)", false, function(st) _G.LongJumpActive = st end)
-CreateSlider(SecHvHMovement, "Long Jump Power", _G.LongJumpPower, 20, 120, false, function(val) _G.LongJumpPower = val end)
+local SecAutoFarm = CreateSection(Tabs["Main"], "MM2 Auto Farm & Coins")
+CreateToggle(SecAutoFarm, "Auto Farm Coins (Smart Safe TP)", false, function(st)
+    AutoFarm.SetAutoFarmCoins(st)
+end)
+CreateSlider(SecAutoFarm, "Coin Teleport Speed", AutoFarm.CoinSpeed or 22, 10, 50, false, function(val)
+    AutoFarm.CoinSpeed = val
+end)
+CreateToggle(SecAutoFarm, "Auto Next Round Spawn", false, function(st)
+    AutoFarm.SetAutoRoundSpawn(st)
+end)
 
-local SecUtility = CreateSection(Tabs["Main"], "Player Protection & Repel")
-CreateToggle(SecUtility, "Anti-Fling", false, function(st) _G.AntiFlingActive = st end)
-CreateToggle(SecUtility, "Auto Pickup Gun", false, function(st) _G.AutoPickupActive = st end)
-CreateToggle(SecUtility, "Distance Pickup (No Teleport)", false, function(st) _G.PickupMode = st and "Distance" or "Teleport" end)
-CreateToggle(SecUtility, "Murderer Repel Shield (Push Away)", false, function(st) _G.MurdererRepelActive = st end)
+local SecAdvMovement = CreateSection(Tabs["Main"], "HvH Advanced Movement")
+CreateToggle(SecAdvMovement, "Auto Strafe Engine", false, function(st) _G.AutoStrafeActive = st end)
+CreateToggle(SecAdvMovement, "Flight Mode (Noclip Fly)", false, function(st) _G.FlyActive = st end)
+CreateSlider(SecAdvMovement, "Flight Speed", _G.FlySpeed, 20, 150, false, function(val) _G.FlySpeed = val end)
+CreateToggle(SecAdvMovement, "Fast Stop (Instant Deceleration)", false, function(st) _G.FastStopActive = st end)
+CreateToggle(SecAdvMovement, "High Jump Engine", false, function(st) _G.HighJumpActive = st end)
+CreateSlider(SecAdvMovement, "Jump Boost Power", _G.JumpBoostPower, 50, 300, false, function(val) _G.JumpBoostPower = val end)
+CreateToggle(SecAdvMovement, "Long Jump (Forward Boost)", false, function(st) _G.LongJumpActive = st end)
+CreateSlider(SecAdvMovement, "Long Jump Distance", _G.LongJumpPower, 20, 150, false, function(val) _G.LongJumpPower = val end)
+
+local SecSoundsFX = CreateSection(Tabs["Main"], "Footsteps & Camera FX")
+CreateToggle(SecSoundsFX, "Custom Footstep Sounds", false, function(st) _G.CustomFootstepsActive = st end)
+CreateDropdown(SecSoundsFX, "Footstep Sound Preset", {"Minecraft Stone", "Minecraft Wood", "Metal Heavy", "Squid Game", "Anime Slap", "Roblox Classic"}, "Minecraft Stone", function(s) _G.SelectedFootstep = s end)
+CreateSlider(SecSoundsFX, "Footstep Sound Volume", _G.FootstepsVolume, 1, 10, false, function(val) _G.FootstepsVolume = val end)
+CreateToggle(SecSoundsFX, "Custom Field of View (FOV)", false, function(st)
+    _G.CustomFOVActive = st
+    if not st then Camera.FieldOfView = 70 end
+end)
+CreateSlider(SecSoundsFX, "Camera FOV Value", _G.CustomFOVValue, 50, 120, false, function(val)
+    _G.CustomFOVValue = val
+    if _G.CustomFOVActive then Camera.FieldOfView = val end
+end)
+CreateToggle(SecSoundsFX, "Motion Blur Effect", false, function(st) _G.BlurActive = st end)
+CreateSlider(SecSoundsFX, "Blur Intensity", _G.BlurSize, 2, 24, false, function(val) _G.BlurSize = val end)
+CreateToggle(SecSoundsFX, "Kill Flash Screen FX", true, function(st) _G.KillFlashActive = st end)
 
 -- 2. VISUALS TAB
-local SecESP = CreateSection(Tabs["Visuals"], "Player ESP & Weapon Chams")
-CreateToggle(SecESP, "Player Chams (Role Colors)", false, function(st)
+local SecESP = CreateSection(Tabs["Visuals"], "Player ESP & Outlines")
+CreateToggle(SecESP, "Role ESP & Chams", false, function(st)
     _G.ChamsActive = st
-    if not st then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player.Character then
-                for _, obj in ipairs(player.Character:GetDescendants()) do
-                    if obj.Name == "MM2_BoxCham" or obj.Name == "MM2_PlayerHighlight" then
-                        obj:Destroy()
-                    end
-                end
-            end
-        end
-    end
+    if not st then ClearAllChams() end
 end)
-CreateDropdown(SecESP, "Player Chams Style", ChamsStyleOptionNames, _G.PlayerChamsStyle, function(val)
-    _G.PlayerChamsStyle = val
-    ClearAllChams()
+CreateDropdown(SecESP, "Player Chams Style", ChamsStyleOptionNames, _G.PlayerChamsStyle or "Fill / Glow", function(selected)
+    _G.PlayerChamsStyle = selected
+    _G.ChamsStyle = selected
+    if not _G.ChamsActive then ClearAllChams() end
 end)
-CreateDropdown(SecESP, "Murderer ESP Color", ColorOptionNames, _G.SelectedMurdererColor, function(val)
-    _G.SelectedMurdererColor = val
-    if UpdateRoleColors then UpdateRoleColors() end
-    ClearAllChams()
-end)
-CreateDropdown(SecESP, "Sheriff ESP Color", ColorOptionNames, _G.SelectedSheriffColor, function(val)
-    _G.SelectedSheriffColor = val
-    if UpdateRoleColors then UpdateRoleColors() end
-    ClearAllChams()
-end)
-CreateDropdown(SecESP, "Innocent ESP Color", ColorOptionNames, _G.SelectedInnocentColor, function(val)
-    _G.SelectedInnocentColor = val
-    if UpdateRoleColors then UpdateRoleColors() end
-    ClearAllChams()
-end)
-
-CreateToggle(SecESP, "Self Chams (Local & Custom Model)", false, function(st)
-    _G.SelfChamsActive = st
-    if not st and LocalPlayer.Character then
-        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if obj.Name == "MM2_SelfCham" or obj.Name == "MM2_SelfHighlight" then
-                obj:Destroy()
-            end
-        end
-    end
-end)
-CreateDropdown(SecESP, "Self Chams Style", ChamsStyleOptionNames, _G.SelfChamsStyle, function(val)
-    _G.SelfChamsStyle = val
-    ClearAllChams()
-end)
-CreateDropdown(SecESP, "Self Chams Color", ColorOptionNames, _G.SelectedSelfChamColor, function(col)
-    _G.SelectedSelfChamColor = col
-    if LocalPlayer.Character then
-        for _, obj in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if obj.Name == "MM2_SelfCham" or obj.Name == "MM2_SelfHighlight" then
-                obj:Destroy()
-            end
-        end
-    end
-end)
-
-CreateToggle(SecESP, "Weapon Chams (Held Knife & Gun)", false, function(st)
-    _G.WeaponChamsActive = st
-    if not st then
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "MM2_WeaponCham" or obj.Name == "MM2_WeaponHighlight" then
-                obj:Destroy()
-            end
-        end
-    end
-end)
-CreateDropdown(SecESP, "Weapon Chams Style", ChamsStyleOptionNames, _G.WeaponChamsStyle, function(val)
-    _G.WeaponChamsStyle = val
-    ClearAllChams()
-end)
-CreateDropdown(SecESP, "Weapon Chams Color", ColorOptionNames, _G.SelectedWeaponChamColor, function(col)
-    _G.SelectedWeaponChamColor = col
-end)
-
-CreateToggle(SecESP, "Dropped Gun ESP (Glow & Box)", false, function(st)
-    _G.DroppedGunEspActive = st
-    if not st then
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "MM2_GunCham" or obj.Name == "MM2_GunHighlight" then
-                obj:Destroy()
-            end
-        end
-    end
-end)
-CreateDropdown(SecESP, "Dropped Gun Style", ChamsStyleOptionNames, _G.DroppedGunChamsStyle, function(val)
-    _G.DroppedGunChamsStyle = val
-    ClearAllChams()
-end)
-CreateDropdown(SecESP, "Dropped Gun Color", ColorOptionNames, _G.SelectedDroppedGunColor, function(col)
-    _G.SelectedDroppedGunColor = col
-end)
-
-CreateSlider(SecESP, "Chams Fill Transparency", math.round((_G.ChamsFillTransparency or 0.35) * 100), 0, 90, false, function(val)
+CreateSlider(SecESP, "Fill Transparency", math.round((_G.ChamsFillTransparency or 0.35) * 100), 0, 100, false, function(val)
     _G.ChamsFillTransparency = val / 100
 end)
-CreateSlider(SecESP, "Chams Outline Transparency", math.round((_G.ChamsOutlineTransparency or 0) * 100), 0, 90, false, function(val)
+CreateSlider(SecESP, "Outline Transparency", math.round((_G.ChamsOutlineTransparency or 0.0) * 100), 0, 100, false, function(val)
     _G.ChamsOutlineTransparency = val / 100
 end)
-
-local SecHitVisuals = CreateSection(Tabs["Visuals"], "HvH Hit Visuals & Audio")
-CreateToggle(SecHitVisuals, "Hit Logs (Screen Feed)", true, function(st) _G.HitLogsActive = st end)
-CreateToggle(SecHitVisuals, "Hit Sounds (Audio Feedback)", true, function(st) _G.HitSoundsActive = st end)
-CreateDropdown(SecHitVisuals, "Hit Sound Type", {"Skeet", "Neverlose", "Bell", "Bubble", "COD", "Rust"}, "Skeet", function(selected)
-    _G.SelectedHitSound = selected
+CreateDropdown(SecESP, "Murderer Color", ColorOptionNames, _G.SelectedMurdererColor or "Blood Crimson", function(selected)
+    _G.SelectedMurdererColor = selected
+    Core.UpdateRoleColors()
 end)
-CreateSlider(SecHitVisuals, "Sound Volume", _G.HitSoundVolume, 1, 10, false, function(val) _G.HitSoundVolume = val end)
-CreateToggle(SecHitVisuals, "Screen Hitmarker", true, function(st) _G.HitmarkersActive = st end)
-CreateToggle(SecHitVisuals, "Bullet Tracers (Laser Beam)", true, function(st) _G.TracersActive = st end)
-CreateDropdown(SecHitVisuals, "Tracer Color Preset", {"Blood Red", "Cyber Cyan", "Neon Pink", "Electric Green", "Purple HvH", "Pure White", "Gold Glow", "Rainbow RGB"}, _G.SelectedTracerColor or "Blood Red", function(selected)
+CreateDropdown(SecESP, "Sheriff Color", ColorOptionNames, _G.SelectedSheriffColor or "Sky Blue", function(selected)
+    _G.SelectedSheriffColor = selected
+    Core.UpdateRoleColors()
+end)
+CreateDropdown(SecESP, "Innocent Color", ColorOptionNames, _G.SelectedInnocentColor or "Acid Green", function(selected)
+    _G.SelectedInnocentColor = selected
+    Core.UpdateRoleColors()
+end)
+CreateToggle(SecESP, "Dropped Gun ESP", false, function(st) _G.DroppedGunEspActive = st end)
+CreateDropdown(SecESP, "Dropped Gun Color", ColorOptionNames, _G.SelectedDroppedGunColor or "Cyber Cyan", function(selected)
+    _G.SelectedDroppedGunColor = selected
+end)
+CreateDropdown(SecESP, "Dropped Gun Chams Style", ChamsStyleOptionNames, _G.DroppedGunChamsStyle or "Fill / Glow", function(selected)
+    _G.DroppedGunChamsStyle = selected
+end)
+CreateToggle(SecESP, "Murderer Proximity Repel Shield", false, function(st) _G.MurdererRepelActive = st end)
+CreateToggle(SecESP, "Snaplines to Targets", false, function(st) _G.SnaplinesActive = st end)
+
+local SecSelfChams = CreateSection(Tabs["Visuals"], "Self & Weapon Chams")
+CreateToggle(SecSelfChams, "Self Chams (Local Character)", false, function(st) _G.SelfChamsActive = st end)
+CreateDropdown(SecSelfChams, "Self Chams Style", ChamsStyleOptionNames, _G.SelfChamsStyle or "Fill / Glow", function(selected)
+    _G.SelfChamsStyle = selected
+end)
+CreateDropdown(SecSelfChams, "Self Cham Color", ColorOptionNames, _G.SelectedSelfChamColor, function(selected)
+    _G.SelectedSelfChamColor = selected
+end)
+CreateToggle(SecSelfChams, "In-Hand Weapon Chams", false, function(st) _G.WeaponChamsActive = st end)
+CreateDropdown(SecSelfChams, "Weapon Chams Style", ChamsStyleOptionNames, _G.WeaponChamsStyle or "Fill / Glow", function(selected)
+    _G.WeaponChamsStyle = selected
+end)
+CreateDropdown(SecSelfChams, "Weapon Cham Color", ColorOptionNames, _G.SelectedWeaponChamColor or "Sunset Gold", function(selected)
+    _G.SelectedWeaponChamColor = selected
+end)
+
+local SecHitVisuals = CreateSection(Tabs["Visuals"], "HvH Hit Visuals & Tracers")
+CreateToggle(SecHitVisuals, "HvH Hit Logs (Damage Feed)", true, function(st) _G.HitLogsActive = st end)
+CreateToggle(SecHitVisuals, "HvH Hitmarkers", true, function(st) _G.HitmarkersActive = st end)
+CreateToggle(SecHitVisuals, "HvH Hit Sounds", true, function(st) _G.HitSoundsActive = st end)
+CreateDropdown(SecHitVisuals, "Select Hit Sound", {"Skeet", "Neverlose", "Bell", "Bubble", "Bonk (Meme)", "Bespolezno (Russian)", "Hitmarker CS:GO"}, "Skeet", function(s)
+    _G.SelectedHitSound = s
+    pcall(function()
+        local testSound = Instance.new("Sound")
+        testSound.SoundId = HitSounds[s] or HitSounds["Skeet"]
+        testSound.Volume = _G.HitSoundVolume or 3
+        testSound.Parent = SoundService
+        testSound:Play()
+        task.delay(1.5, function() testSound:Destroy() end)
+    end)
+end)
+CreateSlider(SecHitVisuals, "Hit Sound Volume", _G.HitSoundVolume or 3, 1, 10, false, function(val) _G.HitSoundVolume = val end)
+CreateToggle(SecHitVisuals, "Bullet Tracers (HvH Beams)", true, function(st) _G.TracersActive = st end)
+CreateDropdown(SecHitVisuals, "Tracer Color Preset", ColorOptionNames, _G.SelectedTracerColor or "Blood Red", function(selected)
     _G.SelectedTracerColor = selected
 end)
-CreateDropdown(SecHitVisuals, "Tracer Visual Style", {"Dual Pulse (White Core)", "Laser Neon (Solid)"}, _G.TracerStyle or "Dual Pulse (White Core)", function(selected)
+CreateDropdown(SecHitVisuals, "Tracer Style", {"Dual Pulse (White Core)", "Solid Neon Laser", "Lightning Spark (Twitch)", "Rainbow Sine"}, _G.TracerStyle or "Dual Pulse (White Core)", function(selected)
     _G.TracerStyle = selected
 end)
 CreateSlider(SecHitVisuals, "Tracer Thickness", _G.TracerThickness or 0.12, 0.05, 0.4, true, function(val)
@@ -319,117 +287,133 @@ CreateToggle(SecHitVisuals, "HvH Watermark Display", true, function(st)
     Watermark.Visible = st
 end)
 
-local SecCustomWeapons = CreateSection(Tabs["Visuals"], "Custom Weapons (Knife & Gun Skins / 3D Models)")
-CreateToggle(SecCustomWeapons, "Enable Custom Knife", false, function(st)
-    _G.CustomKnifeActive = st
-    UpdateCustomWeapons()
-end)
-CreateDropdown(SecCustomWeapons, "Knife Model / Skin", KnifeModelNames, _G.SelectedKnifeModel, function(val)
-    _G.SelectedKnifeModel = val
-    if _G.CustomKnifeActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateToggle(SecCustomWeapons, "Enable Custom Gun", false, function(st)
-    _G.CustomGunActive = st
-    UpdateCustomWeapons()
-end)
-CreateDropdown(SecCustomWeapons, "Gun Model / Skin", GunModelNames, _G.SelectedGunModel, function(val)
-    _G.SelectedGunModel = val
-    if _G.CustomGunActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateDropdown(SecCustomWeapons, "Weapon Material", {"Default", "Neon Glow", "ForceField", "Glass", "Chrome Metal"}, _G.CustomWeaponMaterial, function(val)
-    _G.CustomWeaponMaterial = val
-    if _G.CustomKnifeActive or _G.CustomGunActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateDropdown(SecCustomWeapons, "Weapon Color Tint", {"Original", "Blood Red", "Cyber Cyan", "Neon Pink", "Gold", "Lime Green", "Rainbow RGB"}, _G.CustomWeaponColor, function(val)
-    _G.CustomWeaponColor = val
-    if _G.CustomKnifeActive or _G.CustomGunActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateDropdown(SecCustomWeapons, "Weapon Aura (FX)", {"None", "Fire Flames", "Void Smoke", "Cyber Sparks", "Golden Haze", "Blood Drip"}, _G.CustomWeaponAura, function(val)
-    _G.CustomWeaponAura = val
-    if _G.CustomKnifeActive or _G.CustomGunActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateToggle(SecCustomWeapons, "Knife Blade Trail", false, function(st)
-    _G.WeaponTrailActive = st
-    if _G.CustomKnifeActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red", "Cyber Cyan", "Gold Glow", "Pure White"}, _G.SelectedWeaponTrailColor, function(val)
-    _G.SelectedWeaponTrailColor = val
-    if _G.CustomKnifeActive then
-        UpdateCustomWeapons()
-    end
-end)
-CreateToggle(SecCustomWeapons, "Hands Positioning (Вытянуть руки)", false, function(st)
+local SecHands = CreateSection(Tabs["Visuals"], "Hands Positioning (Вытянуть руки)")
+CreateToggle(SecHands, "Hands Positioning (Вытянуть руки)", false, function(st)
     _G.HandsPositionActive = st
 end)
-CreateDropdown(SecCustomWeapons, "Hands Target Arm", {"Right Arm (Weapon)", "Both Arms", "Left Arm"}, _G.HandsTarget or "Right Arm (Weapon)", function(val)
+CreateDropdown(SecHands, "Hands Target Arm", {"Right Arm (Weapon)", "Both Arms", "Left Arm"}, _G.HandsTarget or "Right Arm (Weapon)", function(val)
     _G.HandsTarget = val
 end)
-CreateSlider(SecCustomWeapons, "Hands Forward / Back (Вытянуть)", _G.HandsStretchForward or 0.0, -5.0, 5.0, true, function(val)
+CreateSlider(SecHands, "Hands Forward / Back (Вытянуть)", _G.HandsStretchForward or 0.0, -5.0, 5.0, true, function(val)
     _G.HandsStretchForward = val
 end)
-CreateSlider(SecCustomWeapons, "Hands Left / Right (Spread)", _G.HandsSpreadLeftRight or 0.0, -5.0, 5.0, true, function(val)
+CreateSlider(SecHands, "Hands Left / Right (Spread)", _G.HandsSpreadLeftRight or 0.0, -5.0, 5.0, true, function(val)
     _G.HandsSpreadLeftRight = val
 end)
-CreateSlider(SecCustomWeapons, "Hands Height (Up / Down)", _G.HandsHeightUpDown or 0.0, -5.0, 5.0, true, function(val)
+CreateSlider(SecHands, "Hands Height (Up / Down)", _G.HandsHeightUpDown or 0.0, -5.0, 5.0, true, function(val)
     _G.HandsHeightUpDown = val
 end)
-CreateSlider(SecCustomWeapons, "Hands Angle Pitch (Наклон 45°)", _G.HandsAnglePitch or 0, -90, 90, false, function(val)
+CreateSlider(SecHands, "Hands Angle Pitch (Наклон 45°)", _G.HandsAnglePitch or 0, -90, 90, false, function(val)
     _G.HandsAnglePitch = val
 end)
-CreateSlider(SecCustomWeapons, "Hands Angle Yaw (Поворот)", _G.HandsAngleYaw or 0, -180, 180, false, function(val)
+CreateSlider(SecHands, "Hands Angle Yaw (Поворот)", _G.HandsAngleYaw or 0, -180, 180, false, function(val)
     _G.HandsAngleYaw = val
 end)
-CreateSlider(SecCustomWeapons, "Hands Angle Roll (Крен)", _G.HandsAngleRoll or 0, -180, 180, false, function(val)
+CreateSlider(SecHands, "Hands Angle Roll (Крен)", _G.HandsAngleRoll or 0, -180, 180, false, function(val)
     _G.HandsAngleRoll = val
 end)
 
-CreateToggle(SecCustomWeapons, "Weapon In-Hand Angle & Grip", _G.CustomWeaponGripActive, function(st)
+-- ========================================================================
+-- 3. SKINS TAB (COLUMN 1: MM2 SKINS & GODLIES | COLUMN 2: CUSTOM 3D MODELS)
+-- ========================================================================
+-- COLUMN 1: MM2 OFFICIAL SKINS & GODLIES
+local SecMM2Skins = CreateSection(Tabs["Skins"], "MM2 Official Skins (Column 1)")
+CreateToggle(SecMM2Skins, "Enable MM2 Knife Skin", false, function(st)
+    _G.CustomKnifeActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecMM2Skins, "MM2 Knife Skin", KnifeModelNames, _G.SelectedKnifeModel, function(val)
+    _G.SelectedKnifeModel = val
+    if _G.CustomKnifeActive then UpdateCustomWeapons() end
+end)
+CreateToggle(SecMM2Skins, "Enable MM2 Gun Skin", false, function(st)
+    _G.CustomGunActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecMM2Skins, "MM2 Gun Skin", GunModelNames, _G.SelectedGunModel, function(val)
+    _G.SelectedGunModel = val
+    if _G.CustomGunActive then UpdateCustomWeapons() end
+end)
+CreateDropdown(SecMM2Skins, "Weapon Material", {"Default", "Neon Glow", "ForceField", "Glass", "Chrome Metal"}, _G.CustomWeaponMaterial, function(val)
+    _G.CustomWeaponMaterial = val
+    if _G.CustomKnifeActive or _G.CustomGunActive then UpdateCustomWeapons() end
+end)
+CreateDropdown(SecMM2Skins, "Weapon Color Tint", {"Original", "Blood Red", "Cyber Cyan", "Neon Pink", "Gold", "Lime Green", "Rainbow RGB"}, _G.CustomWeaponColor, function(val)
+    _G.CustomWeaponColor = val
+    if _G.CustomKnifeActive or _G.CustomGunActive then UpdateCustomWeapons() end
+end)
+CreateDropdown(SecMM2Skins, "Weapon Aura (FX)", {"None", "Fire Flames", "Void Smoke", "Cyber Sparks", "Golden Haze", "Blood Drip"}, _G.CustomWeaponAura, function(val)
+    _G.CustomWeaponAura = val
+    if _G.CustomKnifeActive or _G.CustomGunActive then UpdateCustomWeapons() end
+end)
+CreateToggle(SecMM2Skins, "Knife Blade Trail", false, function(st)
+    _G.WeaponTrailActive = st
+    if _G.CustomKnifeActive then UpdateCustomWeapons() end
+end)
+CreateDropdown(SecMM2Skins, "Blade Trail Color", {"Rainbow RGB", "Blood Red", "Cyber Cyan", "Gold Glow", "Pure White"}, _G.SelectedWeaponTrailColor, function(val)
+    _G.SelectedWeaponTrailColor = val
+    if _G.CustomKnifeActive then UpdateCustomWeapons() end
+end)
+
+-- COLUMN 2: CUSTOM 3D WEAPON MODELS (AWP, AK-47, M4A1, DEAGLE, SCYTHE, ETC.)
+local SecCustomModels = CreateSection(Tabs["Skins"], "Custom 3D Models: AWP, AK-47... (Column 2)")
+CreateToggle(SecCustomModels, "Enable Custom 3D Gun (AWP/AK/M4)", false, function(st)
+    _G.Custom3DGunActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecCustomModels, "Custom Gun Model", CustomGunModelNames, _G.SelectedCustomGun or "AK-47 (Assault Rifle)", function(val)
+    _G.SelectedCustomGun = val
+    if _G.Custom3DGunActive then UpdateCustomWeapons() end
+end)
+CreateToggle(SecCustomModels, "Enable Custom 3D Melee (Karambit/Scythe)", false, function(st)
+    _G.Custom3DMeleeActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecCustomModels, "Custom Melee Model", CustomMeleeModelNames, _G.SelectedCustomMelee or "Karambit (Fade / Doppler)", function(val)
+    _G.SelectedCustomMelee = val
+    if _G.Custom3DMeleeActive then UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomModels, "Model Scale Size", _G.Custom3DWeaponScale or 1.0, 0.4, 2.5, true, function(val)
+    _G.Custom3DWeaponScale = val
+    if _G.Custom3DGunActive or _G.Custom3DMeleeActive then UpdateCustomWeapons() end
+end)
+
+CreateToggle(SecCustomModels, "Weapon In-Hand Angle & Grip", _G.CustomWeaponGripActive, function(st)
     _G.CustomWeaponGripActive = st
     _G.CustomGunGripActive = st
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Weapon Angle Pitch (Вверх/Вниз)", _G.WeaponAnglePitch or 0, -180, 180, false, function(val)
+CreateSlider(SecCustomModels, "Weapon Angle Pitch (Вверх/Вниз)", _G.WeaponAnglePitch or 0, -180, 180, false, function(val)
     _G.WeaponAnglePitch = val
     _G.GunHandRotX = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Weapon Angle Yaw (Влево/Вправо)", _G.WeaponAngleYaw or 0, -180, 180, false, function(val)
+CreateSlider(SecCustomModels, "Weapon Angle Yaw (Влево/Вправо)", _G.WeaponAngleYaw or 0, -180, 180, false, function(val)
     _G.WeaponAngleYaw = val
     _G.GunHandRotY = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Weapon Angle Roll (Гангстер боком)", _G.WeaponAngleRoll or 0, -180, 180, false, function(val)
+CreateSlider(SecCustomModels, "Weapon Angle Roll (Гангстер боком)", _G.WeaponAngleRoll or 0, -180, 180, false, function(val)
     _G.WeaponAngleRoll = val
     _G.GunHandRotZ = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Weapon Offset X (Left/Right)", _G.WeaponOffsetX or 0.0, -3.0, 3.0, true, function(val)
+CreateSlider(SecCustomModels, "Weapon Offset X (Left/Right)", _G.WeaponOffsetX or 0.0, -3.0, 3.0, true, function(val)
     _G.WeaponOffsetX = val
     _G.GunHandPosX = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Weapon Offset Y (Up/Down)", _G.WeaponOffsetY or 0.0, -3.0, 3.0, true, function(val)
+CreateSlider(SecCustomModels, "Weapon Offset Y (Up/Down)", _G.WeaponOffsetY or 0.0, -3.0, 3.0, true, function(val)
     _G.WeaponOffsetY = val
     _G.GunHandPosY = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Weapon Offset Z (Forward/Back)", _G.WeaponOffsetZ or 0.0, -3.0, 3.0, true, function(val)
+CreateSlider(SecCustomModels, "Weapon Offset Z (Forward/Back)", _G.WeaponOffsetZ or 0.0, -3.0, 3.0, true, function(val)
     _G.WeaponOffsetZ = val
     _G.GunHandPosZ = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
+
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
 CreateToggle(SecChineseHat, "Chinese Conical Hat", false, function(st)
     _G.ChineseHatActive = st
@@ -483,81 +467,29 @@ CreateSlider(SecTrails, "Body Trail Lifetime", _G.TrailLifetime, 0.2, 2.0, true,
         curTrail.Lifetime = val
     end
 end)
-CreateToggle(SecTrails, "Foot Rope Trail (Под ногами)", false, function(st)
+CreateToggle(SecTrails, "Ground Footstep Rope", false, function(st)
     _G.FootRopeActive = st
     if st then
-        ApplyFootRope()
+        ApplyFootstepRope()
     else
-        RemoveFootRope()
+        RemoveFootstepRope()
     end
 end)
-CreateDropdown(SecTrails, "Rope Color Preset", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
+CreateDropdown(SecTrails, "Ground Rope Color", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pure White", "Gold Glow", "Rainbow RGB"}, "Blood Red", function(selected)
     _G.SelectedRopeColor = selected
     if _G.FootRopeActive then
-        ApplyFootRope()
+        ApplyFootstepRope()
     end
 end)
-CreateSlider(SecTrails, "Rope Length (Tail)", _G.RopeLifetime, 0.3, 2.5, true, function(val)
+CreateSlider(SecTrails, "Ground Rope Lifetime", _G.RopeLifetime, 0.3, 3.0, true, function(val)
     _G.RopeLifetime = val
-    local curRope = Visuals.FootRopeTrail or _G.FootRopeTrail
-    if curRope and curRope.Parent then
-        curRope.Lifetime = val
-    end
 end)
-CreateSlider(SecTrails, "Rope Thickness", _G.RopeWidth, 0.1, 1.0, true, function(val)
+CreateSlider(SecTrails, "Ground Rope Width", _G.RopeWidth, 0.1, 1.5, true, function(val)
     _G.RopeWidth = val
-    local curRope = Visuals.FootRopeTrail or _G.FootRopeTrail
-    if curRope and curRope.Parent then
-        curRope.WidthScale = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, val),
-            NumberSequenceKeypoint.new(1, 0.02)
-        })
-    end
 end)
 
-local SecFootsteps = CreateSection(Tabs["Visuals"], "Footsteps Audio & Camera")
-CreateToggle(SecFootsteps, "Custom Footstep Sounds", false, function(st)
-    _G.CustomFootstepsActive = st
-    if not st and LocalPlayer.Character then
-        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local run = hrp:FindFirstChild("Running")
-            if run and run:IsA("Sound") then run.Volume = 0.65 end
-        end
-    end
-end)
-CreateDropdown(SecFootsteps, "Footstep Sound Type", {"Minecraft Stone", "Concrete Combat Boot", "High Heels Click", "Anime Bubble Pop", "Squeaky Meme Toy"}, "Minecraft Stone", function(selected)
-    _G.SelectedFootstep = selected
-end)
-CreateSlider(SecFootsteps, "Footsteps Volume", _G.FootstepsVolume, 1, 10, false, function(val)
-    _G.FootstepsVolume = val
-end)
-CreateToggle(SecFootsteps, "Custom Camera FOV", false, function(st)
-    _G.CustomFOVActive = st
-    if not st then
-        Camera.FieldOfView = OriginalLighting.FieldOfView or 70
-    end
-end)
-CreateSlider(SecFootsteps, "Field of View", _G.CustomFOVValue, 60, 120, false, function(val)
-    _G.CustomFOVValue = val
-    if _G.CustomFOVActive then
-        Camera.FieldOfView = val
-    end
-end)
-CreateToggle(SecFootsteps, "Screen Depth Blur", false, function(st)
-    _G.BlurActive = st
-    UpdateBlur()
-end)
-CreateSlider(SecFootsteps, "Blur Intensity", _G.BlurSize, 1, 25, false, function(val)
-    _G.BlurSize = val
-    UpdateBlur()
-end)
-CreateToggle(SecFootsteps, "Hit / Kill Screen Flash", true, function(st)
-    _G.KillFlashActive = st
-end)
-
-local SecWorldFog = CreateSection(Tabs["Visuals"], "World Fog & Atmosphere")
-CreateToggle(SecWorldFog, "Custom Fog Color", false, function(st)
+local SecSkyLighting = CreateSection(Tabs["Visuals"], "Skybox, Fog & Ambience")
+CreateToggle(SecSkyLighting, "Atmospheric Fog", false, function(st)
     _G.FogColorActive = st
     if not st then
         Lighting.FogColor = OriginalLighting.FogColor
@@ -565,20 +497,12 @@ CreateToggle(SecWorldFog, "Custom Fog Color", false, function(st)
         Lighting.FogEnd = OriginalLighting.FogEnd
     end
 end)
-CreateDropdown(SecWorldFog, "Fog Color Preset", {"Blood Red", "Purple Night", "Cyber Cyan", "Midnight Black", "Neon Green", "Toxic Orange", "Deep Violet", "Pure White"}, "Blood Red", function(selected)
+CreateDropdown(SecSkyLighting, "Fog Color Preset", {"Blood Red", "Purple HvH", "Cyber Cyan", "Electric Green", "Pitch Black", "Pure White"}, "Blood Red", function(selected)
     _G.SelectedFogColor = selected
 end)
-CreateSlider(SecWorldFog, "Fog Start Dist", _G.FogStart, 0, 300, false, function(val) _G.FogStart = val end)
-CreateSlider(SecWorldFog, "Fog End (Density)", _G.FogEnd, 30, 1200, false, function(val) _G.FogEnd = val end)
-CreateToggle(SecWorldFog, "Override Time of Day", false, function(st)
-    _G.TimeOfDayActive = st
-    if not st then
-        Lighting.ClockTime = OriginalLighting.ClockTime
-    end
+CreateSlider(SecSkyLighting, "Fog Distance End", _G.FogEnd, 50, 800, false, function(val)
+    _G.FogEnd = val
 end)
-CreateSlider(SecWorldFog, "Time (Clock Hours)", _G.TimeOfDayValue, 0, 24, false, function(val) _G.TimeOfDayValue = val end)
-
-local SecSkyLighting = CreateSection(Tabs["Visuals"], "Skybox & World Lighting")
 CreateToggle(SecSkyLighting, "Custom Skybox", false, function(st)
     _G.CustomSkyActive = st
     if st then

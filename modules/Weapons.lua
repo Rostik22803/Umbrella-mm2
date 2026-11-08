@@ -242,6 +242,84 @@ end)
 ------------------------------------------------------------------------
 local KnifePresets = {
     ["Default"] = nil,
+    ["Corrupt (Ancient Black/Blue)"] = {
+        MeshId = "rbxassetid://156092238",
+        TextureId = "",
+        Scale = Vector3.new(1.05, 1.05, 1.05),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 160, 255)
+    },
+    ["Harvester (Scythe Ancient)"] = {
+        MeshId = "rbxassetid://367801163",
+        TextureId = "rbxassetid://367801185",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(40, 40, 45)
+    },
+    ["Batwing (Ancient)"] = {
+        MeshId = "rbxassetid://168119698",
+        TextureId = "rbxassetid://168119736",
+        Scale = Vector3.new(1.15, 1.15, 1.15),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(160, 20, 240)
+    },
+    ["Elderwood Scythe (Ancient)"] = {
+        MeshId = "rbxassetid://367801163",
+        TextureId = "rbxassetid://367801185",
+        Scale = Vector3.new(1.2, 1.2, 1.2),
+        Material = Enum.Material.Wood,
+        Color = Color3.fromRGB(180, 50, 20)
+    },
+    ["Icebreaker (Ancient)"] = {
+        MeshId = "rbxassetid://121944778",
+        TextureId = "rbxassetid://161313071",
+        Scale = Vector3.new(1.2, 1.2, 1.2),
+        Material = Enum.Material.Glass,
+        Color = Color3.fromRGB(160, 230, 255)
+    },
+    ["Candleflame (Godly)"] = {
+        MeshId = "rbxassetid://105333894",
+        TextureId = "rbxassetid://105334003",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(255, 120, 30)
+    },
+    ["Swirly Blade (Godly)"] = {
+        MeshId = "rbxassetid://121944778",
+        TextureId = "rbxassetid://157019835",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(255, 50, 150)
+    },
+    ["Chroma Fang"] = {
+        MeshId = "rbxassetid://117500241",
+        TextureId = "rbxassetid://117500388",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Chroma Heat"] = {
+        MeshId = "rbxassetid://105333894",
+        TextureId = "rbxassetid://105334003",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Chroma Tides"] = {
+        MeshId = "rbxassetid://156092238",
+        TextureId = "rbxassetid://156092253",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Chroma Deathshard"] = {
+        MeshId = "rbxassetid://118269783",
+        TextureId = "rbxassetid://118269752",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Default"] = nil,
     ["Luger Blade / Heat"] = {
         MeshId = "rbxassetid://105333894",
         TextureId = "rbxassetid://105334003",
@@ -356,6 +434,56 @@ local KnifePresets = {
 
 local GunPresets = {
     ["Default"] = nil,
+    ["Elderwood Revolver (Ancient)"] = {
+        MeshId = "rbxassetid://97886770",
+        TextureId = "",
+        Scale = Vector3.new(1.15, 1.15, 1.15),
+        Material = Enum.Material.Wood,
+        Color = Color3.fromRGB(180, 60, 20)
+    },
+    ["Harvester Gun (Ancient)"] = {
+        MeshId = "rbxassetid://97886770",
+        TextureId = "",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(45, 45, 50)
+    },
+    ["Ocean Gun (Godly)"] = {
+        MeshId = "rbxassetid://95356090",
+        TextureId = "rbxassetid://95387789",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Glass,
+        Color = Color3.fromRGB(0, 180, 255)
+    },
+    ["Waves Gun (Godly)"] = {
+        MeshId = "rbxassetid://95356090",
+        TextureId = "rbxassetid://95387789",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(30, 255, 200)
+    },
+    ["Iceblaster (Ancient)"] = {
+        MeshId = "rbxassetid://97886770",
+        TextureId = "",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Material = Enum.Material.Glass,
+        Color = Color3.fromRGB(170, 240, 255)
+    },
+    ["Chroma Laser"] = {
+        MeshId = "rbxassetid://18265627",
+        TextureId = "rbxassetid://18265614",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Chroma Heat Gun"] = {
+        MeshId = "rbxassetid://95356090",
+        TextureId = "rbxassetid://95387789",
+        Scale = Vector3.new(1, 1, 1),
+        Material = Enum.Material.Neon,
+        IsChroma = true
+    },
+    ["Default"] = nil,
     ["Golden Luger"] = {
         MeshId = "rbxassetid://95356090",
         TextureId = "rbxassetid://95387789",
@@ -407,7 +535,172 @@ local GunPresets = {
     }
 }
 
+-- ========================================================================
+-- CUSTOM 3D WEAPON MODELS ENGINE (AWP, AK-47, M4A1, DEAGLE, SCYTHE, ETC.)
+-- ========================================================================
+local CustomGunPresets = {
+    ["AK-47 (Assault Rifle)"] = {
+        MeshId = "rbxassetid://474479901",
+        TextureId = "rbxassetid://474479951",
+        Scale = Vector3.new(0.08, 0.08, 0.08),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Wood
+    },
+    ["AWP (Dragon Lore / Sniper)"] = {
+        MeshId = "rbxassetid://475354922",
+        TextureId = "rbxassetid://475354992",
+        Scale = Vector3.new(0.08, 0.08, 0.08),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["M4A1 (Tactical Carbine)"] = {
+        MeshId = "rbxassetid://474480036",
+        TextureId = "rbxassetid://474480079",
+        Scale = Vector3.new(0.08, 0.08, 0.08),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Desert Eagle (.50 Action Express)"] = {
+        MeshId = "rbxassetid://474480112",
+        TextureId = "rbxassetid://474480155",
+        Scale = Vector3.new(0.08, 0.08, 0.08),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["SPAS-12 (Combat Shotgun)"] = {
+        MeshId = "rbxassetid://474480197",
+        TextureId = "rbxassetid://474480228",
+        Scale = Vector3.new(0.08, 0.08, 0.08),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["RPG-7 (Rocket Launcher)"] = {
+        MeshId = "rbxassetid://94690081",
+        TextureId = "rbxassetid://94690054",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Glock-18 (Automatic)"] = {
+        MeshId = "rbxassetid://430045961",
+        TextureId = "rbxassetid://430046045",
+        Scale = Vector3.new(0.07, 0.07, 0.07),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Minigun (Heavy Vulcan)"] = {
+        MeshId = "rbxassetid://10469446",
+        TextureId = "rbxassetid://10469460",
+        Scale = Vector3.new(1.0, 1.0, 1.0),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Alien Raygun"] = {
+        MeshId = "rbxassetid://18265627",
+        TextureId = "rbxassetid://18265614",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 255, 255)
+    }
+}
+
+local CustomMeleePresets = {
+    ["Karambit (Fade / Doppler)"] = {
+        MeshId = "rbxassetid://458925433",
+        TextureId = "rbxassetid://458925455",
+        Scale = Vector3.new(0.07, 0.07, 0.07),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Butterfly Knife (Balisong)"] = {
+        MeshId = "rbxassetid://585472851",
+        TextureId = "rbxassetid://585472877",
+        Scale = Vector3.new(0.06, 0.06, 0.06),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Muramasa Katana"] = {
+        MeshId = "rbxassetid://86297695",
+        TextureId = "rbxassetid://86290910",
+        Scale = Vector3.new(1.2, 1.2, 1.2),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(220, 30, 40)
+    },
+    ["Death Scythe (Grim Reaper)"] = {
+        MeshId = "rbxassetid://367801163",
+        TextureId = "rbxassetid://367801185",
+        Scale = Vector3.new(1.1, 1.1, 1.1),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(40, 40, 50)
+    },
+    ["Minecraft Diamond Sword"] = {
+        MeshId = "rbxassetid://147722227",
+        TextureId = "rbxassetid://147722270",
+        Scale = Vector3.new(1.3, 1.3, 1.3),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 240, 255)
+    },
+    ["Nordic Battle Axe"] = {
+        MeshId = "rbxassetid://1279013",
+        TextureId = "rbxassetid://1279012",
+        Scale = Vector3.new(1.2, 1.2, 1.2),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal
+    },
+    ["Crowbar (Half-Life)"] = {
+        MeshId = "rbxassetid://46062744",
+        TextureId = "rbxassetid://46062770",
+        Scale = Vector3.new(1.0, 1.0, 1.0),
+        Offset = Vector3.new(0, 0, 0),
+        Material = Enum.Material.Metal,
+        Color = Color3.fromRGB(220, 40, 40)
+    },
+    ["Lightsaber (Neon Beam)"] = {
+        IsSpecial3D = "Lightsaber",
+        Material = Enum.Material.Neon,
+        Color = Color3.fromRGB(0, 255, 255)
+    }
+}
+
+local CustomGunModelNames = {
+    "AK-47 (Assault Rifle)",
+    "AWP (Dragon Lore / Sniper)",
+    "M4A1 (Tactical Carbine)",
+    "Desert Eagle (.50 Action Express)",
+    "SPAS-12 (Combat Shotgun)",
+    "RPG-7 (Rocket Launcher)",
+    "Glock-18 (Automatic)",
+    "Minigun (Heavy Vulcan)",
+    "Alien Raygun"
+}
+
+local CustomMeleeModelNames = {
+    "Karambit (Fade / Doppler)",
+    "Butterfly Knife (Balisong)",
+    "Muramasa Katana",
+    "Death Scythe (Grim Reaper)",
+    "Minecraft Diamond Sword",
+    "Nordic Battle Axe",
+    "Crowbar (Half-Life)",
+    "Lightsaber (Neon Beam)"
+}
+
 local KnifeModelNames = {
+    "Corrupt (Ancient Black/Blue)",
+    "Harvester (Scythe Ancient)",
+    "Batwing (Ancient)",
+    "Elderwood Scythe (Ancient)",
+    "Icebreaker (Ancient)",
+    "Candleflame (Godly)",
+    "Swirly Blade (Godly)",
+    "Chroma Fang",
+    "Chroma Heat",
+    "Chroma Tides",
+    "Chroma Deathshard",
     "Luger Blade / Heat",
     "Fang (Serrated Godly)",
     "Saw (Buzzsaw Godly)",
@@ -429,12 +722,19 @@ local KnifeModelNames = {
 
 local GunModelNames = {
     "Golden Luger",
-    "Sci-Fi Laser Revolver",
-    "Phaser (Plasma Gun)",
     "Chroma Luger (Animated RGB)",
-    "Sheriff .45 Revolver",
     "Darkbringer Style (Void Glow)",
     "Lightbringer Style (Holy Glow)",
+    "Elderwood Revolver (Ancient)",
+    "Harvester Gun (Ancient)",
+    "Ocean Gun (Godly)",
+    "Waves Gun (Godly)",
+    "Iceblaster (Ancient)",
+    "Sci-Fi Laser Revolver",
+    "Phaser (Plasma Gun)",
+    "Sheriff .45 Revolver",
+    "Chroma Laser",
+    "Chroma Heat Gun",
     "Default"
 }
 
@@ -649,13 +949,21 @@ local function ApplyWeaponFX(tool, isKnife, emitterPart)
 end
 
 local function ApplyCustomKnife(tool)
-    if not tool or not _G.CustomKnifeActive then return end
+    if not tool then return end
     local handle = tool:FindFirstChild("Handle")
     if not handle then return end
     
     BackupWeapon(tool)
     
-    local preset = KnifePresets[_G.SelectedKnifeModel]
+    local preset = nil
+    local scaleMultiplier = 1.0
+    if _G.Custom3DMeleeActive then
+        preset = CustomMeleePresets[_G.SelectedCustomMelee]
+        scaleMultiplier = _G.Custom3DWeaponScale or 1.0
+    elseif _G.CustomKnifeActive then
+        preset = KnifePresets[_G.SelectedKnifeModel]
+    end
+    
     if not preset then
         RestoreWeapon(tool)
         return
@@ -732,7 +1040,7 @@ local function ApplyCustomKnife(tool)
     
     mesh.MeshId = preset.MeshId
     mesh.TextureId = preset.TextureId or ""
-    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * scaleMultiplier
     mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
     handle.Transparency = 0
     
@@ -773,13 +1081,21 @@ local function ApplyCustomKnife(tool)
 end
 
 local function ApplyCustomGun(tool)
-    if not tool or not _G.CustomGunActive then return end
+    if not tool then return end
     local handle = tool:FindFirstChild("Handle")
     if not handle then return end
     
     BackupWeapon(tool)
     
-    local preset = GunPresets[_G.SelectedGunModel]
+    local preset = nil
+    local scaleMultiplier = 1.0
+    if _G.Custom3DGunActive then
+        preset = CustomGunPresets[_G.SelectedCustomGun]
+        scaleMultiplier = _G.Custom3DWeaponScale or 1.0
+    elseif _G.CustomGunActive then
+        preset = GunPresets[_G.SelectedGunModel]
+    end
+    
     if not preset then
         RestoreWeapon(tool)
         return
@@ -801,7 +1117,7 @@ local function ApplyCustomGun(tool)
     
     mesh.MeshId = preset.MeshId
     mesh.TextureId = preset.TextureId or ""
-    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * scaleMultiplier
     mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
     handle.Transparency = 0
     
@@ -974,7 +1290,7 @@ end)
 local function UpdateCustomWeapons()
     local knife = GetPlayerKnife()
     if knife then
-        if _G.CustomKnifeActive then
+        if _G.Custom3DMeleeActive or _G.CustomKnifeActive then
             ApplyCustomKnife(knife)
         else
             RestoreWeapon(knife)
@@ -986,7 +1302,7 @@ local function UpdateCustomWeapons()
     
     local gun = GetPlayerGun()
     if gun then
-        if _G.CustomGunActive then
+        if _G.Custom3DGunActive or _G.CustomGunActive then
             ApplyCustomGun(gun)
         else
             RestoreWeapon(gun)
@@ -1001,7 +1317,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.2)
-        if _G.CustomKnifeActive or _G.CustomGunActive or _G.CustomGunGripActive then
+        if _G.CustomKnifeActive or _G.CustomGunActive or _G.Custom3DGunActive or _G.Custom3DMeleeActive or _G.CustomGunGripActive or _G.CustomWeaponGripActive then
             UpdateCustomWeapons()
         end
     end
@@ -1052,5 +1368,9 @@ Weapons.GunPresets = GunPresets
 Weapons.ModelCandidateList = ModelCandidateList
 Weapons.KnifeModelNames = KnifeModelNames
 Weapons.GunModelNames = GunModelNames
+Weapons.CustomGunPresets = CustomGunPresets
+Weapons.CustomMeleePresets = CustomMeleePresets
+Weapons.CustomGunModelNames = CustomGunModelNames
+Weapons.CustomMeleeModelNames = CustomMeleeModelNames
 
 return Weapons
