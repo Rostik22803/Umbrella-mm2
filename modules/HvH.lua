@@ -23,6 +23,14 @@ local UserInputService = Services.UserInputService
 local RunService = Services.RunService
 local SoundService = Services.SoundService
 local TweenService = Services.TweenService
+local HitLogsContainer = UI.HitLogsContainer
+local hmLines = UI.hmLines or {}
+local function TriggerScreenFlash(...)
+    if Umbrella.Visuals and Umbrella.Visuals.TriggerScreenFlash then
+        Umbrella.Visuals.TriggerScreenFlash(...)
+    end
+end
+
 
 local GetRole = Core.GetRole or function() return "Innocent" end
 local AddHitLog = function(...)
