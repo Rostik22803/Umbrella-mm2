@@ -14,32 +14,148 @@ local UIStrokeMain = Instance.new("UIStroke")
 -- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    pcall(function()
+        Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+        LocalPlayer = Players.LocalPlayer
+    end)
+    if not LocalPlayer then
+        LocalPlayer = Players.LocalPlayer or Players:GetPlayers()[1]
+    end
+end
+
 local Camera = workspace.CurrentCamera
+if not Camera then
+    pcall(function()
+        workspace:GetPropertyChangedSignal("CurrentCamera"):Wait()
+        Camera = workspace.CurrentCamera
+    end)
+end
+
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
 
--- Безопасное получение CoreGui / PlayerGui
-local ParentGui = game:GetService("CoreGui")
-if not pcall(function() local x = ParentGui.Name end) then
-    ParentGui = LocalPlayer:WaitForChild("PlayerGui")
+-- Delta / Mobile / PC Executor Safe ParentGui Resolution
+local ParentGui = nil
+
+if typeof(gethui) == "function" then
+    pcall(function()
+        ParentGui = gethui()
+    end)
 end
 
--- Удаляем предыдущие копии
-for _, old in ipairs(ParentGui:GetChildren()) do
-    if old.Name == "Umbrella_MM2_Edition" then
-        old:Destroy()
-    end
+if not ParentGui then
+    pcall(function()
+        if syn and syn.protect_gui then
+            ParentGui = game:GetService("CoreGui")
+            syn.protect_gui(ScreenGui)
+        else
+            local test = Instance.new("Folder")
+            test.Parent = game:GetService("CoreGui")
+            test:Destroy()
+            ParentGui = game:GetService("CoreGui")
+        end
+    end)
 end
+
+if not ParentGui then
+    pcall(function()
+        ParentGui = LocalPlayer:WaitForChild("PlayerGui", 5) or LocalPlayer.PlayerGui
+    end)
+end
+
+-- Safely remove any previous instances across all potential parents
+pcall(function()
+    if ParentGui then
+        for _, old in ipairs(ParentGui:GetChildren()) do
+            if old.Name == "Umbrella_MM2_Edition" or old.Name == "Umbrella_FloatingToggle" then
+                old:Destroy()
+            end
+        end
+    end
+end)
+pcall(function()
+    if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui ~= ParentGui then
+        for _, old in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+            if old.Name == "Umbrella_MM2_Edition" or old.Name == "Umbrella_FloatingToggle" then
+                old:Destroy()
+            end
+        end
+    end
+end)
 
 ScreenGui.Name = "Umbrella_MM2_Edition"
-ScreenGui.Parent = ParentGui
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 99999
+
+local parentOk = pcall(function()
+    ScreenGui.Parent = ParentGui
+end)
+
+if not parentOk or not ScreenGui.Parent then
+    ParentGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+    ScreenGui.Parent = ParentGui
+end
 
 ------------------------------------------------------------------------
--- 8-СЕГМЕНТНЫЙ ЗОНТ UMBRELLA
+-- FLOATING TOGGLE ICON (MOBILE & DELTA EXECUTOR COMPATIBLE)
+------------------------------------------------------------------------
+local FloatingGui = Instance.new("ScreenGui")
+FloatingGui.Name = "Umbrella_FloatingToggle"
+FloatingGui.ResetOnSpawn = false
+FloatingGui.DisplayOrder = 100000
+
+pcall(function()
+    FloatingGui.Parent = ParentGui
+end)
+if not FloatingGui.Parent then
+    FloatingGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 5)
+end
+
+local ToggleBtn = Instance.new("ImageButton")
+ToggleBtn.Name = "ToggleButton"
+ToggleBtn.Parent = FloatingGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(18, 19, 25)
+ToggleBtn.Position = UDim2.new(0, 15, 0.45, 0)
+ToggleBtn.Size = UDim2.new(0, 44, 0, 44)
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+
+local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
+ToggleStroke.Color = Color3.fromRGB(220, 35, 45)
+ToggleStroke.Thickness = 2
+
+local MiniLogoHolder = Instance.new("Frame")
+MiniLogoHolder.Parent = ToggleBtn
+MiniLogoHolder.BackgroundTransparency = 1
+MiniLogoHolder.Position = UDim2.new(0.5, -14, 0.5, -14)
+MiniLogoHolder.Size = UDim2.new(0, 28, 0, 28)
+
+RunService.RenderStepped:Connect(function(dt)
+    if MiniLogoHolder and MiniLogoHolder.Parent then
+        MiniLogoHolder.Rotation = (MiniLogoHolder.Rotation + (dt * 45)) % 360
+    end
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Keyboard toggle fallback for PC / Emulator
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+------------------------------------------------------------------------
+-- UMBRELLA LOGO ENGINE
 ------------------------------------------------------------------------
 local UmbrellaCircles = {}
 
@@ -90,6 +206,11 @@ local function CreateExactUmbrellaLogo(parent, size)
 
     return Container
 end
+    pcall(function()
+        if MiniLogoHolder and not MiniLogoHolder:FindFirstChild("UmbrellaLogoContainer") then
+            CreateExactUmbrellaLogo(MiniLogoHolder, 28)
+        end
+    end)
 
 ------------------------------------------------------------------------
 -- 1. ЭКРАН ЗАГРУЗКИ
@@ -136,8 +257,17 @@ Instance.new("UICorner", ProgressBarFill).CornerRadius = UDim.new(1, 0)
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(14, 15, 19)
-MainFrame.Position = UDim2.new(0.5, -375, 0.5, -250)
-MainFrame.Size = UDim2.new(0, 750, 0, 500)
+local function UpdateResponsiveLayout()
+    local view = Camera and Camera.ViewportSize or Vector2.new(800, 600)
+    local maxW = math.clamp(view.X - 30, 320, 720)
+    local maxH = math.clamp(view.Y - 30, 250, 470)
+    MainFrame.Size = UDim2.new(0, maxW, 0, maxH)
+    MainFrame.Position = UDim2.new(0.5, -maxW / 2, 0.5, -maxH / 2)
+end
+UpdateResponsiveLayout()
+if Camera then
+    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateResponsiveLayout)
+end
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.ClipsDescendants = false
@@ -3646,29 +3776,35 @@ SwitchTab("Main")
 -- ЛОГИКА АНИМАЦИИ ЗАГРУЗКИ
 ------------------------------------------------------------------------
 task.spawn(function()
-    local spinConn = RunService.RenderStepped:Connect(function(dt)
-        LoadingLogoHolder.Rotation = (LoadingLogoHolder.Rotation + (dt * 200)) % 360
-        HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 90)) % 360
+    pcall(function()
+        local spinConn = RunService.RenderStepped:Connect(function(dt)
+            if LoadingLogoHolder and LoadingLogoHolder.Parent then
+                LoadingLogoHolder.Rotation = (LoadingLogoHolder.Rotation + (dt * 200)) % 360
+            end
+            if HeaderLogoHolder and HeaderLogoHolder.Parent then
+                HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 90)) % 360
+            end
+        end)
+        
+        local fillTween = TweenService:Create(ProgressBarFill, TweenInfo.new(0.9, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
+        fillTween:Play()
+        task.wait(1.0)
+        
+        if LoadingFrame and LoadingFrame.Parent then
+            LoadingFrame:Destroy()
+        end
+        if spinConn then spinConn:Disconnect() end
     end)
-    
-    local fillTween = TweenService:Create(ProgressBarFill, TweenInfo.new(1.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)})
-    fillTween:Play()
-    fillTween.Completed:Wait()
-    
-    task.wait(0.2)
-    
-    local fadeOut = TweenService:Create(LoadingFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {BackgroundTransparency = 1})
-    fadeOut:Play()
-    fadeOut.Completed:Wait()
-    
-    LoadingFrame:Destroy()
-    spinConn:Disconnect()
     
     RunService.RenderStepped:Connect(function(dt)
-        HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 30)) % 360
+        if HeaderLogoHolder and HeaderLogoHolder.Parent then
+            HeaderLogoHolder.Rotation = (HeaderLogoHolder.Rotation + (dt * 30)) % 360
+        end
     end)
     
-    ApplyMenuTheme()
+    pcall(function()
+        ApplyMenuTheme()
+    end)
     MainFrame.Visible = true
 end)
 
@@ -4590,8 +4726,10 @@ task.spawn(function()
                             local predPos = GetPredictedPosition(targetHrp)
                             local dist = (myHrp.Position - predPos).Magnitude
                             if dist <= _G.KnifeReachDist then
-                                firetouchinterest(handle, targetHrp, 0)
-                                firetouchinterest(handle, targetHrp, 1)
+                                if firetouchinterest then
+                                    firetouchinterest(handle, targetHrp, 0)
+                                    firetouchinterest(handle, targetHrp, 1)
+                                end
                                 OnHitRegistered(player, targetHrp.Position, "Torso")
                             end
                         end
@@ -5150,28 +5288,34 @@ end)
 -- 2. REAL INVISIBLE SILENT AIM (MM2 Specialized Hook for Shoot/Stab/Throw Remotes & Index/Namecall)
 local Mouse = LocalPlayer:GetMouse()
 local OldIndex = nil
-OldIndex = hookmetamethod(game, "__index", function(self, key)
-    if _G.RealSilentAimActive and not checkcaller() and (key == "Hit" or key == "Target") then
-        local target = GetClosestTarget()
-        if target and target.Character then
-            local bone = GetAimbotBone(target.Character)
-            if bone then
-                local predPos = GetPredictedPosition(bone)
-                if key == "Hit" then
-                    return CFrame.new(predPos)
-                elseif key == "Target" then
-                    return bone
+if hookmetamethod then
+    pcall(function()
+        OldIndex = hookmetamethod(game, "__index", function(self, key)
+            if _G.RealSilentAimActive and checkcaller and not checkcaller() and (key == "Hit" or key == "Target") then
+                local target = GetClosestTarget()
+                if target and target.Character then
+                    local bone = GetAimbotBone(target.Character)
+                    if bone then
+                        local predPos = GetPredictedPosition(bone)
+                        if key == "Hit" then
+                            return CFrame.new(predPos)
+                        elseif key == "Target" then
+                            return bone
+                        end
+                    end
                 end
             end
-        end
-    end
-    return OldIndex(self, key)
-end)
+            return OldIndex(self, key)
+        end)
+    end)
+end
 
 local lastShootTracerTick = 0
 
 local OldNamecall = nil
-OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+if hookmetamethod and getnamecallmethod then
+    pcall(function()
+        OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     
@@ -5246,7 +5390,9 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return OldNamecall(self, ...)
-end)
+        end)
+    end)
+end
 
 local function SetupGunTracerListener(tool)
     if not tool or not tool:IsA("Tool") then return end
