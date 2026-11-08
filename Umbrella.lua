@@ -17,9 +17,15 @@ _G.Umbrella = Umbrella
 -- Dynamic Module Loader with Offline Cache & Anti-Cache HttpGet
 local function Import(name)
     local content = nil
-    if readfile and isfile and isfile("modules/" .. name .. ".lua") then
-        content = readfile("modules/" .. name .. ".lua")
-    else
+    local hasLocal = false
+    pcall(function()
+        if readfile and isfile and isfile("modules/" .. name .. ".lua") then
+            content = readfile("modules/" .. name .. ".lua")
+            hasLocal = true
+        end
+    end)
+    
+    if not hasLocal or not content or content == "" then
         local url = BaseUrl .. name .. ".lua?t=" .. tick()
         local success, res = pcall(function()
             return game:HttpGet(url)
@@ -27,21 +33,23 @@ local function Import(name)
         if success and res and res ~= "" then
             content = res
         else
-            error("[Umbrella Loader] Failed to fetch module '" .. name .. "' from " .. url)
+            error("[Umbrella Loader] Failed to fetch module '" .. name .. "' from " .. tostring(url))
         end
     end
     
     local fn, err = loadstring(content)
     if not fn then
-        error("[Umbrella Loader] Compilation error in " .. name .. ": " .. tostring(err))
+        error("[Umbrella Loader] Syntax error in " .. name .. ": " .. tostring(err))
     end
-    local mod = fn()
+    local successExec, mod = pcall(fn)
+    if not successExec then
+        error("[Umbrella Loader] Runtime error in " .. name .. ": " .. tostring(mod))
+    end
     Umbrella[name] = mod
     Umbrella.Modules[name] = mod
     return mod
 end
 
--- 1. Load Core & State
 local Core = Import("Core")
 
 -- 2. Load UI Engine & Components
@@ -97,6 +105,28 @@ local UpdateColorCorrection = Visuals.UpdateColorCorrection
 local UpdateBlur = Visuals.UpdateBlur
 
 local Players = Core.Services.Players
+local ScreenGui = UI.ScreenGui
+local Watermark = UI.Watermark
+local AwallIndicator = UI.AwallIndicator
+local HeaderLine = UI.HeaderLine
+local UIStrokeMain = UI.UIStrokeMain
+local Camera = Core.Camera
+local LocalPlayer = Core.LocalPlayer
+local Lighting = Core.Services.Lighting
+local OriginalLighting = Visuals.OriginalLighting or {
+    FieldOfView = 70,
+    FogColor = Color3.fromRGB(128, 128, 128),
+    FogStart = 0,
+    FogEnd = 1000,
+    ClockTime = 14,
+    Ambient = Color3.fromRGB(128, 128, 128),
+    OutdoorAmbient = Color3.fromRGB(128, 128, 128),
+    Brightness = 1,
+    GlobalShadows = true
+}
+local UpdateCustomWeapons = Weapons.UpdateCustomWeapons
+local UpdateRoleColors = Core.UpdateRoleColors
+
 
 -- Populate Tabs & Attach UI Controls
 -- 1. MAIN TAB
