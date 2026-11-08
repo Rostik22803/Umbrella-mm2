@@ -33,19 +33,45 @@ Core.Services = {
 Core.LocalPlayer = LocalPlayer
 Core.Camera = Camera
 
--- Safe CoreGui / PlayerGui Resolution
-local ParentGui = game:GetService("CoreGui")
-if not pcall(function() local x = ParentGui.Name end) then
-    ParentGui = LocalPlayer:WaitForChild("PlayerGui")
-end
-Core.ParentGui = ParentGui
-
--- Destroy previous UI instances
-for _, old in ipairs(ParentGui:GetChildren()) do
-    if old.Name == "Umbrella_MM2_Edition" then
-        old:Destroy()
+-- Safe CoreGui / PlayerGui Resolution for Delta, Codex, Fluxus, PC
+local function ResolveParentGui()
+    if gethui then
+        local s, res = pcall(gethui)
+        if s and res then return res end
     end
+    if syn and syn.protect_gui then
+        local s, res = pcall(function() return game:GetService("CoreGui") end)
+        if s and res then return res end
+    end
+    local sCore, coreGui = pcall(function() return game:GetService("CoreGui") end)
+    if sCore and coreGui then
+        local canParent = pcall(function()
+            local test = Instance.new("Folder")
+            test.Parent = coreGui
+            test:Destroy()
+        end)
+        if canParent then return coreGui end
+    end
+    local p = LocalPlayer or (Players and Players.LocalPlayer)
+    if p then
+        local pgui = p:FindFirstChildOfClass("PlayerGui") or p:WaitForChild("PlayerGui", 5)
+        if pgui then return pgui end
+    end
+    return game:GetService("CoreGui")
 end
+
+local ParentGui = ResolveParentGui()
+Core.ParentGui = ParentGui
+Core.ResolveParentGui = ResolveParentGui
+
+-- Destroy previous UI instances safely
+pcall(function()
+    for _, old in ipairs(ParentGui:GetChildren()) do
+        if old.Name == "Umbrella_MM2_Edition" then
+            old:Destroy()
+        end
+    end
+end)
 
 -- Color Presets & Palette
 local ColorPresets = {

@@ -14,6 +14,7 @@ local Services = Core.Services or {
 }
 local Players = Services.Players
 local LocalPlayer = Core.LocalPlayer or Players.LocalPlayer
+local GetRole = Core.GetRole or function() return "Innocent" end
 
 -- АВТОПОДБОР ПИСТОЛЕТА (ДВА РЕЖИМА: ТЕЛЕПОРТ И НА РАССТОЯНИИ BBOX/TOUCH)
 task.spawn(function()
