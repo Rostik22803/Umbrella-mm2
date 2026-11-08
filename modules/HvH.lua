@@ -247,30 +247,82 @@ local function ShowScreenHitmarker()
     end)
 end
 
+local TracerColorPresets = {
+    ["Blood Red"]      = Color3.fromRGB(225, 30, 45),
+    ["Cyber Cyan"]     = Color3.fromRGB(0, 235, 255),
+    ["Neon Pink"]      = Color3.fromRGB(255, 25, 160),
+    ["Electric Green"] = Color3.fromRGB(40, 255, 90),
+    ["Purple HvH"]     = Color3.fromRGB(160, 45, 255),
+    ["Pure White"]     = Color3.fromRGB(255, 255, 255),
+    ["Gold Glow"]      = Color3.fromRGB(255, 215, 20)
+}
+
 local function CreateBulletTracer(startPos, endPos)
     if not _G.TracersActive then return end
+    if not startPos or not endPos then return end
     local dist = (endPos - startPos).Magnitude
     if dist < 0.5 then return end
     
+    local tracerCol = Color3.fromRGB(225, 30, 45)
+    if _G.SelectedTracerColor == "Rainbow RGB" then
+        tracerCol = _G.RainbowColor or Color3.fromRGB(255, 0, 0)
+    elseif TracerColorPresets[_G.SelectedTracerColor] then
+        tracerCol = TracerColorPresets[_G.SelectedTracerColor]
+    end
+    
+    local thickness = _G.TracerThickness or 0.12
+    local lifetime = _G.TracerLifetime or 0.5
+    local style = _G.TracerStyle or "Dual Pulse (White Core)"
+    
+    -- Main colored neon laser beam
     local tracer = Instance.new("Part")
     tracer.Name = "Umbrella_Tracer"
     tracer.Anchored = true
     tracer.CanCollide = false
+    tracer.CanTouch = false
+    tracer.CanQuery = false
     tracer.Material = Enum.Material.Neon
-    tracer.Color = Color3.fromRGB(220, 35, 45)
-    tracer.Size = Vector3.new(0.12, 0.12, dist)
+    tracer.Color = tracerCol
+    tracer.Size = Vector3.new(thickness, thickness, dist)
     tracer.CFrame = CFrame.new(startPos, endPos) * CFrame.new(0, 0, -dist / 2)
-    tracer.Transparency = 0.1
+    tracer.Transparency = 0.05
     tracer.Parent = workspace
     
-    task.spawn(function()
-        for i = 1, 10 do
-            task.wait(0.03)
-            if tracer and tracer.Parent then
-                tracer.Transparency = 0.1 + (0.9 * (i / 10))
-            end
-        end
+    -- High-end white inner core (Skeet / Neverlose style)
+    local core = nil
+    if style == "Dual Pulse (White Core)" then
+        core = Instance.new("Part")
+        core.Name = "Umbrella_TracerCore"
+        core.Anchored = true
+        core.CanCollide = false
+        core.CanTouch = false
+        core.CanQuery = false
+        core.Material = Enum.Material.Neon
+        core.Color = Color3.fromRGB(255, 255, 255)
+        core.Size = Vector3.new(thickness * 0.45, thickness * 0.45, dist)
+        core.CFrame = tracer.CFrame
+        core.Transparency = 0
+        core.Parent = workspace
+    end
+    
+    -- Smooth Tween fade-out
+    local tweenInfo = TweenInfo.new(lifetime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tw = TweenService:Create(tracer, tweenInfo, {
+        Transparency = 1,
+        Size = Vector3.new(thickness * 0.1, thickness * 0.1, dist)
+    })
+    tw:Play()
+    if core then
+        local twCore = TweenService:Create(core, tweenInfo, {
+            Transparency = 1,
+            Size = Vector3.new(thickness * 0.05, thickness * 0.05, dist)
+        })
+        twCore:Play()
+    end
+    
+    task.delay(lifetime + 0.05, function()
         if tracer and tracer.Parent then tracer:Destroy() end
+        if core and core.Parent then core:Destroy() end
     end)
 end
 
