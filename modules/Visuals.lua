@@ -22,6 +22,36 @@ local Camera = Core.Camera or workspace.CurrentCamera
 local UserInputService = Services.UserInputService
 local RunService = Services.RunService
 local TweenService = Services.TweenService
+local ColorPresets = Core.ColorPresets or {}
+local ChamColorPresets = ColorPresets
+local RopeColorPresets = ColorPresets
+local UpdateRoleColors = Core.UpdateRoleColors or function() end
+local Lighting = Core.Services.Lighting or game:GetService("Lighting")
+local SoundService = Core.Services.SoundService or game:GetService("SoundService")
+
+local ScreenGui = UI.ScreenGui
+local HeaderLine = UI.HeaderLine
+local UIStrokeMain = UI.UIStrokeMain
+local AwallIndicator = UI.AwallIndicator
+local UmbrellaCircles = UI.UmbrellaCircles or {}
+local AllDropdownStrokes = UI.AllDropdownStrokes or {}
+local AllSliderFills = UI.AllSliderFills or {}
+local AllToggles = UI.AllToggles or {}
+local AllSectionTitles = UI.AllSectionTitles or {}
+local AllSectionScrollbars = UI.AllSectionScrollbars or {}
+local Tabs = UI.Tabs or {}
+local TabButtons = UI.TabButtons or {}
+local CurrentActiveTab = UI.CurrentActiveTab or "Main"
+
+local crosshairSpinAngle = 0
+local function CheckAwallRay(...)
+    if Umbrella.Combat and Umbrella.Combat.CheckAwallRay then
+        return Umbrella.Combat.CheckAwallRay(...)
+    end
+    return false, 999
+end
+local function UpdateHeadDots() end
+
 local Lighting = Services.Lighting
 
 local GetRole = Core.GetRole or function() return "Innocent" end
@@ -1074,6 +1104,8 @@ RunService.RenderStepped:Connect(function()
     end
     
     -- Кастомный FOV камеры
+        -- Кастомный FOV камеры
+        -- Кастомный FOV камеры
     if _G.CustomFOVActive then
         Camera.FieldOfView = _G.CustomFOVValue
     end
@@ -1139,4 +1171,5 @@ Visuals.ApplyAtmosphere = ApplyAtmosphere
 Visuals.UpdateColorCorrection = UpdateColorCorrection
 Visuals.UpdateBlur = UpdateBlur
 
+Visuals.OriginalLighting = OriginalLighting
 return Visuals
