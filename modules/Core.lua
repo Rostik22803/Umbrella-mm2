@@ -47,6 +47,40 @@ for _, old in ipairs(ParentGui:GetChildren()) do
     end
 end
 
+-- Color Presets & Palette
+local ColorPresets = {
+    ["Umbrella Red"]     = Color3.fromRGB(220, 35, 45),
+    ["Blood Crimson"]    = Color3.fromRGB(255, 30, 40),
+    ["Cyber Cyan"]       = Color3.fromRGB(0, 240, 255),
+    ["Electric Purple"]  = Color3.fromRGB(180, 50, 255),
+    ["Neon Pink"]        = Color3.fromRGB(255, 20, 147),
+    ["Acid Green"]       = Color3.fromRGB(40, 255, 70),
+    ["Sunset Gold"]      = Color3.fromRGB(255, 200, 30),
+    ["Deep Orange"]      = Color3.fromRGB(255, 110, 20),
+    ["Sky Blue"]         = Color3.fromRGB(50, 150, 255),
+    ["Pure White"]       = Color3.fromRGB(255, 255, 255),
+    ["Muted Gray"]       = Color3.fromRGB(150, 155, 165),
+    ["Rainbow RGB"]      = Color3.fromRGB(255, 255, 255)
+}
+Core.ColorPresets = ColorPresets
+
+local ColorOptionNames = {
+    "Umbrella Red",
+    "Blood Crimson",
+    "Cyber Cyan",
+    "Electric Purple",
+    "Neon Pink",
+    "Acid Green",
+    "Sunset Gold",
+    "Deep Orange",
+    "Sky Blue",
+    "Pure White",
+    "Muted Gray",
+    "Rainbow RGB"
+}
+Core.ColorOptionNames = ColorOptionNames
+local ChamColorPresets = ColorPresets
+
 -- Role Colors
 ------------------------------------------------------------------------
 local RoleColors = {
