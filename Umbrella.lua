@@ -1068,6 +1068,47 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     end
 end
 
+local function CreateButton(parentSec, text, callback)
+    local BtnFrame = Instance.new("Frame")
+    BtnFrame.Parent = parentSec
+    BtnFrame.BackgroundTransparency = 1
+    BtnFrame.Size = UDim2.new(1, 0, 0, 28)
+    
+    local Btn = Instance.new("TextButton")
+    Btn.Parent = BtnFrame
+    local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+    Btn.BackgroundColor3 = bgPreset.ItemBg
+    Btn.Size = UDim2.new(1, 0, 1, 0)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(220, 225, 235)
+    Btn.TextSize = 12
+    Btn.AutoButtonColor = false
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    
+    local stroke = Instance.new("UIStroke", Btn)
+    stroke.Color = bgPreset.Stroke
+    stroke.Thickness = 1
+    
+    Btn.MouseEnter:Connect(function()
+        Btn.BackgroundColor3 = Color3.fromRGB(42, 45, 55)
+        stroke.Color = GetThemeAccentColor()
+    end)
+    Btn.MouseLeave:Connect(function()
+        local curPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+        Btn.BackgroundColor3 = curPreset.ItemBg
+        stroke.Color = curPreset.Stroke
+    end)
+    Btn.MouseButton1Click:Connect(function()
+        Btn.BackgroundColor3 = GetThemeAccentColor()
+        task.wait(0.08)
+        local curPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
+        Btn.BackgroundColor3 = curPreset.ItemBg
+        if callback then callback() end
+    end)
+    return Btn
+end
+
 ------------------------------------------------------------------------
 -- НАПОЛНЕНИЕ ВКЛАДОК И НАСТРОЙКА HVH ФУНКЦИЙ
 ------------------------------------------------------------------------
@@ -1095,6 +1136,16 @@ _G.CustomWeaponColor = "Original"
 _G.CustomWeaponAura = "None"
 _G.WeaponTrailActive = false
 _G.SelectedWeaponTrailColor = "Rainbow RGB"
+
+-- Custom Weapon Grip Transform (Position & Angles)
+_G.CustomWeaponGripTarget = "Both (Knife & Gun)"
+_G.CustomWeaponOffsetX = 0.0
+_G.CustomWeaponOffsetY = 0.0
+_G.CustomWeaponOffsetZ = 0.0
+_G.CustomWeaponAngleX = 0
+_G.CustomWeaponAngleY = 0
+_G.CustomWeaponAngleZ = 0
+_G.CustomWeaponScale = 1.0
 
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
@@ -1129,6 +1180,10 @@ _G.SelectedHitSound = "Skeet"
 _G.HitSoundVolume = 3
 _G.HitmarkersActive = true
 _G.TracersActive = true
+_G.SelectedTracerColor = "Blood Crimson"
+_G.TracerThickness = 0.15
+_G.TracerLifetime = 0.65
+_G.TracerStyle = "Laser Beam"
 _G.HitEffectActive = true
 _G.WatermarkActive = true
 
@@ -1666,7 +1721,8 @@ local function BackupWeapon(tool)
         VertexColor = mesh and mesh.VertexColor or Vector3.new(1, 1, 1),
         Color = handle.Color,
         Material = handle.Material,
-        Transparency = handle.Transparency
+        Transparency = handle.Transparency,
+        Grip = tool.Grip
     }
 end
 
@@ -1702,11 +1758,66 @@ local function RestoreWeapon(tool)
             mesh.Offset = data.Offset
             mesh.VertexColor = data.VertexColor
         end
+        if data.Grip then
+            tool.Grip = data.Grip
+            local char = LocalPlayer.Character
+            if char then
+                for _, desc in ipairs(char:GetDescendants()) do
+                    if (desc:IsA("Weld") or desc:IsA("ManualWeld") or desc:IsA("Motor6D")) and desc.Name == "RightGrip" then
+                        if desc.Part1 == handle or desc.Part0 == handle then
+                            desc.C1 = data.Grip
+                        end
+                    end
+                end
+            end
+        end
     else
         handle.Transparency = 0
     end
     for _, ch in ipairs(handle:GetChildren()) do
         if ch:IsA("Decal") then ch.Transparency = 0 end
+    end
+end
+
+local function ApplyWeaponGripTransform(tool, isKnife)
+    if not tool then return end
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then return end
+    
+    BackupWeapon(tool)
+    local data = OriginalWeaponData[tool]
+    local baseGrip = (data and data.Grip) or tool.Grip or CFrame.new()
+    
+    local target = _G.CustomWeaponGripTarget or "Both (Knife & Gun)"
+    local shouldApply = (target == "Both (Knife & Gun)")
+        or (isKnife and target == "Knife Only")
+        or (not isKnife and target == "Gun Only")
+    
+    local newGrip = baseGrip
+    if shouldApply then
+        local offX = _G.CustomWeaponOffsetX or 0.0
+        local offY = _G.CustomWeaponOffsetY or 0.0
+        local offZ = _G.CustomWeaponOffsetZ or 0.0
+        local angX = _G.CustomWeaponAngleX or 0
+        local angY = _G.CustomWeaponAngleY or 0
+        local angZ = _G.CustomWeaponAngleZ or 0
+        
+        local userOffset = Vector3.new(offX, offY, offZ)
+        local userRot = CFrame.Angles(math.rad(angX), math.rad(angY), math.rad(angZ))
+        newGrip = baseGrip * CFrame.new(userOffset) * userRot
+    end
+    
+    tool.Grip = newGrip
+    
+    local char = LocalPlayer.Character
+    if char then
+        for _, desc in ipairs(char:GetDescendants()) do
+            if (desc:IsA("Weld") or desc:IsA("ManualWeld") or desc:IsA("Motor6D")) and desc.Name == "RightGrip" then
+                if desc.Part1 == handle or desc.Part0 == handle then
+                    desc.C1 = newGrip
+                end
+            end
+        end
     end
 end
 
@@ -1897,6 +2008,7 @@ local function ApplyCustomKnife(tool)
         
         model.Parent = tool
         ApplyWeaponFX(tool, true, blade)
+        ApplyWeaponGripTransform(tool, true)
         return
     end
     
@@ -1914,9 +2026,10 @@ local function ApplyCustomKnife(tool)
         mesh.Parent = handle
     end
     
+    local knifeScaleMult = _G.CustomWeaponScale or 1.0
     mesh.MeshId = preset.MeshId
     mesh.TextureId = preset.TextureId or ""
-    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * knifeScaleMult
     mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
     handle.Transparency = 0
     
@@ -1954,6 +2067,7 @@ local function ApplyCustomKnife(tool)
     end
     
     ApplyWeaponFX(tool, true, handle)
+    ApplyWeaponGripTransform(tool, true)
 end
 
 local function ApplyCustomGun(tool)
@@ -1983,9 +2097,10 @@ local function ApplyCustomGun(tool)
         mesh.Parent = handle
     end
     
+    local gunScaleMult = _G.CustomWeaponScale or 1.0
     mesh.MeshId = preset.MeshId
     mesh.TextureId = preset.TextureId or ""
-    mesh.Scale = preset.Scale or Vector3.new(1, 1, 1)
+    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * gunScaleMult
     mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
     handle.Transparency = 0
     
@@ -2023,6 +2138,7 @@ local function ApplyCustomGun(tool)
     end
     
     ApplyWeaponFX(tool, false, handle)
+    ApplyWeaponGripTransform(tool, false)
 end
 
 local function GetPlayerKnife()
@@ -2078,6 +2194,7 @@ local function UpdateCustomWeapons()
             ApplyCustomKnife(knife)
         else
             RestoreWeapon(knife)
+            ApplyWeaponGripTransform(knife, true)
         end
     end
     
@@ -2087,6 +2204,7 @@ local function UpdateCustomWeapons()
             ApplyCustomGun(gun)
         else
             RestoreWeapon(gun)
+            ApplyWeaponGripTransform(gun, false)
         end
     end
 end
@@ -2095,7 +2213,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.2)
-        if _G.CustomKnifeActive or _G.CustomGunActive then
+        if _G.CustomKnifeActive or _G.CustomGunActive or (_G.CustomWeaponOffsetX ~= 0 or _G.CustomWeaponOffsetY ~= 0 or _G.CustomWeaponOffsetZ ~= 0 or _G.CustomWeaponAngleX ~= 0 or _G.CustomWeaponAngleY ~= 0 or _G.CustomWeaponAngleZ ~= 0 or _G.CustomWeaponScale ~= 1.0) then
             UpdateCustomWeapons()
         end
     end
@@ -2822,6 +2940,18 @@ end)
 CreateSlider(SecHitVisuals, "Sound Volume", _G.HitSoundVolume, 1, 10, false, function(val) _G.HitSoundVolume = val end)
 CreateToggle(SecHitVisuals, "Screen Hitmarker", true, function(st) _G.HitmarkersActive = st end)
 CreateToggle(SecHitVisuals, "Bullet Tracers (Laser Beam)", true, function(st) _G.TracersActive = st end)
+CreateDropdown(SecHitVisuals, "Tracer Color Preset", {"Blood Crimson", "Cyber Cyan", "Neon Pink", "Sunset Gold", "Acid Green", "Electric Purple", "Pure White", "Rainbow RGB"}, _G.SelectedTracerColor, function(val)
+    _G.SelectedTracerColor = val
+end)
+CreateDropdown(SecHitVisuals, "Tracer Visual Style", {"Laser Beam", "Neon Cylinder", "Dual Energy"}, _G.TracerStyle, function(val)
+    _G.TracerStyle = val
+end)
+CreateSlider(SecHitVisuals, "Tracer Thickness", _G.TracerThickness, 0.05, 0.8, true, function(val)
+    _G.TracerThickness = val
+end)
+CreateSlider(SecHitVisuals, "Tracer Lifetime (Sec)", _G.TracerLifetime, 0.15, 2.5, true, function(val)
+    _G.TracerLifetime = val
+end)
 CreateToggle(SecHitVisuals, "3D Hit Impact Sphere", true, function(st) _G.HitEffectActive = st end)
 CreateToggle(SecHitVisuals, "HvH Watermark Display", true, function(st) 
     _G.WatermarkActive = st 
@@ -2878,6 +3008,50 @@ CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red
     if _G.CustomKnifeActive then
         UpdateCustomWeapons()
     end
+end)
+
+local SecWeaponOffsets = CreateSection(Tabs["Visuals"], "Weapon Position & Angles (Grip Offset)")
+CreateDropdown(SecWeaponOffsets, "Adjust Target", {"Both (Knife & Gun)", "Knife Only", "Gun Only"}, _G.CustomWeaponGripTarget, function(val)
+    _G.CustomWeaponGripTarget = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Horizontal (X: Left / Right)", _G.CustomWeaponOffsetX, -3.0, 3.0, true, function(val)
+    _G.CustomWeaponOffsetX = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Height (Y: Up / Down)", _G.CustomWeaponOffsetY, -3.0, 3.0, true, function(val)
+    _G.CustomWeaponOffsetY = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Depth (Z: Forward / Back)", _G.CustomWeaponOffsetZ, -3.0, 3.0, true, function(val)
+    _G.CustomWeaponOffsetZ = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Pitch Angle (X: Up / Down Tilt)", _G.CustomWeaponAngleX, -180, 180, false, function(val)
+    _G.CustomWeaponAngleX = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Yaw Angle (Y: Left / Right Turn)", _G.CustomWeaponAngleY, -180, 180, false, function(val)
+    _G.CustomWeaponAngleY = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Roll Angle (Z: Roll / Twist)", _G.CustomWeaponAngleZ, -180, 180, false, function(val)
+    _G.CustomWeaponAngleZ = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecWeaponOffsets, "Weapon Model Scale", _G.CustomWeaponScale, 0.2, 3.0, true, function(val)
+    _G.CustomWeaponScale = val
+    UpdateCustomWeapons()
+end)
+CreateButton(SecWeaponOffsets, "Reset Offsets & Angles (Default)", function()
+    _G.CustomWeaponOffsetX = 0.0
+    _G.CustomWeaponOffsetY = 0.0
+    _G.CustomWeaponOffsetZ = 0.0
+    _G.CustomWeaponAngleX = 0
+    _G.CustomWeaponAngleY = 0
+    _G.CustomWeaponAngleZ = 0
+    _G.CustomWeaponScale = 1.0
+    UpdateCustomWeapons()
 end)
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
 CreateToggle(SecChineseHat, "Chinese Conical Hat", false, function(st)
@@ -3744,29 +3918,154 @@ end
 
 local function CreateBulletTracer(startPos, endPos)
     if not _G.TracersActive then return end
+    if not startPos or not endPos then return end
     local dist = (endPos - startPos).Magnitude
     if dist < 0.5 then return end
     
-    local tracer = Instance.new("Part")
-    tracer.Name = "Umbrella_Tracer"
-    tracer.Anchored = true
-    tracer.CanCollide = false
-    tracer.Material = Enum.Material.Neon
-    tracer.Color = Color3.fromRGB(220, 35, 45)
-    tracer.Size = Vector3.new(0.12, 0.12, dist)
-    tracer.CFrame = CFrame.new(startPos, endPos) * CFrame.new(0, 0, -dist / 2)
-    tracer.Transparency = 0.1
-    tracer.Parent = workspace
+    local tracerColor = Color3.fromRGB(255, 30, 40)
+    if _G.SelectedTracerColor == "Rainbow RGB" then
+        tracerColor = _G.RainbowColor or Color3.fromRGB(255, 35, 45)
+    elseif ColorPresets[_G.SelectedTracerColor] then
+        tracerColor = ColorPresets[_G.SelectedTracerColor]
+    end
     
-    task.spawn(function()
-        for i = 1, 10 do
-            task.wait(0.03)
-            if tracer and tracer.Parent then
-                tracer.Transparency = 0.1 + (0.9 * (i / 10))
+    local thickness = math.clamp(_G.TracerThickness or 0.15, 0.05, 1.0)
+    local lifetime = math.clamp(_G.TracerLifetime or 0.65, 0.15, 3.0)
+    local style = _G.TracerStyle or "Laser Beam"
+    
+    if style == "Neon Cylinder" then
+        local tracer = Instance.new("Part")
+        tracer.Name = "Umbrella_Tracer"
+        tracer.Shape = Enum.PartType.Cylinder
+        tracer.Material = Enum.Material.Neon
+        tracer.Color = tracerColor
+        tracer.Size = Vector3.new(dist, thickness, thickness)
+        tracer.CFrame = CFrame.new((startPos + endPos) / 2, endPos) * CFrame.Angles(0, math.rad(90), 0)
+        tracer.Anchored = true
+        tracer.CanCollide = false
+        tracer.CanTouch = false
+        tracer.CanQuery = false
+        tracer.Transparency = 0.05
+        tracer.Parent = workspace
+        
+        task.spawn(function()
+            local steps = 14
+            local dt = lifetime / steps
+            for i = 1, steps do
+                task.wait(dt)
+                if tracer and tracer.Parent then
+                    tracer.Transparency = 0.05 + 0.95 * (i / steps)
+                else
+                    break
+                end
             end
-        end
-        if tracer and tracer.Parent then tracer:Destroy() end
-    end)
+            if tracer and tracer.Parent then tracer:Destroy() end
+        end)
+    elseif style == "Dual Energy" then
+        local mid = (startPos + endPos) / 2
+        local rot = CFrame.new(mid, endPos) * CFrame.Angles(0, math.rad(90), 0)
+        
+        local outer = Instance.new("Part")
+        outer.Name = "Umbrella_TracerOuter"
+        outer.Shape = Enum.PartType.Cylinder
+        outer.Material = Enum.Material.Neon
+        outer.Color = tracerColor
+        outer.Size = Vector3.new(dist, thickness * 1.8, thickness * 1.8)
+        outer.CFrame = rot
+        outer.Anchored = true
+        outer.CanCollide = false
+        outer.CanTouch = false
+        outer.CanQuery = false
+        outer.Transparency = 0.4
+        outer.Parent = workspace
+        
+        local core = Instance.new("Part")
+        core.Name = "Umbrella_TracerCore"
+        core.Shape = Enum.PartType.Cylinder
+        core.Material = Enum.Material.Neon
+        core.Color = Color3.fromRGB(255, 255, 255)
+        core.Size = Vector3.new(dist, thickness * 0.7, thickness * 0.7)
+        core.CFrame = rot
+        core.Anchored = true
+        core.CanCollide = false
+        core.CanTouch = false
+        core.CanQuery = false
+        core.Transparency = 0.05
+        core.Parent = workspace
+        
+        task.spawn(function()
+            local steps = 14
+            local dt = lifetime / steps
+            for i = 1, steps do
+                task.wait(dt)
+                local alpha = i / steps
+                if outer and outer.Parent then outer.Transparency = 0.4 + 0.6 * alpha end
+                if core and core.Parent then core.Transparency = 0.05 + 0.95 * alpha end
+            end
+            if outer and outer.Parent then outer:Destroy() end
+            if core and core.Parent then core:Destroy() end
+        end)
+    else -- "Laser Beam"
+        local p0 = Instance.new("Part")
+        p0.Name = "Umbrella_TracerP0"
+        p0.Size = Vector3.new(0, 0, 0)
+        p0.CFrame = CFrame.new(startPos)
+        p0.Anchored = true
+        p0.CanCollide = false
+        p0.CanTouch = false
+        p0.CanQuery = false
+        p0.Transparency = 1
+        p0.Parent = workspace
+        
+        local p1 = Instance.new("Part")
+        p1.Name = "Umbrella_TracerP1"
+        p1.Size = Vector3.new(0, 0, 0)
+        p1.CFrame = CFrame.new(endPos)
+        p1.Anchored = true
+        p1.CanCollide = false
+        p1.CanTouch = false
+        p1.CanQuery = false
+        p1.Transparency = 1
+        p1.Parent = workspace
+        
+        local a0 = Instance.new("Attachment", p0)
+        local a1 = Instance.new("Attachment", p1)
+        
+        local beam = Instance.new("Beam")
+        beam.Name = "Umbrella_LaserBeam"
+        beam.Attachment0 = a0
+        beam.Attachment1 = a1
+        beam.Width0 = thickness
+        beam.Width1 = thickness
+        beam.FaceCamera = true
+        beam.LightEmission = 1
+        beam.LightInfluence = 0
+        beam.Color = ColorSequence.new(tracerColor)
+        beam.Transparency = NumberSequence.new(0.05)
+        beam.Parent = p0
+        
+        task.spawn(function()
+            local steps = 14
+            local dt = lifetime / steps
+            for i = 1, steps do
+                task.wait(dt)
+                if beam and beam.Parent then
+                    local alpha = i / steps
+                    beam.Transparency = NumberSequence.new(0.05 + 0.95 * alpha)
+                    beam.Width0 = thickness * (1 - alpha * 0.35)
+                    beam.Width1 = thickness * (1 - alpha * 0.35)
+                else
+                    break
+                end
+            end
+            if p0 and p0.Parent then p0:Destroy() end
+            if p1 and p1.Parent then p1:Destroy() end
+        end)
+    end
+    
+    if _G.HitEffectActive then
+        Create3DHitEffect(endPos)
+    end
 end
 
 local function Create3DHitEffect(hitPos)
@@ -4750,14 +5049,63 @@ OldIndex = hookmetamethod(game, "__index", function(self, key)
     return OldIndex(self, key)
 end)
 
+local lastShootTracerTick = 0
+
 local OldNamecall = nil
 OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     
-    if _G.RealSilentAimActive and not checkcaller() and (method == "FireServer" or method == "fireServer") then
+    if not checkcaller() and (method == "FireServer" or method == "fireServer") then
         local remoteName = self.Name
-        if remoteName == "Shoot" or remoteName == "ShootServer" or remoteName == "Stab" or remoteName == "StabServer" or remoteName == "Throw" or remoteName == "KnifeServer" then
+        if remoteName == "Shoot" or remoteName == "ShootServer" then
+            local char = LocalPlayer.Character
+            local gun = char and (char:FindFirstChild("Gun") or char:FindFirstChild("Revolver") or char:FindFirstChildWhichIsA("Tool"))
+            local handle = gun and gun:FindFirstChild("Handle")
+            local startPos = (handle and handle.Position) or (char and char:FindFirstChild("HumanoidRootPart") and (char.HumanoidRootPart.Position + Vector3.new(0, 0.5, 0))) or Camera.CFrame.Position
+            local targetPos = nil
+            
+            if _G.RealSilentAimActive then
+                local target = GetClosestTarget()
+                if target and target.Character then
+                    local bone = GetAimbotBone(target.Character)
+                    local predPos = bone and GetPredictedPosition(bone) or (target.Character.PrimaryPart and target.Character.PrimaryPart.Position)
+                    for i, arg in ipairs(args) do
+                        if typeof(arg) == "Vector3" then
+                            args[i] = predPos
+                        elseif typeof(arg) == "CFrame" then
+                            args[i] = CFrame.new(arg.Position, predPos)
+                        end
+                    end
+                    if #args == 0 or (typeof(args[1]) ~= "Vector3" and typeof(args[1]) ~= "CFrame") then
+                        args[1] = predPos
+                    end
+                    targetPos = predPos
+                    OnHitRegistered(target, predPos, "HumanoidRootPart")
+                end
+            end
+            
+            if not targetPos then
+                for _, arg in ipairs(args) do
+                    if typeof(arg) == "Vector3" then
+                        targetPos = arg
+                        break
+                    elseif typeof(arg) == "CFrame" then
+                        targetPos = arg.Position
+                        break
+                    end
+                end
+            end
+            
+            if not targetPos then
+                local mouse = LocalPlayer:GetMouse()
+                targetPos = mouse and mouse.Hit and mouse.Hit.Position or (Camera.CFrame.Position + Camera.CFrame.LookVector * 250)
+            end
+            
+            lastShootTracerTick = tick()
+            CreateBulletTracer(startPos, targetPos)
+            return OldNamecall(self, unpack(args))
+        elseif _G.RealSilentAimActive and (remoteName == "Stab" or remoteName == "StabServer" or remoteName == "Throw" or remoteName == "KnifeServer") then
             local target = GetClosestTarget()
             if target and target.Character then
                 local bone = GetAimbotBone(target.Character)
@@ -4779,6 +5127,35 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return OldNamecall(self, ...)
+end)
+
+local function SetupGunTracerListener(tool)
+    if not tool or not tool:IsA("Tool") then return end
+    local n = tool.Name:lower()
+    if n == "gun" or n == "revolver" or n:find("gun") or n:find("revolver") or tool:FindFirstChild("Shoot") or tool:FindFirstChild("ShootServer") then
+        tool.Activated:Connect(function()
+            task.defer(function()
+                if tick() - lastShootTracerTick < 0.06 then return end
+                lastShootTracerTick = tick()
+                local handle = tool:FindFirstChild("Handle")
+                local startPos = (handle and handle.Position) or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0.5, 0))) or Camera.CFrame.Position
+                local mouse = LocalPlayer:GetMouse()
+                local endPos = mouse and mouse.Hit and mouse.Hit.Position or (Camera.CFrame.Position + Camera.CFrame.LookVector * 250)
+                CreateBulletTracer(startPos, endPos)
+            end)
+        end)
+    end
+end
+
+if LocalPlayer:FindFirstChild("Backpack") then
+    for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do SetupGunTracerListener(t) end
+    LocalPlayer.Backpack.ChildAdded:Connect(SetupGunTracerListener)
+end
+if LocalPlayer.Character then
+    for _, t in ipairs(LocalPlayer.Character:GetChildren()) do SetupGunTracerListener(t) end
+end
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    newChar.ChildAdded:Connect(SetupGunTracerListener)
 end)
 
 local isMinimized = false
