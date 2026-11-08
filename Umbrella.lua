@@ -370,32 +370,64 @@ CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red
         UpdateCustomWeapons()
     end
 end)
-CreateToggle(SecCustomWeapons, "Custom Gun Hands / Viewmodel Offset", _G.CustomGunGripActive, function(st)
+CreateToggle(SecCustomWeapons, "Hands Positioning (Вытянуть руки)", false, function(st)
+    _G.HandsPositionActive = st
+end)
+CreateDropdown(SecCustomWeapons, "Hands Target Arm", {"Right Arm (Weapon)", "Both Arms", "Left Arm"}, _G.HandsTarget or "Right Arm (Weapon)", function(val)
+    _G.HandsTarget = val
+end)
+CreateSlider(SecCustomWeapons, "Hands Forward / Back (Вытянуть)", _G.HandsStretchForward or 0.0, -5.0, 5.0, true, function(val)
+    _G.HandsStretchForward = val
+end)
+CreateSlider(SecCustomWeapons, "Hands Left / Right (Spread)", _G.HandsSpreadLeftRight or 0.0, -5.0, 5.0, true, function(val)
+    _G.HandsSpreadLeftRight = val
+end)
+CreateSlider(SecCustomWeapons, "Hands Height (Up / Down)", _G.HandsHeightUpDown or 0.0, -5.0, 5.0, true, function(val)
+    _G.HandsHeightUpDown = val
+end)
+CreateSlider(SecCustomWeapons, "Hands Angle Pitch (Наклон 45°)", _G.HandsAnglePitch or 0, -90, 90, false, function(val)
+    _G.HandsAnglePitch = val
+end)
+CreateSlider(SecCustomWeapons, "Hands Angle Yaw (Поворот)", _G.HandsAngleYaw or 0, -180, 180, false, function(val)
+    _G.HandsAngleYaw = val
+end)
+CreateSlider(SecCustomWeapons, "Hands Angle Roll (Крен)", _G.HandsAngleRoll or 0, -180, 180, false, function(val)
+    _G.HandsAngleRoll = val
+end)
+
+CreateToggle(SecCustomWeapons, "Weapon In-Hand Angle & Grip", _G.CustomWeaponGripActive, function(st)
+    _G.CustomWeaponGripActive = st
     _G.CustomGunGripActive = st
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Gun Position X (Left/Right)", _G.GunHandPosX or 0.0, -3.0, 3.0, true, function(val)
-    _G.GunHandPosX = val
-    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
-end)
-CreateSlider(SecCustomWeapons, "Gun Position Y (Up/Down)", _G.GunHandPosY or 0.0, -3.0, 3.0, true, function(val)
-    _G.GunHandPosY = val
-    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
-end)
-CreateSlider(SecCustomWeapons, "Gun Position Z (Forward/Back)", _G.GunHandPosZ or 0.0, -3.0, 3.0, true, function(val)
-    _G.GunHandPosZ = val
-    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
-end)
-CreateSlider(SecCustomWeapons, "Gun Angle Pitch (X)", _G.GunHandRotX or 0, -180, 180, false, function(val)
+CreateSlider(SecCustomWeapons, "Weapon Angle Pitch (Вверх/Вниз)", _G.WeaponAnglePitch or 0, -180, 180, false, function(val)
+    _G.WeaponAnglePitch = val
     _G.GunHandRotX = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Gun Angle Yaw (Y)", _G.GunHandRotY or 0, -180, 180, false, function(val)
+CreateSlider(SecCustomWeapons, "Weapon Angle Yaw (Влево/Вправо)", _G.WeaponAngleYaw or 0, -180, 180, false, function(val)
+    _G.WeaponAngleYaw = val
     _G.GunHandRotY = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
-CreateSlider(SecCustomWeapons, "Gun Angle Roll (Z)", _G.GunHandRotZ or 0, -180, 180, false, function(val)
+CreateSlider(SecCustomWeapons, "Weapon Angle Roll (Гангстер боком)", _G.WeaponAngleRoll or 0, -180, 180, false, function(val)
+    _G.WeaponAngleRoll = val
     _G.GunHandRotZ = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Weapon Offset X (Left/Right)", _G.WeaponOffsetX or 0.0, -3.0, 3.0, true, function(val)
+    _G.WeaponOffsetX = val
+    _G.GunHandPosX = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Weapon Offset Y (Up/Down)", _G.WeaponOffsetY or 0.0, -3.0, 3.0, true, function(val)
+    _G.WeaponOffsetY = val
+    _G.GunHandPosY = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Weapon Offset Z (Forward/Back)", _G.WeaponOffsetZ or 0.0, -3.0, 3.0, true, function(val)
+    _G.WeaponOffsetZ = val
+    _G.GunHandPosZ = val
     if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
@@ -683,14 +715,23 @@ CreateSlider(SecCombat, "FOV Thickness", _G.FOVThickness or 1.2, 1, 5, false, fu
 CreateSlider(SecCombat, "Aimbot Smoothness", _G.AimSmoothness, 1, 10, false, function(val) _G.AimSmoothness = val end)
 CreateToggle(SecCombat, "Always Aim (No Click Req)", false, function(st) _G.AlwaysAim = st end)
 CreateToggle(SecCombat, "Real Invisible Silent Aim", false, function(st) _G.RealSilentAimActive = st end)
+CreateToggle(SecCombat, "Silent Aim: Visible Only (100% Hit Reg)", true, function(st)
+    _G.SilentAimVisibleOnly = st
+end)
+CreateToggle(SecCombat, "Silent Aim: Multi-Bone Scan (Head/Body/Arms)", true, function(st)
+    _G.MultiBoneScan = st
+end)
+CreateToggle(SecCombat, "Allow Wallbang (Unchecked Shots)", false, function(st)
+    _G.SilentAimWallbang = st
+end)
 CreateDropdown(SecCombat, "Silent Aim Target", {"Murderer Only", "All Enemies / Players"}, _G.SilentAimTargetMode or "Murderer Only", function(val)
     _G.SilentAimTargetMode = val
 end)
-CreateToggle(SecCombat, "Silent Aim Wallbang (Through Walls)", _G.SilentAimWallbang, function(st)
-    _G.SilentAimWallbang = st
-end)
 CreateSlider(SecCombat, "Silent Aim FOV Radius", _G.SilentAimFOV or 300, 40, 600, false, function(val)
     _G.SilentAimFOV = val
+end)
+CreateToggle(SecCombat, "Auto Shoot (Sheriff Triggerbot)", _G.AutoShootSheriff, function(st)
+    _G.AutoShootSheriff = st
 end)
 CreateToggle(SecCombat, "Movement Velocity Prediction", false, function(st) _G.PredictionActive = st end)
 CreateSlider(SecCombat, "Prediction Time", _G.PredictionAmount, 0.05, 0.5, true, function(val) _G.PredictionAmount = val end)

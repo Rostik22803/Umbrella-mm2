@@ -458,25 +458,32 @@ local function BackupWeapon(tool)
     }
 end
 
-local function ApplyGunGrip(tool)
+local function ApplyWeaponGrip(tool)
     if not tool or not tool:IsA("Tool") then return end
-    local isGun = (tool.Name == "Gun" or tool.Name == "Revolver" or tool:FindFirstChild("ShootGun") or tool:FindFirstChild("KnifeServer"))
-    if not isGun then return end
     BackupWeapon(tool)
     local data = OriginalWeaponData[tool]
     local baseGrip = (data and data.Grip) or CFrame.new()
-    if _G.CustomGunGripActive then
-        local posOffset = Vector3.new(_G.GunHandPosX or 0, _G.GunHandPosY or 0, _G.GunHandPosZ or 0)
+    
+    if _G.CustomWeaponGripActive or _G.CustomGunGripActive then
+        local pX = _G.WeaponOffsetX or _G.GunHandPosX or 0
+        local pY = _G.WeaponOffsetY or _G.GunHandPosY or 0
+        local pZ = _G.WeaponOffsetZ or _G.GunHandPosZ or 0
+        local rX = _G.WeaponAnglePitch or _G.GunHandRotX or 0
+        local rY = _G.WeaponAngleYaw or _G.GunHandRotY or 0
+        local rZ = _G.WeaponAngleRoll or _G.GunHandRotZ or 0
+        
+        local posOffset = Vector3.new(pX, pY, pZ)
         local rotOffset = CFrame.Angles(
-            math.rad(_G.GunHandRotX or 0),
-            math.rad(_G.GunHandRotY or 0),
-            math.rad(_G.GunHandRotZ or 0)
+            math.rad(rX),
+            math.rad(rY),
+            math.rad(rZ)
         )
         tool.Grip = baseGrip * CFrame.new(posOffset) * rotOffset
     else
         tool.Grip = baseGrip
     end
 end
+local ApplyGunGrip = ApplyWeaponGrip
 
 local function RestoreWeapon(tool)
     if not tool then return end
@@ -880,6 +887,90 @@ local function GetPlayerGun()
     return nil
 end
 
+-- ========================================================================
+-- HANDS & ARMS MANIPULATION ENGINE (R6 & R15 Shoulder Positioning & Tilt)
+-- ========================================================================
+local origRightShoulderC0 = nil
+local origLeftShoulderC0 = nil
+local cachedChar = nil
+
+local function GetShoulders(char)
+    if not char then return nil, nil end
+    local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+    if not torso then return nil, nil end
+    
+    local rightShoulder = torso:FindFirstChild("Right Shoulder") 
+        or (char:FindFirstChild("RightUpperArm") and char.RightUpperArm:FindFirstChild("RightShoulder"))
+    local leftShoulder = torso:FindFirstChild("Left Shoulder") 
+        or (char:FindFirstChild("LeftUpperArm") and char.LeftUpperArm:FindFirstChild("LeftShoulder"))
+    return rightShoulder, leftShoulder
+end
+
+local function ResetShoulders()
+    if cachedChar then
+        local r, l = GetShoulders(cachedChar)
+        if r and origRightShoulderC0 then r.C0 = origRightShoulderC0 end
+        if l and origLeftShoulderC0 then l.C0 = origLeftShoulderC0 end
+    end
+    origRightShoulderC0 = nil
+    origLeftShoulderC0 = nil
+    cachedChar = nil
+end
+
+RunService.Stepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    if cachedChar ~= char then
+        cachedChar = char
+        origRightShoulderC0 = nil
+        origLeftShoulderC0 = nil
+    end
+    
+    local rightShoulder, leftShoulder = GetShoulders(char)
+    if not rightShoulder and not leftShoulder then return end
+    
+    if rightShoulder and not origRightShoulderC0 then origRightShoulderC0 = rightShoulder.C0 end
+    if leftShoulder and not origLeftShoulderC0 then origLeftShoulderC0 = leftShoulder.C0 end
+    
+    if _G.HandsPositionActive then
+        local fwd = _G.HandsStretchForward or 0       -- Руки вперед (+) / назад (-)
+        local spread = _G.HandsSpreadLeftRight or 0   -- Руки влево / вправо
+        local hgt = _G.HandsHeightUpDown or 0         -- Руки вверх (+) / вниз (-)
+        
+        local pitch = math.rad(_G.HandsAnglePitch or 0) -- Наклон 45° вверх/вниз
+        local yaw = math.rad(_G.HandsAngleYaw or 0)     -- Поворот влево/вправо
+        local roll = math.rad(_G.HandsAngleRoll or 0)   -- Крен/наклон
+        
+        local mode = _G.HandsTarget or "Right Arm (Weapon)"
+        
+        if rightShoulder and (mode == "Right Arm (Weapon)" or mode == "Both Arms") then
+            local offsetCF = CFrame.new(spread, hgt, -fwd) * CFrame.Angles(pitch, yaw, roll)
+            rightShoulder.C0 = origRightShoulderC0 * offsetCF
+        elseif rightShoulder and origRightShoulderC0 then
+            rightShoulder.C0 = origRightShoulderC0
+        end
+        
+        if leftShoulder and (mode == "Left Arm" or mode == "Both Arms") then
+            local offsetCF = CFrame.new(-spread, hgt, -fwd) * CFrame.Angles(pitch, -yaw, -roll)
+            leftShoulder.C0 = origLeftShoulderC0 * offsetCF
+        elseif leftShoulder and origLeftShoulderC0 then
+            leftShoulder.C0 = origLeftShoulderC0
+        end
+    else
+        if rightShoulder and origRightShoulderC0 and rightShoulder.C0 ~= origRightShoulderC0 then
+            rightShoulder.C0 = origRightShoulderC0
+        end
+        if leftShoulder and origLeftShoulderC0 and leftShoulder.C0 ~= origLeftShoulderC0 then
+            leftShoulder.C0 = origLeftShoulderC0
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    ResetShoulders()
+end)
+
 local function UpdateCustomWeapons()
     local knife = GetPlayerKnife()
     if knife then
@@ -887,6 +978,9 @@ local function UpdateCustomWeapons()
             ApplyCustomKnife(knife)
         else
             RestoreWeapon(knife)
+        end
+        if _G.CustomWeaponGripActive or _G.CustomGunGripActive then
+            ApplyWeaponGrip(knife)
         end
     end
     
@@ -897,8 +991,8 @@ local function UpdateCustomWeapons()
         else
             RestoreWeapon(gun)
         end
-        if _G.CustomGunGripActive then
-            ApplyGunGrip(gun)
+        if _G.CustomWeaponGripActive or _G.CustomGunGripActive then
+            ApplyWeaponGrip(gun)
         end
     end
 end
@@ -947,6 +1041,9 @@ end)
 Weapons.ApplyCustomModel = ApplyCustomModel
 Weapons.RemoveCustomModel = RemoveCustomModel
 Weapons.ApplyGunGrip = ApplyGunGrip
+Weapons.ApplyWeaponGrip = ApplyWeaponGrip
+Weapons.GetShoulders = GetShoulders
+Weapons.ResetShoulders = ResetShoulders
 Weapons.ApplyCustomKnife = ApplyCustomKnife
 Weapons.ApplyCustomGun = ApplyCustomGun
 Weapons.UpdateCustomWeapons = UpdateCustomWeapons
