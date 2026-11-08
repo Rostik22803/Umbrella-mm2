@@ -6,6 +6,23 @@
     ========================================================================
 --]]
 
+if not game:IsLoaded() then
+    pcall(function() game.Loaded:Wait() end)
+end
+
+local function Notify(title, text, duration)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 3
+        })
+    end)
+    print(string.format("[%s] %s", title, text))
+end
+
+Notify("Umbrella MM2", "Initializing supremacy engine...", 2)
+
 local BaseUrl = "https://raw.githubusercontent.com/Rostik22803/Umbrella-mm2/main/modules/"
 
 local Umbrella = {
@@ -14,36 +31,52 @@ local Umbrella = {
 }
 _G.Umbrella = Umbrella
 
--- Dynamic Module Loader with Offline Cache & Anti-Cache HttpGet
+-- Dynamic Module Loader with Anti-Cache HttpGet & Auto Retry
 local function Import(name)
     local content = nil
-    local hasLocal = false
-    pcall(function()
-        if readfile and isfile and isfile("modules/" .. name .. ".lua") then
-            content = readfile("modules/" .. name .. ".lua")
-            hasLocal = true
-        end
-    end)
+    local lastErr = nil
     
-    if not hasLocal or not content or content == "" then
+    -- Primary: Fetch latest from GitHub with anti-cache
+    for attempt = 1, 3 do
         local url = BaseUrl .. name .. ".lua?t=" .. tick()
         local success, res = pcall(function()
             return game:HttpGet(url)
         end)
         if success and res and res ~= "" then
             content = res
+            break
         else
-            error("[Umbrella Loader] Failed to fetch module '" .. name .. "' from " .. tostring(url))
+            lastErr = res
+            task.wait(0.3)
         end
+    end
+    
+    -- Fallback: Local file cache if available
+    if not content or content == "" then
+        pcall(function()
+            if readfile and isfile and isfile("modules/" .. name .. ".lua") then
+                content = readfile("modules/" .. name .. ".lua")
+            end
+        end)
+    end
+    
+    if not content or content == "" then
+        local msg = "Failed to fetch module '" .. name .. "': " .. tostring(lastErr)
+        Notify("Umbrella Error", msg, 5)
+        error(msg)
     end
     
     local fn, err = loadstring(content)
     if not fn then
-        error("[Umbrella Loader] Syntax error in " .. name .. ": " .. tostring(err))
+        local msg = "Syntax error in " .. name .. ": " .. tostring(err)
+        Notify("Umbrella Error", msg, 5)
+        error(msg)
     end
     local successExec, mod = pcall(fn)
     if not successExec then
-        error("[Umbrella Loader] Runtime error in " .. name .. ": " .. tostring(mod))
+        local msg = "Runtime error in " .. name .. ": " .. tostring(mod)
+        Notify("Umbrella Error", msg, 5)
+        error(msg)
     end
     Umbrella[name] = mod
     Umbrella.Modules[name] = mod
@@ -726,3 +759,4 @@ SwitchTab("Main")
 
 -- Start Loading Sequence & Show Menu
 UI.FinishLoading()
+Notify("Umbrella MM2", "v11.0 Loaded! Tap Umbrella button or press RCtrl to toggle", 4)
