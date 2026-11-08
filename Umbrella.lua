@@ -1072,42 +1072,31 @@ local function CreateButton(parentSec, text, callback)
     local BtnFrame = Instance.new("Frame")
     BtnFrame.Parent = parentSec
     BtnFrame.BackgroundTransparency = 1
-    BtnFrame.Size = UDim2.new(1, 0, 0, 28)
+    BtnFrame.Size = UDim2.new(1, 0, 0, 26)
     
     local Btn = Instance.new("TextButton")
     Btn.Parent = BtnFrame
     local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
-    Btn.BackgroundColor3 = bgPreset.ItemBg
+    Btn.BackgroundColor3 = bgPreset.Stroke
     Btn.Size = UDim2.new(1, 0, 1, 0)
     Btn.Font = Enum.Font.SourceSansBold
     Btn.Text = text
-    Btn.TextColor3 = Color3.fromRGB(220, 225, 235)
+    Btn.TextColor3 = Color3.fromRGB(225, 230, 240)
     Btn.TextSize = 12
-    Btn.AutoButtonColor = false
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
     
-    local stroke = Instance.new("UIStroke", Btn)
-    stroke.Color = bgPreset.Stroke
+    local stroke = Instance.new("UIStroke")
+    stroke.Parent = Btn
+    stroke.Color = GetThemeAccentColor()
     stroke.Thickness = 1
+    table.insert(AllDropdownStrokes, stroke)
     
-    Btn.MouseEnter:Connect(function()
-        Btn.BackgroundColor3 = Color3.fromRGB(42, 45, 55)
-        stroke.Color = GetThemeAccentColor()
-    end)
-    Btn.MouseLeave:Connect(function()
-        local curPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
-        Btn.BackgroundColor3 = curPreset.ItemBg
-        stroke.Color = curPreset.Stroke
-    end)
     Btn.MouseButton1Click:Connect(function()
-        Btn.BackgroundColor3 = GetThemeAccentColor()
-        task.wait(0.08)
-        local curPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
-        Btn.BackgroundColor3 = curPreset.ItemBg
-        if callback then callback() end
+        callback()
     end)
     return Btn
 end
+
 
 ------------------------------------------------------------------------
 -- НАПОЛНЕНИЕ ВКЛАДОК И НАСТРОЙКА HVH ФУНКЦИЙ
@@ -1137,15 +1126,31 @@ _G.CustomWeaponAura = "None"
 _G.WeaponTrailActive = false
 _G.SelectedWeaponTrailColor = "Rainbow RGB"
 
--- Custom Weapon Grip Transform (Position & Angles)
-_G.CustomWeaponGripTarget = "Both (Knife & Gun)"
-_G.CustomWeaponOffsetX = 0.0
-_G.CustomWeaponOffsetY = 0.0
-_G.CustomWeaponOffsetZ = 0.0
-_G.CustomWeaponAngleX = 0
-_G.CustomWeaponAngleY = 0
-_G.CustomWeaponAngleZ = 0
-_G.CustomWeaponScale = 1.0
+-- Custom Weapons Position, Angles & Scale
+_G.WeaponOffsetActive = true
+_G.WeaponOffsetTarget = "Both (Knife & Gun)"
+_G.WeaponOffsetX = 0.0
+_G.WeaponOffsetY = 0.0
+_G.WeaponOffsetZ = 0.0
+_G.WeaponAngleX = 0
+_G.WeaponAngleY = 0
+_G.WeaponAngleZ = 0
+_G.WeaponScale = 1.0
+
+-- Hands & Viewmodel Engine Settings
+_G.HandsOffsetActive = false
+_G.HandsTarget = "Right Arm / Weapon Hand"
+_G.HandOffsetX = 0.0
+_G.HandOffsetY = 0.0
+_G.HandOffsetZ = 0.0
+_G.HandAngleX = 0
+_G.HandAngleY = 0
+_G.HandAngleZ = 0
+_G.HandsFirstPerson = true
+_G.HandsChamsActive = false
+_G.SelectedHandsColor = "Cyber Cyan"
+_G.SelectedHandsMaterial = "Neon Glow"
+_G.HandsTransparency = 0.0
 
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
@@ -1180,10 +1185,6 @@ _G.SelectedHitSound = "Skeet"
 _G.HitSoundVolume = 3
 _G.HitmarkersActive = true
 _G.TracersActive = true
-_G.SelectedTracerColor = "Blood Crimson"
-_G.TracerThickness = 0.15
-_G.TracerLifetime = 0.65
-_G.TracerStyle = "Laser Beam"
 _G.HitEffectActive = true
 _G.WatermarkActive = true
 
@@ -1707,9 +1708,14 @@ local GunModelNames = {
 }
 
 local OriginalWeaponData = {}
+local OriginalToolGrips = {}
 
 local function BackupWeapon(tool)
-    if not tool or OriginalWeaponData[tool] then return end
+    if not tool then return end
+    if not OriginalToolGrips[tool] then
+        OriginalToolGrips[tool] = tool.Grip
+    end
+    if OriginalWeaponData[tool] then return end
     local handle = tool:FindFirstChild("Handle")
     if not handle then return end
     local mesh = handle:FindFirstChildOfClass("SpecialMesh")
@@ -1721,9 +1727,53 @@ local function BackupWeapon(tool)
         VertexColor = mesh and mesh.VertexColor or Vector3.new(1, 1, 1),
         Color = handle.Color,
         Material = handle.Material,
-        Transparency = handle.Transparency,
-        Grip = tool.Grip
+        Transparency = handle.Transparency
     }
+end
+
+local function GetCustomWeaponGrip(tool, baseGrip)
+    local target = _G.WeaponOffsetTarget or "Both (Knife & Gun)"
+    local isKnife = (tool == GetPlayerKnife())
+    local isGun = (tool == GetPlayerGun())
+    
+    if target == "Knife Only" and not isKnife then return baseGrip end
+    if target == "Gun Only" and not isGun then return baseGrip end
+    
+    local offset = Vector3.new(_G.WeaponOffsetX or 0, _G.WeaponOffsetY or 0, _G.WeaponOffsetZ or 0)
+    local rot = CFrame.Angles(
+        math.rad(_G.WeaponAngleX or 0),
+        math.rad(_G.WeaponAngleY or 0),
+        math.rad(_G.WeaponAngleZ or 0)
+    )
+    return baseGrip * CFrame.new(offset) * rot
+end
+
+local function ApplyWeaponGrip(tool)
+    if not tool or not tool:IsA("Tool") then return end
+    local baseGrip = OriginalToolGrips[tool]
+    if not baseGrip then
+        baseGrip = tool.Grip
+        OriginalToolGrips[tool] = baseGrip
+    end
+    
+    local targetGrip = baseGrip
+    if _G.WeaponOffsetActive then
+        targetGrip = GetCustomWeaponGrip(tool, baseGrip)
+    end
+    
+    tool.Grip = targetGrip
+    
+    local char = LocalPlayer.Character
+    if char and tool.Parent == char then
+        local rightHand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
+        if rightHand then
+            local grip = rightHand:FindFirstChild("RightGrip")
+            local handle = tool:FindFirstChild("Handle")
+            if grip and handle and grip.Part1 == handle then
+                grip.C1 = targetGrip
+            end
+        end
+    end
 end
 
 local function RestoreWeapon(tool)
@@ -1745,6 +1795,20 @@ local function RestoreWeapon(tool)
     local a1 = handle:FindFirstChild("MM2_TrailAtt1")
     if a1 then a1:Destroy() end
     
+    if OriginalToolGrips[tool] then
+        tool.Grip = OriginalToolGrips[tool]
+        local char = LocalPlayer.Character
+        if char and tool.Parent == char then
+            local rightHand = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
+            if rightHand then
+                local grip = rightHand:FindFirstChild("RightGrip")
+                if grip and grip.Part1 == handle then
+                    grip.C1 = OriginalToolGrips[tool]
+                end
+            end
+        end
+    end
+    
     local data = OriginalWeaponData[tool]
     if data then
         handle.Transparency = data.Transparency or 0
@@ -1758,66 +1822,11 @@ local function RestoreWeapon(tool)
             mesh.Offset = data.Offset
             mesh.VertexColor = data.VertexColor
         end
-        if data.Grip then
-            tool.Grip = data.Grip
-            local char = LocalPlayer.Character
-            if char then
-                for _, desc in ipairs(char:GetDescendants()) do
-                    if (desc:IsA("Weld") or desc:IsA("ManualWeld") or desc:IsA("Motor6D")) and desc.Name == "RightGrip" then
-                        if desc.Part1 == handle or desc.Part0 == handle then
-                            desc.C1 = data.Grip
-                        end
-                    end
-                end
-            end
-        end
     else
         handle.Transparency = 0
     end
     for _, ch in ipairs(handle:GetChildren()) do
         if ch:IsA("Decal") then ch.Transparency = 0 end
-    end
-end
-
-local function ApplyWeaponGripTransform(tool, isKnife)
-    if not tool then return end
-    local handle = tool:FindFirstChild("Handle")
-    if not handle then return end
-    
-    BackupWeapon(tool)
-    local data = OriginalWeaponData[tool]
-    local baseGrip = (data and data.Grip) or tool.Grip or CFrame.new()
-    
-    local target = _G.CustomWeaponGripTarget or "Both (Knife & Gun)"
-    local shouldApply = (target == "Both (Knife & Gun)")
-        or (isKnife and target == "Knife Only")
-        or (not isKnife and target == "Gun Only")
-    
-    local newGrip = baseGrip
-    if shouldApply then
-        local offX = _G.CustomWeaponOffsetX or 0.0
-        local offY = _G.CustomWeaponOffsetY or 0.0
-        local offZ = _G.CustomWeaponOffsetZ or 0.0
-        local angX = _G.CustomWeaponAngleX or 0
-        local angY = _G.CustomWeaponAngleY or 0
-        local angZ = _G.CustomWeaponAngleZ or 0
-        
-        local userOffset = Vector3.new(offX, offY, offZ)
-        local userRot = CFrame.Angles(math.rad(angX), math.rad(angY), math.rad(angZ))
-        newGrip = baseGrip * CFrame.new(userOffset) * userRot
-    end
-    
-    tool.Grip = newGrip
-    
-    local char = LocalPlayer.Character
-    if char then
-        for _, desc in ipairs(char:GetDescendants()) do
-            if (desc:IsA("Weld") or desc:IsA("ManualWeld") or desc:IsA("Motor6D")) and desc.Name == "RightGrip" then
-                if desc.Part1 == handle or desc.Part0 == handle then
-                    desc.C1 = newGrip
-                end
-            end
-        end
     end
 end
 
@@ -1967,9 +1976,10 @@ local function ApplyCustomKnife(tool)
         local model = Instance.new("Model")
         model.Name = "CustomWeaponModel"
         
+        local scaleMultiplier = _G.WeaponScale or 1.0
         local hilt = Instance.new("Part")
         hilt.Name = "Hilt"
-        hilt.Size = Vector3.new(0.25, 0.9, 0.25)
+        hilt.Size = Vector3.new(0.25, 0.9, 0.25) * scaleMultiplier
         hilt.Material = Enum.Material.Metal
         hilt.Color = Color3.fromRGB(45, 45, 45)
         hilt.CanCollide = false
@@ -1982,7 +1992,7 @@ local function ApplyCustomKnife(tool)
         local blade = Instance.new("Part")
         blade.Name = "Blade"
         blade.Shape = Enum.PartType.Cylinder
-        blade.Size = Vector3.new(3.0, 0.22, 0.22)
+        blade.Size = Vector3.new(3.0 * scaleMultiplier, 0.22 * scaleMultiplier, 0.22 * scaleMultiplier)
         blade.Material = Enum.Material.Neon
         local bladeColor = preset.Color
         if _G.CustomWeaponColor ~= "Original" and ChamColorPresets[_G.CustomWeaponColor] then
@@ -1993,7 +2003,7 @@ local function ApplyCustomKnife(tool)
         blade.CanTouch = false
         blade.CanQuery = false
         blade.Massless = true
-        blade.CFrame = handle.CFrame * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.rad(90))
+        blade.CFrame = handle.CFrame * CFrame.new(0, 1.6 * scaleMultiplier, 0) * CFrame.Angles(0, 0, math.rad(90))
         blade.Parent = model
         
         local w1 = Instance.new("WeldConstraint")
@@ -2007,8 +2017,8 @@ local function ApplyCustomKnife(tool)
         w2.Parent = blade
         
         model.Parent = tool
+        ApplyWeaponGrip(tool)
         ApplyWeaponFX(tool, true, blade)
-        ApplyWeaponGripTransform(tool, true)
         return
     end
     
@@ -2026,10 +2036,10 @@ local function ApplyCustomKnife(tool)
         mesh.Parent = handle
     end
     
-    local knifeScaleMult = _G.CustomWeaponScale or 1.0
+    local scaleMultiplier = _G.WeaponScale or 1.0
     mesh.MeshId = preset.MeshId
     mesh.TextureId = preset.TextureId or ""
-    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * knifeScaleMult
+    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * scaleMultiplier
     mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
     handle.Transparency = 0
     
@@ -2066,8 +2076,8 @@ local function ApplyCustomKnife(tool)
         mesh.VertexColor = Vector3.new(1, 1, 1)
     end
     
+    ApplyWeaponGrip(tool)
     ApplyWeaponFX(tool, true, handle)
-    ApplyWeaponGripTransform(tool, true)
 end
 
 local function ApplyCustomGun(tool)
@@ -2097,10 +2107,10 @@ local function ApplyCustomGun(tool)
         mesh.Parent = handle
     end
     
-    local gunScaleMult = _G.CustomWeaponScale or 1.0
+    local scaleMultiplier = _G.WeaponScale or 1.0
     mesh.MeshId = preset.MeshId
     mesh.TextureId = preset.TextureId or ""
-    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * gunScaleMult
+    mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * scaleMultiplier
     mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
     handle.Transparency = 0
     
@@ -2137,8 +2147,8 @@ local function ApplyCustomGun(tool)
         mesh.VertexColor = Vector3.new(1, 1, 1)
     end
     
+    ApplyWeaponGrip(tool)
     ApplyWeaponFX(tool, false, handle)
-    ApplyWeaponGripTransform(tool, false)
 end
 
 local function GetPlayerKnife()
@@ -2194,7 +2204,6 @@ local function UpdateCustomWeapons()
             ApplyCustomKnife(knife)
         else
             RestoreWeapon(knife)
-            ApplyWeaponGripTransform(knife, true)
         end
     end
     
@@ -2204,7 +2213,15 @@ local function UpdateCustomWeapons()
             ApplyCustomGun(gun)
         else
             RestoreWeapon(gun)
-            ApplyWeaponGripTransform(gun, false)
+        end
+    end
+    
+    local char = LocalPlayer.Character
+    if char then
+        for _, obj in ipairs(char:GetChildren()) do
+            if obj:IsA("Tool") then
+                ApplyWeaponGrip(obj)
+            end
         end
     end
 end
@@ -2213,7 +2230,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.2)
-        if _G.CustomKnifeActive or _G.CustomGunActive or (_G.CustomWeaponOffsetX ~= 0 or _G.CustomWeaponOffsetY ~= 0 or _G.CustomWeaponOffsetZ ~= 0 or _G.CustomWeaponAngleX ~= 0 or _G.CustomWeaponAngleY ~= 0 or _G.CustomWeaponAngleZ ~= 0 or _G.CustomWeaponScale ~= 1.0) then
+        if _G.CustomKnifeActive or _G.CustomGunActive then
             UpdateCustomWeapons()
         end
     end
@@ -2247,6 +2264,179 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         UpdateCustomWeapons()
     end
 end)
+
+------------------------------------------------------------------------
+-- HANDS & VIEWMODEL ENGINE (OFFSET, ANGLES, VISUALS & CHAMS)
+------------------------------------------------------------------------
+local OriginalShoulderC0 = {}
+local OriginalArmProperties = {}
+
+local function GetPlayerArmParts()
+    local parts = {}
+    local char = LocalPlayer.Character
+    if not char then return parts end
+    
+    local rArm = char:FindFirstChild("Right Arm")
+    local lArm = char:FindFirstChild("Left Arm")
+    if rArm then table.insert(parts, rArm) end
+    if lArm then table.insert(parts, lArm) end
+    
+    local r15Names = {
+        "RightUpperArm", "RightLowerArm", "RightHand",
+        "LeftUpperArm", "LeftLowerArm", "LeftHand"
+    }
+    for _, name in ipairs(r15Names) do
+        local p = char:FindFirstChild(name)
+        if p and p:IsA("BasePart") then
+            table.insert(parts, p)
+        end
+    end
+    
+    return parts
+end
+
+local function GetShoulderJoints()
+    local char = LocalPlayer.Character
+    if not char then return nil, nil end
+    
+    local torso = char:FindFirstChild("Torso")
+    if torso then
+        local rSh = torso:FindFirstChild("Right Shoulder")
+        local lSh = torso:FindFirstChild("Left Shoulder")
+        if rSh or lSh then
+            return rSh, lSh
+        end
+    end
+    
+    local rUpper = char:FindFirstChild("RightUpperArm")
+    local lUpper = char:FindFirstChild("LeftUpperArm")
+    local rSh = rUpper and rUpper:FindFirstChild("RightShoulder")
+    local lSh = lUpper and lUpper:FindFirstChild("LeftShoulder")
+    return rSh, lSh
+end
+
+local function UpdateHandsEngine()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local rShoulder, lShoulder = GetShoulderJoints()
+    
+    if rShoulder and not OriginalShoulderC0[rShoulder] then
+        OriginalShoulderC0[rShoulder] = rShoulder.C0
+    end
+    if lShoulder and not OriginalShoulderC0[lShoulder] then
+        OriginalShoulderC0[lShoulder] = lShoulder.C0
+    end
+    
+    if _G.HandsOffsetActive then
+        local offset = Vector3.new(_G.HandOffsetX or 0, _G.HandOffsetY or 0, _G.HandOffsetZ or 0)
+        local rot = CFrame.Angles(
+            math.rad(_G.HandAngleX or 0),
+            math.rad(_G.HandAngleY or 0),
+            math.rad(_G.HandAngleZ or 0)
+        )
+        local handCF = CFrame.new(offset) * rot
+        local target = _G.HandsTarget or "Right Arm / Weapon Hand"
+        
+        if rShoulder and OriginalShoulderC0[rShoulder] then
+            if target == "Right Arm / Weapon Hand" or target == "Both Arms" then
+                rShoulder.C0 = OriginalShoulderC0[rShoulder] * handCF
+            else
+                rShoulder.C0 = OriginalShoulderC0[rShoulder]
+            end
+        end
+        
+        if lShoulder and OriginalShoulderC0[lShoulder] then
+            if target == "Left Arm" or target == "Both Arms" then
+                local leftCF = CFrame.new(-offset.X, offset.Y, offset.Z) * CFrame.Angles(
+                    math.rad(_G.HandAngleX or 0),
+                    math.rad(-(_G.HandAngleY or 0)),
+                    math.rad(-(_G.HandAngleZ or 0))
+                )
+                lShoulder.C0 = OriginalShoulderC0[lShoulder] * leftCF
+            else
+                lShoulder.C0 = OriginalShoulderC0[lShoulder]
+            end
+        end
+    else
+        if rShoulder and OriginalShoulderC0[rShoulder] then
+            rShoulder.C0 = OriginalShoulderC0[rShoulder]
+        end
+        if lShoulder and OriginalShoulderC0[lShoulder] then
+            lShoulder.C0 = OriginalShoulderC0[lShoulder]
+        end
+    end
+    
+    local armParts = GetPlayerArmParts()
+    for _, part in ipairs(armParts) do
+        if not OriginalArmProperties[part] then
+            OriginalArmProperties[part] = {
+                Color = part.Color,
+                Material = part.Material,
+                Transparency = part.Transparency
+            }
+        end
+        
+        if _G.HandsChamsActive then
+            local chosenColor = Color3.fromRGB(0, 220, 255)
+            if _G.SelectedHandsColor == "Rainbow RGB" then
+                chosenColor = _G.RainbowColor
+            elseif ChamColorPresets[_G.SelectedHandsColor] then
+                chosenColor = ChamColorPresets[_G.SelectedHandsColor]
+            elseif ColorPresets[_G.SelectedHandsColor] then
+                chosenColor = ColorPresets[_G.SelectedHandsColor]
+            end
+            part.Color = chosenColor
+            
+            if _G.SelectedHandsMaterial == "Neon Glow" then
+                part.Material = Enum.Material.Neon
+            elseif _G.SelectedHandsMaterial == "ForceField" then
+                part.Material = Enum.Material.ForceField
+            elseif _G.SelectedHandsMaterial == "Glass" then
+                part.Material = Enum.Material.Glass
+            elseif _G.SelectedHandsMaterial == "Chrome Metal" then
+                part.Material = Enum.Material.Metal
+            end
+            part.Transparency = _G.HandsTransparency or 0.0
+        else
+            local orig = OriginalArmProperties[part]
+            if orig then
+                part.Color = orig.Color
+                part.Material = orig.Material
+                part.Transparency = orig.Transparency
+            end
+        end
+        
+        if _G.HandsFirstPerson or _G.HandsChamsActive then
+            part.LocalTransparencyModifier = part.Transparency
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.HandsOffsetActive or _G.HandsChamsActive or _G.HandsFirstPerson then
+        UpdateHandsEngine()
+    end
+    if _G.WeaponOffsetActive then
+        local char = LocalPlayer.Character
+        if char then
+            for _, obj in ipairs(char:GetChildren()) do
+                if obj:IsA("Tool") then
+                    ApplyWeaponGrip(obj)
+                end
+            end
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    table.clear(OriginalShoulderC0)
+    table.clear(OriginalArmProperties)
+    task.wait(0.5)
+    UpdateHandsEngine()
+    UpdateCustomWeapons()
+end)
+
 
 ------------------------------------------------------------------------
 -- WORLD, WEATHER, FOG & SKYBOX VISUALS ENGINE
@@ -2940,18 +3130,6 @@ end)
 CreateSlider(SecHitVisuals, "Sound Volume", _G.HitSoundVolume, 1, 10, false, function(val) _G.HitSoundVolume = val end)
 CreateToggle(SecHitVisuals, "Screen Hitmarker", true, function(st) _G.HitmarkersActive = st end)
 CreateToggle(SecHitVisuals, "Bullet Tracers (Laser Beam)", true, function(st) _G.TracersActive = st end)
-CreateDropdown(SecHitVisuals, "Tracer Color Preset", {"Blood Crimson", "Cyber Cyan", "Neon Pink", "Sunset Gold", "Acid Green", "Electric Purple", "Pure White", "Rainbow RGB"}, _G.SelectedTracerColor, function(val)
-    _G.SelectedTracerColor = val
-end)
-CreateDropdown(SecHitVisuals, "Tracer Visual Style", {"Laser Beam", "Neon Cylinder", "Dual Energy"}, _G.TracerStyle, function(val)
-    _G.TracerStyle = val
-end)
-CreateSlider(SecHitVisuals, "Tracer Thickness", _G.TracerThickness, 0.05, 0.8, true, function(val)
-    _G.TracerThickness = val
-end)
-CreateSlider(SecHitVisuals, "Tracer Lifetime (Sec)", _G.TracerLifetime, 0.15, 2.5, true, function(val)
-    _G.TracerLifetime = val
-end)
 CreateToggle(SecHitVisuals, "3D Hit Impact Sphere", true, function(st) _G.HitEffectActive = st end)
 CreateToggle(SecHitVisuals, "HvH Watermark Display", true, function(st) 
     _G.WatermarkActive = st 
@@ -3009,49 +3187,115 @@ CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red
         UpdateCustomWeapons()
     end
 end)
+CreateToggle(SecCustomWeapons, "Enable Weapon Offsets & Angles", true, function(st)
+    _G.WeaponOffsetActive = st
+    UpdateCustomWeapons()
+end)
+CreateDropdown(SecCustomWeapons, "Adjust Target", {"Both (Knife & Gun)", "Knife Only", "Gun Only"}, _G.WeaponOffsetTarget, function(val)
+    _G.WeaponOffsetTarget = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Horizontal (X: Left / Right)", _G.WeaponOffsetX, -3.0, 3.0, true, function(val)
+    _G.WeaponOffsetX = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Height (Y: Up / Down)", _G.WeaponOffsetY, -3.0, 3.0, true, function(val)
+    _G.WeaponOffsetY = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Depth (Z: Forward / Back)", _G.WeaponOffsetZ, -3.0, 3.0, true, function(val)
+    _G.WeaponOffsetZ = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Pitch Angle (X: Up / Down)", _G.WeaponAngleX, -180, 180, false, function(val)
+    _G.WeaponAngleX = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Yaw Angle (Y: Left / Right)", _G.WeaponAngleY, -180, 180, false, function(val)
+    _G.WeaponAngleY = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Roll Angle (Z: Twist / Spin)", _G.WeaponAngleZ, -180, 180, false, function(val)
+    _G.WeaponAngleZ = val
+    UpdateCustomWeapons()
+end)
+CreateSlider(SecCustomWeapons, "Weapon Scale", _G.WeaponScale, 0.2, 3.0, true, function(val)
+    _G.WeaponScale = val
+    UpdateCustomWeapons()
+end)
+CreateButton(SecCustomWeapons, "Reset Weapon Position & Angles", function()
+    _G.WeaponOffsetX = 0.0
+    _G.WeaponOffsetY = 0.0
+    _G.WeaponOffsetZ = 0.0
+    _G.WeaponAngleX = 0
+    _G.WeaponAngleY = 0
+    _G.WeaponAngleZ = 0
+    _G.WeaponScale = 1.0
+    UpdateCustomWeapons()
+end)
 
-local SecWeaponOffsets = CreateSection(Tabs["Visuals"], "Weapon Position & Angles (Grip Offset)")
-CreateDropdown(SecWeaponOffsets, "Adjust Target", {"Both (Knife & Gun)", "Knife Only", "Gun Only"}, _G.CustomWeaponGripTarget, function(val)
-    _G.CustomWeaponGripTarget = val
-    UpdateCustomWeapons()
+local SecHands = CreateSection(Tabs["Visuals"], "Hands & Viewmodel (Настройки Рук)")
+CreateToggle(SecHands, "Enable Hands Position/Angles", false, function(st)
+    _G.HandsOffsetActive = st
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Horizontal (X: Left / Right)", _G.CustomWeaponOffsetX, -3.0, 3.0, true, function(val)
-    _G.CustomWeaponOffsetX = val
-    UpdateCustomWeapons()
+CreateDropdown(SecHands, "Target Hand", {"Right Arm / Weapon Hand", "Both Arms", "Left Arm"}, _G.HandsTarget, function(val)
+    _G.HandsTarget = val
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Height (Y: Up / Down)", _G.CustomWeaponOffsetY, -3.0, 3.0, true, function(val)
-    _G.CustomWeaponOffsetY = val
-    UpdateCustomWeapons()
+CreateSlider(SecHands, "Hand Offset X (Left / Right)", _G.HandOffsetX, -3.0, 3.0, true, function(val)
+    _G.HandOffsetX = val
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Depth (Z: Forward / Back)", _G.CustomWeaponOffsetZ, -3.0, 3.0, true, function(val)
-    _G.CustomWeaponOffsetZ = val
-    UpdateCustomWeapons()
+CreateSlider(SecHands, "Hand Offset Y (Height / Up / Down)", _G.HandOffsetY, -3.0, 3.0, true, function(val)
+    _G.HandOffsetY = val
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Pitch Angle (X: Up / Down Tilt)", _G.CustomWeaponAngleX, -180, 180, false, function(val)
-    _G.CustomWeaponAngleX = val
-    UpdateCustomWeapons()
+CreateSlider(SecHands, "Hand Offset Z (Forward / Back)", _G.HandOffsetZ, -3.0, 3.0, true, function(val)
+    _G.HandOffsetZ = val
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Yaw Angle (Y: Left / Right Turn)", _G.CustomWeaponAngleY, -180, 180, false, function(val)
-    _G.CustomWeaponAngleY = val
-    UpdateCustomWeapons()
+CreateSlider(SecHands, "Hand Pitch Angle (X: Up / Down)", _G.HandAngleX, -180, 180, false, function(val)
+    _G.HandAngleX = val
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Roll Angle (Z: Roll / Twist)", _G.CustomWeaponAngleZ, -180, 180, false, function(val)
-    _G.CustomWeaponAngleZ = val
-    UpdateCustomWeapons()
+CreateSlider(SecHands, "Hand Yaw Angle (Y: Left / Right)", _G.HandAngleY, -180, 180, false, function(val)
+    _G.HandAngleY = val
+    UpdateHandsEngine()
 end)
-CreateSlider(SecWeaponOffsets, "Weapon Model Scale", _G.CustomWeaponScale, 0.2, 3.0, true, function(val)
-    _G.CustomWeaponScale = val
-    UpdateCustomWeapons()
+CreateSlider(SecHands, "Hand Roll Angle (Z: Twist / Tilt)", _G.HandAngleZ, -180, 180, false, function(val)
+    _G.HandAngleZ = val
+    UpdateHandsEngine()
 end)
-CreateButton(SecWeaponOffsets, "Reset Offsets & Angles (Default)", function()
-    _G.CustomWeaponOffsetX = 0.0
-    _G.CustomWeaponOffsetY = 0.0
-    _G.CustomWeaponOffsetZ = 0.0
-    _G.CustomWeaponAngleX = 0
-    _G.CustomWeaponAngleY = 0
-    _G.CustomWeaponAngleZ = 0
-    _G.CustomWeaponScale = 1.0
-    UpdateCustomWeapons()
+CreateToggle(SecHands, "Hands Chams & Color", false, function(st)
+    _G.HandsChamsActive = st
+    UpdateHandsEngine()
+end)
+CreateDropdown(SecHands, "Hands Color", {"Cyber Cyan", "Blood Red", "Neon Pink", "Sunset Gold", "Pure White", "Acid Green", "Electric Purple", "Rainbow RGB"}, _G.SelectedHandsColor, function(val)
+    _G.SelectedHandsColor = val
+    UpdateHandsEngine()
+end)
+CreateDropdown(SecHands, "Hands Material", {"Neon Glow", "Default", "ForceField", "Glass", "Chrome Metal"}, _G.SelectedHandsMaterial, function(val)
+    _G.SelectedHandsMaterial = val
+    UpdateHandsEngine()
+end)
+CreateSlider(SecHands, "Hands Transparency", _G.HandsTransparency, 0.0, 1.0, true, function(val)
+    _G.HandsTransparency = val
+    UpdateHandsEngine()
+end)
+CreateToggle(SecHands, "Force Hands In First Person", true, function(st)
+    _G.HandsFirstPerson = st
+    UpdateHandsEngine()
+end)
+CreateButton(SecHands, "Reset Hand Position & Angles", function()
+    _G.HandOffsetX = 0.0
+    _G.HandOffsetY = 0.0
+    _G.HandOffsetZ = 0.0
+    _G.HandAngleX = 0
+    _G.HandAngleY = 0
+    _G.HandAngleZ = 0
+    _G.HandsTransparency = 0.0
+    UpdateHandsEngine()
 end)
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
 CreateToggle(SecChineseHat, "Chinese Conical Hat", false, function(st)
@@ -3918,154 +4162,29 @@ end
 
 local function CreateBulletTracer(startPos, endPos)
     if not _G.TracersActive then return end
-    if not startPos or not endPos then return end
     local dist = (endPos - startPos).Magnitude
     if dist < 0.5 then return end
     
-    local tracerColor = Color3.fromRGB(255, 30, 40)
-    if _G.SelectedTracerColor == "Rainbow RGB" then
-        tracerColor = _G.RainbowColor or Color3.fromRGB(255, 35, 45)
-    elseif ColorPresets[_G.SelectedTracerColor] then
-        tracerColor = ColorPresets[_G.SelectedTracerColor]
-    end
+    local tracer = Instance.new("Part")
+    tracer.Name = "Umbrella_Tracer"
+    tracer.Anchored = true
+    tracer.CanCollide = false
+    tracer.Material = Enum.Material.Neon
+    tracer.Color = Color3.fromRGB(220, 35, 45)
+    tracer.Size = Vector3.new(0.12, 0.12, dist)
+    tracer.CFrame = CFrame.new(startPos, endPos) * CFrame.new(0, 0, -dist / 2)
+    tracer.Transparency = 0.1
+    tracer.Parent = workspace
     
-    local thickness = math.clamp(_G.TracerThickness or 0.15, 0.05, 1.0)
-    local lifetime = math.clamp(_G.TracerLifetime or 0.65, 0.15, 3.0)
-    local style = _G.TracerStyle or "Laser Beam"
-    
-    if style == "Neon Cylinder" then
-        local tracer = Instance.new("Part")
-        tracer.Name = "Umbrella_Tracer"
-        tracer.Shape = Enum.PartType.Cylinder
-        tracer.Material = Enum.Material.Neon
-        tracer.Color = tracerColor
-        tracer.Size = Vector3.new(dist, thickness, thickness)
-        tracer.CFrame = CFrame.new((startPos + endPos) / 2, endPos) * CFrame.Angles(0, math.rad(90), 0)
-        tracer.Anchored = true
-        tracer.CanCollide = false
-        tracer.CanTouch = false
-        tracer.CanQuery = false
-        tracer.Transparency = 0.05
-        tracer.Parent = workspace
-        
-        task.spawn(function()
-            local steps = 14
-            local dt = lifetime / steps
-            for i = 1, steps do
-                task.wait(dt)
-                if tracer and tracer.Parent then
-                    tracer.Transparency = 0.05 + 0.95 * (i / steps)
-                else
-                    break
-                end
+    task.spawn(function()
+        for i = 1, 10 do
+            task.wait(0.03)
+            if tracer and tracer.Parent then
+                tracer.Transparency = 0.1 + (0.9 * (i / 10))
             end
-            if tracer and tracer.Parent then tracer:Destroy() end
-        end)
-    elseif style == "Dual Energy" then
-        local mid = (startPos + endPos) / 2
-        local rot = CFrame.new(mid, endPos) * CFrame.Angles(0, math.rad(90), 0)
-        
-        local outer = Instance.new("Part")
-        outer.Name = "Umbrella_TracerOuter"
-        outer.Shape = Enum.PartType.Cylinder
-        outer.Material = Enum.Material.Neon
-        outer.Color = tracerColor
-        outer.Size = Vector3.new(dist, thickness * 1.8, thickness * 1.8)
-        outer.CFrame = rot
-        outer.Anchored = true
-        outer.CanCollide = false
-        outer.CanTouch = false
-        outer.CanQuery = false
-        outer.Transparency = 0.4
-        outer.Parent = workspace
-        
-        local core = Instance.new("Part")
-        core.Name = "Umbrella_TracerCore"
-        core.Shape = Enum.PartType.Cylinder
-        core.Material = Enum.Material.Neon
-        core.Color = Color3.fromRGB(255, 255, 255)
-        core.Size = Vector3.new(dist, thickness * 0.7, thickness * 0.7)
-        core.CFrame = rot
-        core.Anchored = true
-        core.CanCollide = false
-        core.CanTouch = false
-        core.CanQuery = false
-        core.Transparency = 0.05
-        core.Parent = workspace
-        
-        task.spawn(function()
-            local steps = 14
-            local dt = lifetime / steps
-            for i = 1, steps do
-                task.wait(dt)
-                local alpha = i / steps
-                if outer and outer.Parent then outer.Transparency = 0.4 + 0.6 * alpha end
-                if core and core.Parent then core.Transparency = 0.05 + 0.95 * alpha end
-            end
-            if outer and outer.Parent then outer:Destroy() end
-            if core and core.Parent then core:Destroy() end
-        end)
-    else -- "Laser Beam"
-        local p0 = Instance.new("Part")
-        p0.Name = "Umbrella_TracerP0"
-        p0.Size = Vector3.new(0, 0, 0)
-        p0.CFrame = CFrame.new(startPos)
-        p0.Anchored = true
-        p0.CanCollide = false
-        p0.CanTouch = false
-        p0.CanQuery = false
-        p0.Transparency = 1
-        p0.Parent = workspace
-        
-        local p1 = Instance.new("Part")
-        p1.Name = "Umbrella_TracerP1"
-        p1.Size = Vector3.new(0, 0, 0)
-        p1.CFrame = CFrame.new(endPos)
-        p1.Anchored = true
-        p1.CanCollide = false
-        p1.CanTouch = false
-        p1.CanQuery = false
-        p1.Transparency = 1
-        p1.Parent = workspace
-        
-        local a0 = Instance.new("Attachment", p0)
-        local a1 = Instance.new("Attachment", p1)
-        
-        local beam = Instance.new("Beam")
-        beam.Name = "Umbrella_LaserBeam"
-        beam.Attachment0 = a0
-        beam.Attachment1 = a1
-        beam.Width0 = thickness
-        beam.Width1 = thickness
-        beam.FaceCamera = true
-        beam.LightEmission = 1
-        beam.LightInfluence = 0
-        beam.Color = ColorSequence.new(tracerColor)
-        beam.Transparency = NumberSequence.new(0.05)
-        beam.Parent = p0
-        
-        task.spawn(function()
-            local steps = 14
-            local dt = lifetime / steps
-            for i = 1, steps do
-                task.wait(dt)
-                if beam and beam.Parent then
-                    local alpha = i / steps
-                    beam.Transparency = NumberSequence.new(0.05 + 0.95 * alpha)
-                    beam.Width0 = thickness * (1 - alpha * 0.35)
-                    beam.Width1 = thickness * (1 - alpha * 0.35)
-                else
-                    break
-                end
-            end
-            if p0 and p0.Parent then p0:Destroy() end
-            if p1 and p1.Parent then p1:Destroy() end
-        end)
-    end
-    
-    if _G.HitEffectActive then
-        Create3DHitEffect(endPos)
-    end
+        end
+        if tracer and tracer.Parent then tracer:Destroy() end
+    end)
 end
 
 local function Create3DHitEffect(hitPos)
