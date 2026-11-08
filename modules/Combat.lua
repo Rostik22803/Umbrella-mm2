@@ -339,36 +339,41 @@ end)
 -- 2. REAL INVISIBLE SILENT AIM (MM2 Specialized Hook for Shoot/Stab/Throw Remotes & Index/Namecall)
 local Mouse = LocalPlayer:GetMouse()
 local OldIndex = nil
-OldIndex = hookmetamethod(game, "__index", function(self, key)
-    if _G.RealSilentAimActive and not checkcaller() then
-        if key == "Hit" or key == "hit" then
-            local target = GetClosestTarget()
-            if target and target.Character then
-                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                if bone then
-                    local predPos = GetPredictedPosition(bone)
-                    return CFrame.new(predPos)
-                end
-            end
-        elseif key == "Target" or key == "target" then
-            local target = GetClosestTarget()
-            if target and target.Character then
-                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                if bone then
-                    return bone
-                end
-            end
-        end
-    end
-    return OldIndex(self, key)
-end)
-
 local OldNamecall = nil
-OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    if _G.RealSilentAimActive and not checkcaller() then
+
+if hookmetamethod then
+    pcall(function()
+        OldIndex = hookmetamethod(game, "__index", function(self, key)
+            if _G.RealSilentAimActive and (checkcaller and not checkcaller()) then
+                if key == "Hit" or key == "hit" then
+                    local target = GetClosestTarget()
+                    if target and target.Character then
+                        local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                        if bone then
+                            local predPos = GetPredictedPosition(bone)
+                            return CFrame.new(predPos)
+                        end
+                    end
+                elseif key == "Target" or key == "target" then
+                    local target = GetClosestTarget()
+                    if target and target.Character then
+                        local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                        if bone then
+                            return bone
+                        end
+                    end
+                end
+            end
+            return OldIndex(self, key)
+        end)
+    end)
+
+    pcall(function()
+        OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod and getnamecallmethod()
+            local args = {...}
+            
+            if _G.RealSilentAimActive and (checkcaller and not checkcaller()) then
         -- 1. Intercept workspace:Raycast
         if method == "Raycast" then
             local target = GetClosestTarget()
@@ -452,7 +457,9 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return OldNamecall(self, ...)
-end)
+        end)
+    end)
+end
 
 -- Auto-tracer & Active Shoot Listener for held weapons
 local function HookToolTracer(tool)
