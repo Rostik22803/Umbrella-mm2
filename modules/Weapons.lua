@@ -197,7 +197,7 @@ local function ApplyCustomModel(modelName)
                 local userRot = (_G.CustomModelRotation and _G.CustomModelRotation ~= 0) and CFrame.Angles(0, math.rad(_G.CustomModelRotation), 0) or CFrame.new()
                 newModel:PivotTo(hrp.CFrame * CFrame.new(0, yOffset, 0) * baseRot * userRot)
                 
-                -- Configure all parts: Massless = true, CanCollide = false, CanTouch = false, CanQuery = false
+                -- Configure all parts: Massless = true, CanCollide = false, CanQuery = false, CanTouch = false
                 for _, part in ipairs(newModel:GetDescendants()) do
                     if part:IsA("BasePart") then
                         part.Anchored = false
@@ -250,8 +250,8 @@ local KnifePresets = {
         Color = Color3.fromRGB(0, 160, 255)
     },
     ["Harvester (Scythe Ancient)"] = {
-        MeshId = "rbxassetid://168119698",
-        TextureId = "rbxassetid://168119736",
+        MeshId = "rbxassetid://367801163",
+        TextureId = "rbxassetid://367801185",
         Scale = Vector3.new(1.1, 1.1, 1.1),
         Material = Enum.Material.Metal,
         Color = Color3.fromRGB(40, 40, 45)
@@ -264,8 +264,8 @@ local KnifePresets = {
         Color = Color3.fromRGB(160, 20, 240)
     },
     ["Elderwood Scythe (Ancient)"] = {
-        MeshId = "rbxassetid://168119698",
-        TextureId = "rbxassetid://168119736",
+        MeshId = "rbxassetid://367801163",
+        TextureId = "rbxassetid://367801185",
         Scale = Vector3.new(1.2, 1.2, 1.2),
         Material = Enum.Material.Wood,
         Color = Color3.fromRGB(180, 50, 20)
@@ -535,152 +535,7 @@ local GunPresets = {
     }
 }
 
--- ========================================================================
--- CUSTOM 3D WEAPON MODELS ENGINE (AWP, AK-47, M4A1, DEAGLE, SCYTHE, ETC.)
--- ========================================================================
-local CustomGunPresets = {
-    ["AK-47 (Assault Rifle)"] = {
-        Name = "AK-47 (Assault Rifle)",
-        AssetIds = { "rbxassetid://5182729442", "rbxassetid://5008064682" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["AWP (Dragon Lore / Sniper)"] = {
-        Name = "AWP (Dragon Lore / Sniper)",
-        AssetIds = { "rbxassetid://5181507328", "rbxassetid://11006944635" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["M4A1 (Tactical Carbine)"] = {
-        Name = "M4A1 (Tactical Carbine)",
-        AssetIds = { "rbxassetid://2778873048", "rbxassetid://134207834008981" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Desert Eagle (.50 Action Express)"] = {
-        Name = "Desert Eagle (.50 Action Express)",
-        AssetIds = { "rbxassetid://15651280815", "rbxassetid://17767820926" },
-        BaseScale = 0.9,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["SPAS-12 (Combat Shotgun)"] = {
-        Name = "SPAS-12 (Combat Shotgun)",
-        AssetIds = { "rbxassetid://81807416954084", "rbxassetid://90819734964360" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["RPG-7 (Rocket Launcher)"] = {
-        Name = "RPG-7 (Rocket Launcher)",
-        AssetIds = { "rbxassetid://16630906452", "rbxassetid://140655446" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Glock-18 (Automatic)"] = {
-        Name = "Glock-18 (Automatic)",
-        IsMesh = true,
-        MeshId = "rbxassetid://430045961",
-        TextureId = "rbxassetid://430046045",
-        Scale = Vector3.new(0.9, 0.9, 0.9),
-        Material = Enum.Material.Metal
-    },
-    ["Minigun (Heavy Vulcan)"] = {
-        Name = "Minigun (Heavy Vulcan)",
-        AssetIds = { "rbxassetid://10154175130", "rbxassetid://590594953" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Alien Raygun"] = {
-        Name = "Alien Raygun",
-        IsMesh = true,
-        MeshId = "rbxassetid://18265627",
-        TextureId = "rbxassetid://18265614",
-        Scale = Vector3.new(1.1, 1.1, 1.1),
-        Material = Enum.Material.Neon,
-        Color = Color3.fromRGB(0, 255, 255)
-    }
-}
 
-local CustomMeleePresets = {
-    ["Karambit (Fade / Doppler)"] = {
-        Name = "Karambit (Fade / Doppler)",
-        AssetIds = { "rbxassetid://13290314307", "rbxassetid://345265708" },
-        BaseScale = 0.95,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Butterfly Knife (Balisong)"] = {
-        Name = "Butterfly Knife (Balisong)",
-        AssetIds = { "rbxassetid://9207811853", "rbxassetid://5021484174" },
-        BaseScale = 0.9,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Muramasa Katana"] = {
-        Name = "Muramasa Katana",
-        IsMesh = true,
-        MeshId = "rbxassetid://86297695",
-        TextureId = "rbxassetid://86290910",
-        Scale = Vector3.new(1.1, 1.1, 1.1),
-        Material = Enum.Material.Metal,
-        Color = Color3.fromRGB(220, 30, 40)
-    },
-    ["Death Scythe (Grim Reaper)"] = {
-        Name = "Death Scythe (Grim Reaper)",
-        AssetIds = { "rbxassetid://2664535901", "rbxassetid://2943625227" },
-        BaseScale = 1.1,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Minecraft Diamond Sword"] = {
-        Name = "Minecraft Diamond Sword",
-        AssetIds = { "rbxassetid://7789318672", "rbxassetid://7004608388" },
-        BaseScale = 1.0,
-        RotationOffset = CFrame.Angles(0, math.rad(-90), 0)
-    },
-    ["Nordic Battle Axe"] = {
-        Name = "Nordic Battle Axe",
-        IsMesh = true,
-        MeshId = "rbxassetid://1279013",
-        TextureId = "rbxassetid://1279012",
-        Scale = Vector3.new(1.1, 1.1, 1.1),
-        Material = Enum.Material.Metal
-    },
-    ["Crowbar (Half-Life)"] = {
-        Name = "Crowbar (Half-Life)",
-        IsMesh = true,
-        MeshId = "rbxassetid://46062744",
-        TextureId = "rbxassetid://46062770",
-        Scale = Vector3.new(1.0, 1.0, 1.0),
-        Material = Enum.Material.Metal,
-        Color = Color3.fromRGB(220, 40, 40)
-    },
-    ["Lightsaber (Neon Beam)"] = {
-        Name = "Lightsaber (Neon Beam)",
-        IsSpecial3D = "Lightsaber",
-        Material = Enum.Material.Neon,
-        Color = Color3.fromRGB(0, 255, 255)
-    }
-}
-
-local CustomGunModelNames = {
-    "AK-47 (Assault Rifle)",
-    "AWP (Dragon Lore / Sniper)",
-    "M4A1 (Tactical Carbine)",
-    "Desert Eagle (.50 Action Express)",
-    "SPAS-12 (Combat Shotgun)",
-    "RPG-7 (Rocket Launcher)",
-    "Glock-18 (Automatic)",
-    "Minigun (Heavy Vulcan)",
-    "Alien Raygun"
-}
-
-local CustomMeleeModelNames = {
-    "Karambit (Fade / Doppler)",
-    "Butterfly Knife (Balisong)",
-    "Muramasa Katana",
-    "Death Scythe (Grim Reaper)",
-    "Minecraft Diamond Sword",
-    "Nordic Battle Axe",
-    "Crowbar (Half-Life)",
-    "Lightsaber (Neon Beam)"
-}
 
 local KnifeModelNames = {
     "Corrupt (Ancient Black/Blue)",
@@ -778,147 +633,7 @@ local function ApplyWeaponGrip(tool)
 end
 local ApplyGunGrip = ApplyWeaponGrip
 
-local function ApplyWeaponFX(tool, isKnife, emitterPart)
-    if not emitterPart then return end
-    
-    -- 1. Aura Particle Emitter
-    local existingAura = emitterPart:FindFirstChild("MM2_WeaponAura")
-    if _G.CustomWeaponAura ~= "None" then
-        if not existingAura then
-            existingAura = Instance.new("ParticleEmitter")
-            existingAura.Name = "MM2_WeaponAura"
-            existingAura.Parent = emitterPart
-        end
-        existingAura.LightEmission = 0.95
-        existingAura.LightInfluence = 0
-        existingAura.Drag = 1
-        
-        if _G.CustomWeaponAura == "Fire Flames" then
-            existingAura.Texture = "rbxassetid://243098098"
-            existingAura.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 230, 80)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 100, 20)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 20, 20))
-            })
-            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0.05)})
-            existingAura.Rate = 28
-            existingAura.Speed = NumberRange.new(1.0, 2.0)
-            existingAura.Lifetime = NumberRange.new(0.4, 0.7)
-            existingAura.SpreadAngle = Vector2.new(35, 35)
-        elseif _G.CustomWeaponAura == "Void Smoke" then
-            existingAura.Texture = "rbxassetid://243098098"
-            existingAura.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 5, 80))
-            })
-            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0.1)})
-            existingAura.Rate = 22
-            existingAura.Speed = NumberRange.new(0.8, 1.5)
-            existingAura.Lifetime = NumberRange.new(0.5, 0.8)
-            existingAura.SpreadAngle = Vector2.new(45, 45)
-        elseif _G.CustomWeaponAura == "Cyber Sparks" then
-            existingAura.Texture = "rbxassetid://258129523"
-            existingAura.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
-            })
-            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0.02)})
-            existingAura.Rate = 35
-            existingAura.Speed = NumberRange.new(2.0, 4.0)
-            existingAura.Lifetime = NumberRange.new(0.3, 0.5)
-            existingAura.SpreadAngle = Vector2.new(180, 180)
-        elseif _G.CustomWeaponAura == "Golden Haze" then
-            existingAura.Texture = "rbxassetid://258129523"
-            existingAura.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 230, 100)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 170, 0))
-            })
-            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0.05)})
-            existingAura.Rate = 25
-            existingAura.Speed = NumberRange.new(1.0, 2.5)
-            existingAura.Lifetime = NumberRange.new(0.4, 0.6)
-            existingAura.SpreadAngle = Vector2.new(60, 60)
-        elseif _G.CustomWeaponAura == "Blood Drip" then
-            existingAura.Texture = "rbxassetid://243098098"
-            existingAura.Color = ColorSequence.new(Color3.fromRGB(220, 20, 30))
-            existingAura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0.05)})
-            existingAura.Rate = 22
-            existingAura.Speed = NumberRange.new(0.5, 1.2)
-            existingAura.Lifetime = NumberRange.new(0.4, 0.7)
-            existingAura.Acceleration = Vector3.new(0, -9, 0)
-        end
-    else
-        if existingAura then existingAura:Destroy() end
-    end
-    
-    -- 2. Blade Trail (for Knife)
-    if isKnife then
-        local existingTrail = emitterPart:FindFirstChild("MM2_WeaponTrail")
-        if _G.WeaponTrailActive then
-            local att0 = emitterPart:FindFirstChild("MM2_TrailAtt0")
-            local att1 = emitterPart:FindFirstChild("MM2_TrailAtt1")
-            if not att0 then
-                att0 = Instance.new("Attachment")
-                att0.Name = "MM2_TrailAtt0"
-                att0.Position = Vector3.new(0, 1.2, 0)
-                att0.Parent = emitterPart
-            end
-            if not att1 then
-                att1 = Instance.new("Attachment")
-                att1.Name = "MM2_TrailAtt1"
-                att1.Position = Vector3.new(0, -0.6, 0)
-                att1.Parent = emitterPart
-            end
-            if not existingTrail then
-                existingTrail = Instance.new("Trail")
-                existingTrail.Name = "MM2_WeaponTrail"
-                existingTrail.Attachment0 = att0
-                existingTrail.Attachment1 = att1
-                existingTrail.FaceCamera = true
-                existingTrail.LightEmission = 0.85
-                existingTrail.WidthScale = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 1),
-                    NumberSequenceKeypoint.new(1, 0)
-                })
-                existingTrail.Parent = emitterPart
-            end
-            existingTrail.Lifetime = 0.35
-            local trailCol = Color3.fromRGB(255, 255, 255)
-            if _G.SelectedWeaponTrailColor == "Rainbow RGB" then
-                trailCol = _G.RainbowColor
-            elseif ChamColorPresets[_G.SelectedWeaponTrailColor] then
-                trailCol = ChamColorPresets[_G.SelectedWeaponTrailColor]
-            end
-            existingTrail.Color = ColorSequence.new(trailCol)
-        else
-            if existingTrail then existingTrail:Destroy() end
-            local a0 = emitterPart:FindFirstChild("MM2_TrailAtt0")
-            if a0 then a0:Destroy() end
-            local a1 = emitterPart:FindFirstChild("MM2_TrailAtt1")
-            if a1 then a1:Destroy() end
-        end
-    end
-end
 
-local LoadedWeaponCache = {}
-
-local function LoadWeaponAsset(assetList)
-    if not assetList then return nil end
-    for _, assetUrl in ipairs(assetList) do
-        if LoadedWeaponCache[assetUrl] then
-            return LoadedWeaponCache[assetUrl]:Clone()
-        end
-        local success, objs = pcall(function()
-            return game:GetObjects(assetUrl)
-        end)
-        if success and objs and #objs > 0 then
-            local obj = objs[1]
-            LoadedWeaponCache[assetUrl] = obj:Clone()
-            return obj
-        end
-    end
-    return nil
-end
 
 local function RemoveCustomWeaponVisual(tool)
     if not tool then return end
@@ -973,198 +688,6 @@ local function RestoreWeapon(tool)
     end
 end
 
-local function ApplyCustom3DWeapon(tool, preset, isKnife, scaleMult)
-    if not tool then return end
-    local handle = tool:FindFirstChild("Handle")
-    if not handle then return end
-    
-    BackupWeapon(tool)
-    
-    -- Hide original weapon handle and decals
-    handle.Transparency = 1
-    for _, ch in ipairs(handle:GetChildren()) do
-        if ch:IsA("Decal") then ch.Transparency = 1 end
-    end
-    
-    local existingVisual = tool:FindFirstChild("Custom3DWeaponVisual")
-    if existingVisual and existingVisual:GetAttribute("PresetKey") == preset.Name then
-        return
-    end
-    
-    if existingVisual then existingVisual:Destroy() end
-    
-    -- Special 3D: Lightsaber
-    if preset.IsSpecial3D == "Lightsaber" then
-        local model = Instance.new("Model")
-        model.Name = "Custom3DWeaponVisual"
-        model:SetAttribute("PresetKey", preset.Name)
-        
-        local hilt = Instance.new("Part")
-        hilt.Name = "Hilt"
-        hilt.Size = Vector3.new(0.25, 0.9, 0.25) * scaleMult
-        hilt.Material = Enum.Material.Metal
-        hilt.Color = Color3.fromRGB(45, 45, 45)
-        hilt.CanCollide = false
-        hilt.CanTouch = false
-        hilt.CanQuery = false
-        hilt.Massless = true
-        hilt.CFrame = handle.CFrame
-        hilt.Parent = model
-        
-        local blade = Instance.new("Part")
-        blade.Name = "Blade"
-        blade.Shape = Enum.PartType.Cylinder
-        blade.Size = Vector3.new(3.0 * scaleMult, 0.22 * scaleMult, 0.22 * scaleMult)
-        blade.Material = Enum.Material.Neon
-        local bladeCol = preset.Color or Color3.fromRGB(0, 255, 255)
-        if _G.CustomWeaponColor ~= "Original" and ChamColorPresets[_G.CustomWeaponColor] then
-            bladeCol = ChamColorPresets[_G.CustomWeaponColor]
-        end
-        blade.Color = bladeCol
-        blade.CanCollide = false
-        blade.CanTouch = false
-        blade.CanQuery = false
-        blade.Massless = true
-        blade.CFrame = handle.CFrame * CFrame.new(0, 1.6 * scaleMult, 0) * CFrame.Angles(0, 0, math.rad(90))
-        blade.Parent = model
-        
-        local w1 = Instance.new("WeldConstraint")
-        w1.Part0 = handle
-        w1.Part1 = hilt
-        w1.Parent = hilt
-        
-        local w2 = Instance.new("WeldConstraint")
-        w2.Part0 = hilt
-        w2.Part1 = blade
-        w2.Parent = blade
-        
-        model.Parent = tool
-        ApplyWeaponFX(tool, isKnife, blade)
-        return
-    end
-    
-    -- Special Mesh: If preset specifies a verified Type 4 Mesh (Glock, Muramasa, Axe, Crowbar, Raygun)
-    if preset.IsMesh and preset.MeshId then
-        local model = Instance.new("Model")
-        model.Name = "Custom3DWeaponVisual"
-        model:SetAttribute("PresetKey", preset.Name)
-        
-        local visPart = Instance.new("Part")
-        visPart.Name = "VisualPart"
-        visPart.Size = Vector3.new(1, 1, 1)
-        visPart.CanCollide = false
-        visPart.CanTouch = false
-        visPart.CanQuery = false
-        visPart.Massless = true
-        visPart.Material = preset.Material or Enum.Material.Metal
-        visPart.Color = preset.Color or Color3.fromRGB(255, 255, 255)
-        visPart.CFrame = handle.CFrame
-        visPart.Parent = model
-        
-        local mesh = Instance.new("SpecialMesh")
-        mesh.MeshType = Enum.MeshType.FileMesh
-        mesh.MeshId = preset.MeshId
-        mesh.TextureId = preset.TextureId or ""
-        mesh.Scale = (preset.Scale or Vector3.new(1, 1, 1)) * scaleMult
-        mesh.Offset = preset.Offset or Vector3.new(0, 0, 0)
-        mesh.Parent = visPart
-        
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = handle
-        weld.Part1 = visPart
-        weld.Parent = visPart
-        
-        model.Parent = tool
-        ApplyWeaponFX(tool, isKnife, visPart)
-        return
-    end
-    
-    -- Full 3D Model: AK-47, AWP, M4A1, Deagle, SPAS-12, RPG-7, Karambit, Balisong, Scythe, Diamond Sword, Minigun
-    task.spawn(function()
-        local rawObj = LoadWeaponAsset(preset.AssetIds)
-        if not rawObj then
-            -- Fallback visual indicator
-            local model = Instance.new("Model")
-            model.Name = "Custom3DWeaponVisual"
-            model:SetAttribute("PresetKey", preset.Name)
-            local p = Instance.new("Part")
-            p.Size = Vector3.new(0.5, 2.5 * scaleMult, 0.5)
-            p.Color = Color3.fromRGB(220, 35, 45)
-            p.Material = Enum.Material.Neon
-            p.CanCollide = false
-            p.Massless = true
-            p.CFrame = handle.CFrame
-            p.Parent = model
-            local w = Instance.new("WeldConstraint")
-            w.Part0 = handle
-            w.Part1 = p
-            w.Parent = p
-            model.Parent = tool
-            return
-        end
-        
-        local newModel = nil
-        if rawObj:IsA("Model") or rawObj:IsA("Tool") then
-            newModel = rawObj:Clone()
-        else
-            newModel = Instance.new("Model")
-            rawObj:Clone().Parent = newModel
-        end
-        newModel.Name = "Custom3DWeaponVisual"
-        newModel:SetAttribute("PresetKey", preset.Name)
-        
-        -- Strip unneeded scripts, sounds, touch transmitters
-        for _, obj in ipairs(newModel:GetDescendants()) do
-            if obj:IsA("LuaSourceContainer") or obj:IsA("Sound") or obj:IsA("TouchTransmitter") or obj:IsA("Humanoid") then
-                obj:Destroy()
-            end
-        end
-        
-        local primary = newModel.PrimaryPart or newModel:FindFirstChild("Handle") or newModel:FindFirstChildWhichIsA("BasePart")
-        if not primary then
-            for _, p in ipairs(newModel:GetDescendants()) do
-                if p:IsA("BasePart") then primary = p break end
-            end
-        end
-        
-        if primary then
-            newModel.PrimaryPart = primary
-            
-            -- Auto-normalize size so weapons aren't 100 studs large or microscopic
-            local sBox, sz = pcall(function() return newModel:GetBoundingBox() end)
-            if sBox and sz and sz.Magnitude > 0 then
-                local maxDim = math.max(sz.X, sz.Y, sz.Z)
-                local targetWeaponDim = isKnife and 2.2 or 3.2
-                if maxDim > 0 then
-                    local autoScale = (targetWeaponDim / maxDim) * (preset.BaseScale or 1.0) * scaleMult
-                    pcall(function() newModel:ScaleTo(autoScale) end)
-                end
-            end
-            
-            -- Position & Weld all parts
-            local rotOffset = preset.RotationOffset or CFrame.new()
-            newModel:PivotTo(handle.CFrame * rotOffset)
-            
-            for _, part in ipairs(newModel:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Anchored = false
-                    part.CanCollide = false
-                    part.CanTouch = false
-                    part.CanQuery = false
-                    part.Massless = true
-                    local weld = Instance.new("WeldConstraint")
-                    weld.Part0 = handle
-                    weld.Part1 = part
-                    weld.Parent = part
-                end
-            end
-            
-            newModel.Parent = tool
-            ApplyWeaponFX(tool, isKnife, primary)
-        end
-    end)
-end
-
 local function ApplyCustomKnife(tool)
     if not tool then return end
     local handle = tool:FindFirstChild("Handle")
@@ -1172,16 +695,7 @@ local function ApplyCustomKnife(tool)
     
     BackupWeapon(tool)
     
-    -- Check Column 2 Custom 3D Melee first
-    if _G.Custom3DMeleeActive then
-        local preset = CustomMeleePresets[_G.SelectedCustomMelee]
-        if preset then
-            ApplyCustom3DWeapon(tool, preset, true, _G.Custom3DWeaponScale or 1.0)
-            return
-        end
-    end
-    
-    -- Check Column 1 MM2 Official Skins
+    -- Check MM2 Official Knife Skins
     if _G.CustomKnifeActive then
         local preset = KnifePresets[_G.SelectedKnifeModel]
         if not preset then
@@ -1251,16 +765,7 @@ local function ApplyCustomGun(tool)
     
     BackupWeapon(tool)
     
-    -- Check Column 2 Custom 3D Gun first
-    if _G.Custom3DGunActive then
-        local preset = CustomGunPresets[_G.SelectedCustomGun]
-        if preset then
-            ApplyCustom3DWeapon(tool, preset, false, _G.Custom3DWeaponScale or 1.0)
-            return
-        end
-    end
-    
-    -- Check Column 1 MM2 Official Skins
+    -- Check MM2 Official Gun Skins
     if _G.CustomGunActive then
         local preset = GunPresets[_G.SelectedGunModel]
         if not preset then
@@ -1455,7 +960,7 @@ end)
 local function UpdateCustomWeapons()
     local knife = GetPlayerKnife()
     if knife then
-        if _G.Custom3DMeleeActive or _G.CustomKnifeActive then
+        if _G.CustomKnifeActive then
             ApplyCustomKnife(knife)
         else
             RestoreWeapon(knife)
@@ -1467,7 +972,7 @@ local function UpdateCustomWeapons()
     
     local gun = GetPlayerGun()
     if gun then
-        if _G.Custom3DGunActive or _G.CustomGunActive then
+        if _G.CustomGunActive then
             ApplyCustomGun(gun)
         else
             RestoreWeapon(gun)
@@ -1482,7 +987,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.2)
-        if _G.CustomKnifeActive or _G.CustomGunActive or _G.Custom3DGunActive or _G.Custom3DMeleeActive or _G.CustomGunGripActive or _G.CustomWeaponGripActive then
+        if _G.CustomKnifeActive or _G.CustomGunActive or _G.CustomGunGripActive or _G.CustomWeaponGripActive then
             UpdateCustomWeapons()
         end
     end
@@ -1492,7 +997,7 @@ local function HookBackpackAndChar()
     local bpack = LocalPlayer:FindFirstChild("Backpack")
     if bpack then
         bpack.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive or _G.Custom3DGunActive or _G.Custom3DMeleeActive) then
+            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive) then
                 task.wait(0.1)
                 UpdateCustomWeapons()
             end
@@ -1500,7 +1005,7 @@ local function HookBackpackAndChar()
     end
     if LocalPlayer.Character then
         LocalPlayer.Character.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive or _G.Custom3DGunActive or _G.Custom3DMeleeActive) then
+            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive) then
                 task.wait(0.1)
                 UpdateCustomWeapons()
             end
@@ -1512,7 +1017,7 @@ HookBackpackAndChar()
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     HookBackpackAndChar()
-    if _G.CustomKnifeActive or _G.CustomGunActive or _G.Custom3DGunActive or _G.Custom3DMeleeActive then
+    if _G.CustomKnifeActive or _G.CustomGunActive then
         UpdateCustomWeapons()
     end
 end)
@@ -1533,9 +1038,6 @@ Weapons.GunPresets = GunPresets
 Weapons.ModelCandidateList = ModelCandidateList
 Weapons.KnifeModelNames = KnifeModelNames
 Weapons.GunModelNames = GunModelNames
-Weapons.CustomGunPresets = CustomGunPresets
-Weapons.CustomMeleePresets = CustomMeleePresets
-Weapons.CustomGunModelNames = CustomGunModelNames
-Weapons.CustomMeleeModelNames = CustomMeleeModelNames
+
 
 return Weapons
