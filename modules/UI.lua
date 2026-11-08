@@ -24,12 +24,34 @@ local RunService = Services.RunService
 local TweenService = Services.TweenService
 local SoundService = Services.SoundService
 local Lighting = Services.Lighting
-local ParentGui = Core.ParentGui or game:GetService("CoreGui")
+local ParentGui = Core.ParentGui or (function()
+    if gethui then
+        local s, r = pcall(gethui)
+        if s and r then return r end
+    end
+    local p = LocalPlayer or game:GetService("Players").LocalPlayer
+    if p then
+        local pgui = p:FindFirstChildOfClass("PlayerGui")
+        if pgui then return pgui end
+    end
+    return game:GetService("CoreGui")
+end)()
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Umbrella_MM2_Edition"
-ScreenGui.Parent = ParentGui
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Safe parenting with fallback for mobile executors (Delta, Codex, etc.)
+local parentSuccess = pcall(function()
+    ScreenGui.Parent = ParentGui
+end)
+if not parentSuccess then
+    pcall(function()
+        local p = LocalPlayer or game:GetService("Players").LocalPlayer
+        ScreenGui.Parent = p:WaitForChild("PlayerGui", 5)
+    end)
+end
 UI.ScreenGui = ScreenGui
 
 local MainFrame = Instance.new("Frame")
@@ -690,7 +712,8 @@ local function AddTabButton(name, iconText, layoutOrder)
     
     Btn.MouseButton1Click:Connect(function()
         SwitchTab(name)
-    end)\n    
+    end)
+    
     TabButtons[name] = Btn
 end
 
@@ -909,7 +932,7 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     local Label = Instance.new("TextLabel")
     Label.Parent = DropFrame
     Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 0, 0, 0)
+    Label.Position = UDim2.new(0, 0, 0, 14)
     Label.Size = UDim2.new(1, 0, 0, 14)
     Label.Font = Enum.Font.SourceSans
     Label.Text = text
@@ -1038,6 +1061,42 @@ MinimizeBtn.MouseButton1Click:Connect(function()
         ContentArea.Visible = true
         Sidebar.Visible = true
         MinimizeBtn.Text = "−"
+    end
+end)
+
+------------------------------------------------------------------------
+-- FLOATING MOBILE TOGGLE BUTTON & KEYBIND TOGGLE
+------------------------------------------------------------------------
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "Umbrella_MobileToggle"
+ToggleButton.Parent = ScreenGui
+ToggleButton.Position = UDim2.new(0, 15, 0.5, -20)
+ToggleButton.Size = UDim2.new(0, 42, 0, 42)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(18, 19, 25)
+ToggleButton.Text = ""
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(1, 0)
+local tbStroke = Instance.new("UIStroke", ToggleButton)
+tbStroke.Color = Color3.fromRGB(220, 35, 45)
+tbStroke.Thickness = 1.5
+
+local tbLogoHolder = Instance.new("Frame", ToggleButton)
+tbLogoHolder.BackgroundTransparency = 1
+tbLogoHolder.Position = UDim2.new(0.5, -14, 0.5, -14)
+tbLogoHolder.Size = UDim2.new(0, 28, 0, 28)
+CreateExactUmbrellaLogo(tbLogoHolder, 28)
+
+local function ToggleMenu()
+    MainFrame.Visible = not MainFrame.Visible
+end
+
+ToggleButton.MouseButton1Click:Connect(ToggleMenu)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert then
+        ToggleMenu()
     end
 end)
 
