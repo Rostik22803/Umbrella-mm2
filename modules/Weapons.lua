@@ -109,7 +109,8 @@ local function LoadModelObjects(key)
             return objs
         end
     end
-    return nil\nend
+    return nil
+end
 
 local function ApplyCustomModel(modelName)
     local char = LocalPlayer.Character
@@ -442,6 +443,7 @@ local function BackupWeapon(tool)
     if not handle then return end
     local mesh = handle:FindFirstChildOfClass("SpecialMesh")
     OriginalWeaponData[tool] = {
+        Grip = tool.Grip,
         MeshId = mesh and mesh.MeshId or "",
         TextureId = mesh and mesh.TextureId or "",
         Scale = mesh and mesh.Scale or Vector3.new(1, 1, 1),
@@ -451,6 +453,26 @@ local function BackupWeapon(tool)
         Material = handle.Material,
         Transparency = handle.Transparency
     }
+end
+
+local function ApplyGunGrip(tool)
+    if not tool or not tool:IsA("Tool") then return end
+    local isGun = (tool.Name == "Gun" or tool.Name == "Revolver" or tool:FindFirstChild("ShootGun") or tool:FindFirstChild("KnifeServer"))
+    if not isGun then return end
+    BackupWeapon(tool)
+    local data = OriginalWeaponData[tool]
+    local baseGrip = (data and data.Grip) or CFrame.new()
+    if _G.CustomGunGripActive then
+        local posOffset = Vector3.new(_G.GunHandPosX or 0, _G.GunHandPosY or 0, _G.GunHandPosZ or 0)
+        local rotOffset = CFrame.Angles(
+            math.rad(_G.GunHandRotX or 0),
+            math.rad(_G.GunHandRotY or 0),
+            math.rad(_G.GunHandRotZ or 0)
+        )
+        tool.Grip = baseGrip * CFrame.new(posOffset) * rotOffset
+    else
+        tool.Grip = baseGrip
+    end
 end
 
 local function RestoreWeapon(tool)
@@ -474,6 +496,7 @@ local function RestoreWeapon(tool)
     
     local data = OriginalWeaponData[tool]
     if data then
+        if data.Grip then tool.Grip = data.Grip end
         handle.Transparency = data.Transparency or 0
         handle.Color = data.Color
         handle.Material = data.Material
@@ -806,6 +829,7 @@ local function ApplyCustomGun(tool)
     end
     
     ApplyWeaponFX(tool, false, handle)
+    ApplyGunGrip(tool)
 end
 
 local function GetPlayerKnife()
@@ -871,6 +895,9 @@ local function UpdateCustomWeapons()
         else
             RestoreWeapon(gun)
         end
+        if _G.CustomGunGripActive then
+            ApplyGunGrip(gun)
+        end
     end
 end
 
@@ -878,7 +905,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.2)
-        if _G.CustomKnifeActive or _G.CustomGunActive then
+        if _G.CustomKnifeActive or _G.CustomGunActive or _G.CustomGunGripActive then
             UpdateCustomWeapons()
         end
     end
@@ -917,6 +944,7 @@ end)
 
 Weapons.ApplyCustomModel = ApplyCustomModel
 Weapons.RemoveCustomModel = RemoveCustomModel
+Weapons.ApplyGunGrip = ApplyGunGrip
 Weapons.ApplyCustomKnife = ApplyCustomKnife
 Weapons.ApplyCustomGun = ApplyCustomGun
 Weapons.UpdateCustomWeapons = UpdateCustomWeapons
