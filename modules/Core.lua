@@ -106,6 +106,17 @@ end
 
 Core.RoleColors = RoleColors
 Core.UpdateRoleColors = UpdateRoleColors
+local function IsMurderer(player)
+    if not player then return false end
+    if GetRole(player) == "Murderer" then return true end
+    if player.Character then
+        if player.Character:FindFirstChild("Knife") or player.Character:FindFirstChild("Slash") then return true end
+    end
+    local bp = player:FindFirstChild("Backpack")
+    if bp and (bp:FindFirstChild("Knife") or bp:FindFirstChild("Slash")) then return true end
+    return false
+end
+Core.IsMurderer = IsMurderer
 Core.GetRole = GetRole
 Core.IsHoldingWeapon = IsHoldingWeapon
 
@@ -129,6 +140,20 @@ _G.CustomModelRotation = 0
 _G.CustomKnifeActive = false
 _G.SelectedKnifeModel = "Luger Blade / Heat"
 _G.CustomGunActive = false
+_G.CustomGunGripActive = false
+_G.GunHandPosX = 0.0
+_G.GunHandPosY = 0.0
+_G.GunHandPosZ = 0.0
+_G.GunHandRotX = 0
+_G.GunHandRotY = 0
+_G.GunHandRotZ = 0
+_G.SelectedTracerColor = "Blood Red"
+_G.TracerThickness = 0.12
+_G.TracerLifetime = 0.5
+_G.TracerStyle = "Dual Pulse (White Core)"
+_G.SilentAimTargetMode = "Murderer Only"
+_G.SilentAimWallbang = true
+_G.SilentAimFOV = 300
 _G.SelectedGunModel = "Golden Luger"
 _G.CustomWeaponMaterial = "Default"
 _G.CustomWeaponColor = "Original"
