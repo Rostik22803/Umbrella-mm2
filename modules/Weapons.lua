@@ -17,6 +17,9 @@ local Players = Services.Players
 local LocalPlayer = Core.LocalPlayer or Players.LocalPlayer
 local RunService = Services.RunService
 local TweenService = Services.TweenService
+local ColorPresets = Core.ColorPresets or {}
+local ChamColorPresets = ColorPresets
+
 
 -- 1. Custom 3D Character Models Engine
 -- Custom Models (English Keys + Roblox Asset IDs)
@@ -829,7 +832,6 @@ local function ApplyCustomGun(tool)
     end
     
     ApplyWeaponFX(tool, false, handle)
-    ApplyGunGrip(tool)
 end
 
 local function GetPlayerKnife()
