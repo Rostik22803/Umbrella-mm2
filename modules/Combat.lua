@@ -408,30 +408,57 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 2. REAL INVISIBLE SILENT AIM (MM2 Specialized Hook for Shoot/Stab/Throw Remotes & Index/Namecall)
-local Mouse = LocalPlayer:GetMouse()
+-- 2. REAL INVISIBLE SILENT AIM (100% Crash-Proof & Delta-Optimized Metamethod Engine)
+local CurrentSilentTarget = nil
+local CurrentSilentBone = nil
+local CurrentSilentPos = nil
+local isScanningSilent = false
+local isInsideHook = false
+
+-- Asynchronous target scanner (Runs on Heartbeat with 0.05s throttle, never inside metamethods!)
+RunService.Heartbeat:Connect(function()
+    if not _G.RealSilentAimActive then
+        CurrentSilentTarget = nil
+        CurrentSilentBone = nil
+        CurrentSilentPos = nil
+        return
+    end
+    if isScanningSilent then return end
+    isScanningSilent = true
+    
+    local success, target, bone = pcall(GetClosestTarget)
+    if success and target and bone then
+        CurrentSilentTarget = target
+        CurrentSilentBone = bone
+        CurrentSilentPos = GetPredictedPosition(bone)
+    else
+        CurrentSilentTarget = nil
+        CurrentSilentBone = nil
+        CurrentSilentPos = nil
+    end
+    
+    isScanningSilent = false
+end)
+
 local OldIndex = nil
 local OldNamecall = nil
 
 if hookmetamethod then
+    -- Safe __index hook: ONLY intercepts Player Mouse instances to prevent global engine lag/crashes
     pcall(function()
         OldIndex = hookmetamethod(game, "__index", function(self, key)
-            if _G.RealSilentAimActive and (checkcaller and not checkcaller()) then
-                if key == "Hit" or key == "hit" then
-                    local target, targetBone = GetClosestTarget()
-                    if target and target.Character then
-                        local bone = targetBone or GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                        if bone then
-                            local predPos = GetPredictedPosition(bone)
-                            return CFrame.new(predPos)
-                        end
-                    end
-                elseif key == "Target" or key == "target" then
-                    local target, targetBone = GetClosestTarget()
-                    if target and target.Character then
-                        local bone = targetBone or GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                        if bone then
-                            return bone
+            if not isInsideHook and _G.RealSilentAimActive then
+                local isCaller = false
+                if checkcaller then
+                    pcall(function() isCaller = checkcaller() end)
+                end
+                
+                if not isCaller and CurrentSilentPos and typeof(self) == "Instance" and self:IsA("Mouse") then
+                    if key == "Hit" or key == "hit" then
+                        return CFrame.new(CurrentSilentPos)
+                    elseif key == "Target" or key == "target" then
+                        if CurrentSilentBone then
+                            return CurrentSilentBone
                         end
                     end
                 end
@@ -440,90 +467,53 @@ if hookmetamethod then
         end)
     end)
 
+    -- Safe __namecall hook: Intercepts MM2 RemoteEvents & RemoteFunctions (ShootGun, Throw, Shoot)
     pcall(function()
         OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod and getnamecallmethod()
-            local args = {...}
+            if isInsideHook or not _G.RealSilentAimActive then
+                return OldNamecall(self, ...)
+            end
             
-            if _G.RealSilentAimActive and (checkcaller and not checkcaller()) then
-                -- 1. Intercept workspace:Raycast
-                if method == "Raycast" then
-                    local target, targetBone = GetClosestTarget()
-                    if target and target.Character then
-                        local bone = targetBone or GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                        if bone then
-                            local predPos = GetPredictedPosition(bone)
-                            local origin = args[1]
-                            if typeof(origin) == "Vector3" then
-                                args[2] = (predPos - origin).Unit * 1000
-                                if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
-                                    Umbrella.HvH.CreateBulletTracer(origin, predPos)
-                                end
-                                OnHitRegistered(target, predPos, bone.Name)
-                                return OldNamecall(self, unpack(args))
+            local isCaller = false
+            if checkcaller then
+                pcall(function() isCaller = checkcaller() end)
+            end
+            if isCaller then
+                return OldNamecall(self, ...)
+            end
+            
+            local method = getnamecallmethod and getnamecallmethod()
+            if method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer" then
+                if CurrentSilentPos and CurrentSilentTarget then
+                    local remoteName = tostring(self.Name):lower()
+                    if remoteName:find("shoot") or remoteName:find("throw") or remoteName:find("knife") or remoteName:find("gun") then
+                        isInsideHook = true
+                        local args = {...}
+                        local replaced = false
+                        for i, arg in ipairs(args) do
+                            if typeof(arg) == "Vector3" then
+                                args[i] = CurrentSilentPos
+                                replaced = true
+                            elseif typeof(arg) == "CFrame" then
+                                args[i] = CFrame.new(arg.Position, CurrentSilentPos)
+                                replaced = true
                             end
                         end
-                    end
-                -- 2. Intercept FindPartOnRay methods
-                elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
-                    local target, targetBone = GetClosestTarget()
-                    if target and target.Character then
-                        local bone = targetBone or GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                        if bone then
-                            local predPos = GetPredictedPosition(bone)
-                            local ray = args[1]
-                            if typeof(ray) == "Ray" then
-                                args[1] = Ray.new(ray.Origin, (predPos - ray.Origin).Unit * 1000)
-                                if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
-                                    Umbrella.HvH.CreateBulletTracer(ray.Origin, predPos)
-                                end
-                                OnHitRegistered(target, predPos, bone.Name)
-                                return OldNamecall(self, unpack(args))
-                            end
+                        if not replaced and #args > 0 then
+                            args[1] = CurrentSilentPos
                         end
-                    end
-                -- 3. Intercept Viewport rays
-                elseif method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    local target, targetBone = GetClosestTarget()
-                    if target and target.Character then
-                        local bone = targetBone or GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                        if bone then
-                            local predPos = GetPredictedPosition(bone)
-                            local origin = Camera.CFrame.Position
-                            return Ray.new(origin, (predPos - origin).Unit * 1000)
+                        
+                        -- Draw bullet tracer & hit log
+                        if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
+                            local myChar = LocalPlayer.Character
+                            local origin = (myChar and myChar:FindFirstChild("Head") and myChar.Head.Position) or Camera.CFrame.Position
+                            Umbrella.HvH.CreateBulletTracer(origin, CurrentSilentPos)
                         end
-                    end
-                -- 4. Intercept Remote Events & Remote Functions
-                elseif method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer" then
-                    local remoteName = tostring(self.Name)
-                    local target, targetBone = GetClosestTarget()
-                    if target and target.Character then
-                        local bone = targetBone or GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-                        local predPos = bone and GetPredictedPosition(bone) or (target.Character.PrimaryPart and target.Character.PrimaryPart.Position)
-                        if predPos then
-                            local replaced = false
-                            for i, arg in ipairs(args) do
-                                if typeof(arg) == "Vector3" then
-                                    args[i] = predPos
-                                    replaced = true
-                                elseif typeof(arg) == "CFrame" then
-                                    args[i] = CFrame.new(arg.Position, predPos)
-                                    replaced = true
-                                end
-                            end
-                            if replaced or remoteName == "Shoot" or remoteName == "ShootServer" or remoteName == "ShootGun" or remoteName == "Throw" or remoteName == "KnifeServer" then
-                                if not replaced and #args > 0 then
-                                    args[1] = predPos
-                                end
-                                local char = LocalPlayer.Character
-                                local startPos = (char and char:FindFirstChild("Head") and char.Head.Position) or Camera.CFrame.Position
-                                if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
-                                    Umbrella.HvH.CreateBulletTracer(startPos, predPos)
-                                end
-                                OnHitRegistered(target, predPos, bone and bone.Name or "HumanoidRootPart")
-                                return OldNamecall(self, unpack(args))
-                            end
-                        end
+                        OnHitRegistered(CurrentSilentTarget, CurrentSilentPos, CurrentSilentBone and CurrentSilentBone.Name or "Head")
+                        
+                        local ret = OldNamecall(self, unpack(args))
+                        isInsideHook = false
+                        return ret
                     end
                 end
             end
