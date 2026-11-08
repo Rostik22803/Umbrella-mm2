@@ -430,6 +430,7 @@ end
 
 CreateTabPage("Main")
 CreateTabPage("Visuals")
+CreateTabPage("Skins")
 CreateTabPage("Combat")
 CreateTabPage("HvH")
 CreateTabPage("Settings")
@@ -719,9 +720,10 @@ end
 
 AddTabButton("Main", "⚡", 1)
 AddTabButton("Visuals", "👁", 2)
-AddTabButton("Combat", "⚔", 3)
-AddTabButton("HvH", "☠", 4)
-AddTabButton("Settings", "⚙", 5)
+AddTabButton("Skins", "🎨", 3)
+AddTabButton("Combat", "⚔", 4)
+AddTabButton("HvH", "☠", 5)
+AddTabButton("Settings", "⚙", 6)
 
 
 
@@ -932,7 +934,7 @@ local function CreateDropdown(parentSec, text, options, defaultOpt, callback)
     local Label = Instance.new("TextLabel")
     Label.Parent = DropFrame
     Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 0, 0, 14)
+    Label.Position = UDim2.new(0, 0, 0, 0)
     Label.Size = UDim2.new(1, 0, 0, 14)
     Label.Font = Enum.Font.SourceSans
     Label.Text = text
