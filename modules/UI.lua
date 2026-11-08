@@ -690,8 +690,7 @@ local function AddTabButton(name, iconText, layoutOrder)
     
     Btn.MouseButton1Click:Connect(function()
         SwitchTab(name)
-    end)
-    
+    end)\n    
     TabButtons[name] = Btn
 end
 
@@ -1103,5 +1102,23 @@ UI.MenuBgOptionNames = MenuBgOptionNames
 UI.HeadDotColorOptionNames = HeadDotColorOptionNames
 UI.CrosshairColorOptionNames = CrosshairColorOptionNames
 UI.ChamsStyleOptionNames = { "Boxes", "Highlight", "Outline Only", "Chams (Solid)" }
+
+
+UI.ScreenGui = ScreenGui
+UI.UIStrokeMain = UIStrokeMain
+UI.HeaderLine = HeaderLine
+UI.AwallIndicator = AwallIndicator
+UI.Watermark = Watermark
+UI.HitLogsContainer = HitLogsContainer
+UI.hmLines = hmLines
+UI.Tabs = Tabs
+UI.TabButtons = TabButtons
+UI.CurrentActiveTab = CurrentActiveTab
+UI.AllToggles = AllToggles
+UI.AllSliderFills = AllSliderFills
+UI.AllDropdownStrokes = AllDropdownStrokes
+UI.AllSectionTitles = AllSectionTitles
+UI.AllSectionScrollbars = AllSectionScrollbars
+UI.UmbrellaCircles = UmbrellaCircles or {}
 
 return UI
