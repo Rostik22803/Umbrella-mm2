@@ -156,12 +156,24 @@ Instance.new("UICorner", ProgressBarFill).CornerRadius = UDim.new(1, 0)
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(14, 15, 19)
-MainFrame.Position = UDim2.new(0.5, -375, 0.5, -250)
-MainFrame.Size = UDim2.new(0, 750, 0, 500)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.Size = UDim2.new(0, 680, 0, 440)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.ClipsDescendants = false
 MainFrame.Visible = false
+
+local function UpdateMenuResponsiveSize()
+    local vp = Camera.ViewportSize
+    if vp.X > 0 and vp.Y > 0 then
+        local w = math.clamp(vp.X - 24, 460, 680)
+        local h = math.clamp(vp.Y - 24, 340, 440)
+        MainFrame.Size = UDim2.new(0, w, 0, h)
+    end
+end
+UpdateMenuResponsiveSize()
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateMenuResponsiveSize)
 
 UICornerMain.CornerRadius = UDim.new(0, 8)
 UICornerMain.Parent = MainFrame
@@ -362,8 +374,8 @@ local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(15, 16, 21)
-Sidebar.Position = UDim2.new(0, 0, 0, 48)
-Sidebar.Size = UDim2.new(0, 140, 1, -48)
+Sidebar.Position = UDim2.new(0, 0, 0, 44)
+Sidebar.Size = UDim2.new(0, 130, 1, -44)
 Sidebar.BorderSizePixel = 0
 
 local SidebarLine = Instance.new("Frame")
@@ -391,8 +403,8 @@ local ContentArea = Instance.new("Frame")
 ContentArea.Name = "ContentArea"
 ContentArea.Parent = MainFrame
 ContentArea.BackgroundTransparency = 1
-ContentArea.Position = UDim2.new(0, 140, 0, 48)
-ContentArea.Size = UDim2.new(1, -140, 1, -48)
+ContentArea.Position = UDim2.new(0, 130, 0, 44)
+ContentArea.Size = UDim2.new(1, -130, 1, -44)
 
 local Tabs = {}
 local TabButtons = {}
@@ -402,10 +414,10 @@ local function CreateTabPage(name)
     Page.Name = name .. "Page"
     Page.Parent = ContentArea
     Page.BackgroundTransparency = 1
-    Page.Position = UDim2.new(0, 10, 0, 10)
-    Page.Size = UDim2.new(1, -20, 1, -20)
+    Page.Position = UDim2.new(0, 8, 0, 8)
+    Page.Size = UDim2.new(1, -16, 1, -16)
     Page.Visible = false
-    Page.ScrollBarThickness = 5
+    Page.ScrollBarThickness = 4
     Page.ScrollBarImageColor3 = Color3.fromRGB(220, 35, 45)
     Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -416,12 +428,12 @@ local function CreateTabPage(name)
     
     local Grid = Instance.new("UIGridLayout")
     Grid.Parent = Page
-    Grid.CellSize = UDim2.new(0, 275, 0, 290)
-    Grid.CellPadding = UDim2.new(0, 14, 0, 14)
+    Grid.CellSize = UDim2.new(0.5, -6, 0, 280)
+    Grid.CellPadding = UDim2.new(0, 8, 0, 10)
     Grid.SortOrder = Enum.SortOrder.LayoutOrder
     
     Grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        Page.CanvasSize = UDim2.new(0, 0, 0, Grid.AbsoluteContentSize.Y + 28)
+        Page.CanvasSize = UDim2.new(0, 0, 0, Grid.AbsoluteContentSize.Y + 20)
     end)
     
     Tabs[name] = Page
@@ -736,7 +748,7 @@ local function CreateSection(parentPage, title)
     local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
     Section.BackgroundColor3 = bgPreset.Section
     Section.BackgroundTransparency = _G.SectionTransparency or 0
-    Section.Size = UDim2.new(0, 275, 0, 290)
+    Section.Size = UDim2.new(0.5, -6, 0, 280)
     
     Instance.new("UICorner", Section).CornerRadius = UDim.new(0, 8)
     local Stroke = Instance.new("UIStroke")
@@ -1052,13 +1064,16 @@ end)
 local isMinimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
+    local vp = Camera.ViewportSize
+    local curW = math.clamp(vp.X - 24, 460, 680)
+    local curH = math.clamp(vp.Y - 24, 340, 440)
     if isMinimized then
         ContentArea.Visible = false
         Sidebar.Visible = false
-        MainFrame:TweenSize(UDim2.new(0, 720, 0, 48), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
+        MainFrame:TweenSize(UDim2.new(0, curW, 0, 44), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
         MinimizeBtn.Text = "+"
     else
-        MainFrame:TweenSize(UDim2.new(0, 720, 0, 480), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
+        MainFrame:TweenSize(UDim2.new(0, curW, 0, curH), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
         task.wait(0.15)
         ContentArea.Visible = true
         Sidebar.Visible = true
