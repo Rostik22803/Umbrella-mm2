@@ -256,25 +256,38 @@ local function GetClosestTarget()
     
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local targetRole = GetRole(player)
+            local targetIsMurderer = false
+            if Core.IsMurderer then
+                targetIsMurderer = Core.IsMurderer(player)
+            else
+                targetIsMurderer = (GetRole(player) == "Murderer")
+                    or (player.Character and (player.Character:FindFirstChild("Knife") or player.Character:FindFirstChild("Slash")))
+                    or (player:FindFirstChild("Backpack") and (player.Backpack:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Slash")))
+            end
+            
             local validTarget = false
-            if myRole == "Murderer" and targetRole ~= "Murderer" then
+            if _G.SilentAimTargetMode == "All Enemies / Players" then
                 validTarget = true
-            elseif (myRole == "Sheriff" or myRole == "Innocent") and targetRole == "Murderer" then
-                validTarget = true
+            elseif myRole == "Murderer" then
+                validTarget = not targetIsMurderer
+            else
+                validTarget = targetIsMurderer
             end
             
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
             if validTarget and humanoid and humanoid.Health > 0 then
-                local bone = GetAimbotBone(player.Character)
+                local bone = GetAimbotBone(player.Character) or player.Character:FindFirstChild("Head") or player.Character:FindFirstChild("HumanoidRootPart")
                 if bone then
-                    local isVisible, _ = CheckAwallRay(bone)
-                    if isVisible then
+                    local canHit = true
+                    if not _G.SilentAimWallbang and _G.AwallCheckActive then
+                        canHit = CheckAwallRay(bone)
+                    end
+                    if canHit then
                         local predPos = GetPredictedPosition(bone)
                         local screenPos, onScreen = Camera:WorldToViewportPoint(predPos)
                         if onScreen and screenPos.Z > 0 then
                             local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                            local maxAllowed = _G.ShowFOVCircle and _G.FOVCircleRadius or 1200
+                            local maxAllowed = _G.SilentAimFOV or (_G.ShowFOVCircle and _G.FOVCircleRadius or 1200)
                             if mouseDist <= maxAllowed and mouseDist < shortestDist then
                                 shortestDist = mouseDist
                                 closestPlayer = player
@@ -327,15 +340,21 @@ end)
 local Mouse = LocalPlayer:GetMouse()
 local OldIndex = nil
 OldIndex = hookmetamethod(game, "__index", function(self, key)
-    if _G.RealSilentAimActive and not checkcaller() and (key == "Hit" or key == "Target") then
-        local target = GetClosestTarget()
-        if target and target.Character then
-            local bone = GetAimbotBone(target.Character)
-            if bone then
-                local predPos = GetPredictedPosition(bone)
-                if key == "Hit" then
+    if _G.RealSilentAimActive and not checkcaller() then
+        if key == "Hit" or key == "hit" then
+            local target = GetClosestTarget()
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                if bone then
+                    local predPos = GetPredictedPosition(bone)
                     return CFrame.new(predPos)
-                elseif key == "Target" then
+                end
+            end
+        elseif key == "Target" or key == "target" then
+            local target = GetClosestTarget()
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                if bone then
                     return bone
                 end
             end
@@ -349,30 +368,135 @@ OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     
-    if _G.RealSilentAimActive and not checkcaller() and (method == "FireServer" or method == "fireServer") then
-        local remoteName = self.Name
-        if remoteName == "Shoot" or remoteName == "ShootServer" or remoteName == "Stab" or remoteName == "StabServer" or remoteName == "Throw" or remoteName == "KnifeServer" then
+    if _G.RealSilentAimActive and not checkcaller() then
+        -- 1. Intercept workspace:Raycast
+        if method == "Raycast" then
             local target = GetClosestTarget()
             if target and target.Character then
-                local bone = GetAimbotBone(target.Character)
-                local predPos = bone and GetPredictedPosition(bone) or (target.Character.PrimaryPart and target.Character.PrimaryPart.Position)
-                for i, arg in ipairs(args) do
-                    if typeof(arg) == "Vector3" then
-                        args[i] = predPos
-                    elseif typeof(arg) == "CFrame" then
-                        args[i] = CFrame.new(arg.Position, predPos)
+                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                if bone then
+                    local predPos = GetPredictedPosition(bone)
+                    local origin = args[1]
+                    if typeof(origin) == "Vector3" then
+                        args[2] = (predPos - origin).Unit * 1000
+                        if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
+                            Umbrella.HvH.CreateBulletTracer(origin, predPos)
+                        end
+                        OnHitRegistered(target, predPos, bone.Name)
+                        return OldNamecall(self, unpack(args))
                     end
                 end
-                if #args == 0 or (typeof(args[1]) ~= "Vector3" and typeof(args[1]) ~= "CFrame") then
-                    args[1] = predPos
+            end
+        -- 2. Intercept FindPartOnRay methods
+        elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
+            local target = GetClosestTarget()
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                if bone then
+                    local predPos = GetPredictedPosition(bone)
+                    local ray = args[1]
+                    if typeof(ray) == "Ray" then
+                        args[1] = Ray.new(ray.Origin, (predPos - ray.Origin).Unit * 1000)
+                        if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
+                            Umbrella.HvH.CreateBulletTracer(ray.Origin, predPos)
+                        end
+                        OnHitRegistered(target, predPos, bone.Name)
+                        return OldNamecall(self, unpack(args))
+                    end
                 end
-                OnHitRegistered(target, predPos, "HumanoidRootPart")
-                return OldNamecall(self, unpack(args))
+            end
+        -- 3. Intercept Viewport rays
+        elseif method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+            local target = GetClosestTarget()
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                if bone then
+                    local predPos = GetPredictedPosition(bone)
+                    local origin = Camera.CFrame.Position
+                    return Ray.new(origin, (predPos - origin).Unit * 1000)
+                end
+            end
+        -- 4. Intercept Remote Events & Remote Functions
+        elseif method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer" then
+            local remoteName = tostring(self.Name)
+            local target = GetClosestTarget()
+            if target and target.Character then
+                local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                local predPos = bone and GetPredictedPosition(bone) or (target.Character.PrimaryPart and target.Character.PrimaryPart.Position)
+                if predPos then
+                    local replaced = false
+                    for i, arg in ipairs(args) do
+                        if typeof(arg) == "Vector3" then
+                            args[i] = predPos
+                            replaced = true
+                        elseif typeof(arg) == "CFrame" then
+                            args[i] = CFrame.new(arg.Position, predPos)
+                            replaced = true
+                        end
+                    end
+                    if replaced or remoteName == "Shoot" or remoteName == "ShootServer" or remoteName == "ShootGun" or remoteName == "Throw" or remoteName == "KnifeServer" then
+                        if not replaced and #args > 0 then
+                            args[1] = predPos
+                        end
+                        local char = LocalPlayer.Character
+                        local startPos = (char and char:FindFirstChild("Head") and char.Head.Position) or Camera.CFrame.Position
+                        if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
+                            Umbrella.HvH.CreateBulletTracer(startPos, predPos)
+                        end
+                        OnHitRegistered(target, predPos, bone and bone.Name or "HumanoidRootPart")
+                        return OldNamecall(self, unpack(args))
+                    end
+                end
             end
         end
     end
     
     return OldNamecall(self, ...)
+end)
+
+-- Auto-tracer & Active Shoot Listener for held weapons
+local function HookToolTracer(tool)
+    if not tool or not tool:IsA("Tool") then return end
+    if tool:GetAttribute("UmbrellaTracerBound") then return end
+    tool:SetAttribute("UmbrellaTracerBound", true)
+    
+    tool.Activated:Connect(function()
+        if not _G.TracersActive then return end
+        local isGun = (tool.Name == "Gun" or tool.Name == "Revolver" or tool:FindFirstChild("ShootGun") or tool:FindFirstChild("KnifeServer"))
+        if not isGun then return end
+        
+        local handle = tool:FindFirstChild("Handle")
+        local startPos = (handle and handle.Position) or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position) or Camera.CFrame.Position
+        
+        local target = _G.RealSilentAimActive and GetClosestTarget()
+        local hitPos = nil
+        if target and target.Character then
+            local bone = GetAimbotBone(target.Character) or target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+            if bone then hitPos = GetPredictedPosition(bone) end
+        end
+        if not hitPos then
+            local mouse = LocalPlayer:GetMouse()
+            hitPos = (mouse and mouse.Hit and mouse.Hit.Position) or (startPos + Camera.CFrame.LookVector * 250)
+        end
+        
+        if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
+            Umbrella.HvH.CreateBulletTracer(startPos, hitPos)
+        end
+    end)
+end
+
+if LocalPlayer.Character then
+    for _, t in ipairs(LocalPlayer.Character:GetChildren()) do
+        if t:IsA("Tool") then HookToolTracer(t) end
+    end
+    LocalPlayer.Character.ChildAdded:Connect(function(c)
+        if c:IsA("Tool") then HookToolTracer(c) end
+    end)
+end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char.ChildAdded:Connect(function(c)
+        if c:IsA("Tool") then HookToolTracer(c) end
+    end)
 end)
 
 
