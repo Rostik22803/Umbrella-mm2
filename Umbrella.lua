@@ -238,6 +238,18 @@ end)
 CreateSlider(SecHitVisuals, "Sound Volume", _G.HitSoundVolume, 1, 10, false, function(val) _G.HitSoundVolume = val end)
 CreateToggle(SecHitVisuals, "Screen Hitmarker", true, function(st) _G.HitmarkersActive = st end)
 CreateToggle(SecHitVisuals, "Bullet Tracers (Laser Beam)", true, function(st) _G.TracersActive = st end)
+CreateDropdown(SecHitVisuals, "Tracer Color Preset", {"Blood Red", "Cyber Cyan", "Neon Pink", "Electric Green", "Purple HvH", "Pure White", "Gold Glow", "Rainbow RGB"}, _G.SelectedTracerColor or "Blood Red", function(selected)
+    _G.SelectedTracerColor = selected
+end)
+CreateDropdown(SecHitVisuals, "Tracer Visual Style", {"Dual Pulse (White Core)", "Laser Neon (Solid)"}, _G.TracerStyle or "Dual Pulse (White Core)", function(selected)
+    _G.TracerStyle = selected
+end)
+CreateSlider(SecHitVisuals, "Tracer Thickness", _G.TracerThickness or 0.12, 0.05, 0.4, true, function(val)
+    _G.TracerThickness = val
+end)
+CreateSlider(SecHitVisuals, "Tracer Lifetime", _G.TracerLifetime or 0.5, 0.2, 2.0, true, function(val)
+    _G.TracerLifetime = val
+end)
 CreateToggle(SecHitVisuals, "3D Hit Impact Sphere", true, function(st) _G.HitEffectActive = st end)
 CreateToggle(SecHitVisuals, "HvH Watermark Display", true, function(st) 
     _G.WatermarkActive = st 
@@ -294,6 +306,34 @@ CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red
     if _G.CustomKnifeActive then
         UpdateCustomWeapons()
     end
+end)
+CreateToggle(SecCustomWeapons, "Custom Gun Hands / Viewmodel Offset", _G.CustomGunGripActive, function(st)
+    _G.CustomGunGripActive = st
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Gun Position X (Left/Right)", _G.GunHandPosX or 0.0, -3.0, 3.0, true, function(val)
+    _G.GunHandPosX = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Gun Position Y (Up/Down)", _G.GunHandPosY or 0.0, -3.0, 3.0, true, function(val)
+    _G.GunHandPosY = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Gun Position Z (Forward/Back)", _G.GunHandPosZ or 0.0, -3.0, 3.0, true, function(val)
+    _G.GunHandPosZ = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Gun Angle Pitch (X)", _G.GunHandRotX or 0, -180, 180, false, function(val)
+    _G.GunHandRotX = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Gun Angle Yaw (Y)", _G.GunHandRotY or 0, -180, 180, false, function(val)
+    _G.GunHandRotY = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
+end)
+CreateSlider(SecCustomWeapons, "Gun Angle Roll (Z)", _G.GunHandRotZ or 0, -180, 180, false, function(val)
+    _G.GunHandRotZ = val
+    if Weapons.UpdateCustomWeapons then Weapons.UpdateCustomWeapons() end
 end)
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
 CreateToggle(SecChineseHat, "Chinese Conical Hat", false, function(st)
@@ -580,6 +620,15 @@ CreateSlider(SecCombat, "FOV Thickness", _G.FOVThickness or 1.2, 1, 5, false, fu
 CreateSlider(SecCombat, "Aimbot Smoothness", _G.AimSmoothness, 1, 10, false, function(val) _G.AimSmoothness = val end)
 CreateToggle(SecCombat, "Always Aim (No Click Req)", false, function(st) _G.AlwaysAim = st end)
 CreateToggle(SecCombat, "Real Invisible Silent Aim", false, function(st) _G.RealSilentAimActive = st end)
+CreateDropdown(SecCombat, "Silent Aim Target", {"Murderer Only", "All Enemies / Players"}, _G.SilentAimTargetMode or "Murderer Only", function(val)
+    _G.SilentAimTargetMode = val
+end)
+CreateToggle(SecCombat, "Silent Aim Wallbang (Through Walls)", _G.SilentAimWallbang, function(st)
+    _G.SilentAimWallbang = st
+end)
+CreateSlider(SecCombat, "Silent Aim FOV Radius", _G.SilentAimFOV or 300, 40, 600, false, function(val)
+    _G.SilentAimFOV = val
+end)
 CreateToggle(SecCombat, "Movement Velocity Prediction", false, function(st) _G.PredictionActive = st end)
 CreateSlider(SecCombat, "Prediction Time", _G.PredictionAmount, 0.05, 0.5, true, function(val) _G.PredictionAmount = val end)
 CreateToggle(SecCombat, "Fast Automatic Gun (Hold LKM)", false, function(st) _G.FastGunActive = st end)
