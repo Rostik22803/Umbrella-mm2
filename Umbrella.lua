@@ -1096,6 +1096,17 @@ _G.CustomWeaponAura = "None"
 _G.WeaponTrailActive = false
 _G.SelectedWeaponTrailColor = "Rainbow RGB"
 
+-- Hands Position & Viewmodel Offset
+_G.HandsPositionActive = false
+_G.HandsTarget = "Right Arm & Weapon"
+_G.HandsPosX = 0
+_G.HandsPosY = 0
+_G.HandsPosZ = 0
+_G.HandsRotX = 0
+_G.HandsRotY = 0
+_G.HandsRotZ = 0
+_G.FirstPersonHands = true
+
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
 _G.PredictionActive = false
@@ -2131,6 +2142,162 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 ------------------------------------------------------------------------
+-- HANDS & VIEWMODEL POSITION ENGINE (HVH ARM & WEAPON OFFSET)
+------------------------------------------------------------------------
+local CachedGripC0 = {}
+
+local function RestoreHandsPosition()
+    for grip, origC0 in pairs(CachedGripC0) do
+        if grip and grip.Parent then
+            pcall(function() grip.C0 = origC0 end)
+        end
+    end
+    table.clear(CachedGripC0)
+end
+
+local function GetHandsMotors()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    
+    local rShoulder, lShoulder, rGrip
+    
+    local torso = char:FindFirstChild("Torso")
+    if torso then
+        rShoulder = torso:FindFirstChild("Right Shoulder")
+        lShoulder = torso:FindFirstChild("Left Shoulder")
+    end
+    
+    local upperTorso = char:FindFirstChild("UpperTorso")
+    if upperTorso then
+        rShoulder = rShoulder or upperTorso:FindFirstChild("RightShoulder")
+        lShoulder = lShoulder or upperTorso:FindFirstChild("LeftShoulder")
+    end
+    local rUpper = char:FindFirstChild("RightUpperArm")
+    if rUpper then
+        rShoulder = rShoulder or rUpper:FindFirstChild("RightShoulder")
+    end
+    local lUpper = char:FindFirstChild("LeftUpperArm")
+    if lUpper then
+        lShoulder = lShoulder or lUpper:FindFirstChild("LeftShoulder")
+    end
+    
+    local rArm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightHand")
+    if rArm then
+        rGrip = rArm:FindFirstChild("RightGrip")
+    end
+    
+    return {
+        RightShoulder = rShoulder,
+        LeftShoulder = lShoulder,
+        RightGrip = rGrip,
+        Character = char
+    }
+end
+
+local function ApplyHandsPreset(name)
+    if name == "CS:GO Classic" then
+        _G.HandsPosX = 0.45
+        _G.HandsPosY = -0.35
+        _G.HandsPosZ = -0.65
+        _G.HandsRotX = 5
+        _G.HandsRotY = -10
+        _G.HandsRotZ = 0
+    elseif name == "Doom / Centered" then
+        _G.HandsPosX = -0.85
+        _G.HandsPosY = -0.3
+        _G.HandsPosZ = -0.7
+        _G.HandsRotX = 0
+        _G.HandsRotY = 0
+        _G.HandsRotZ = 0
+    elseif name == "Gangster / Low Hold" then
+        _G.HandsPosX = 0.35
+        _G.HandsPosY = -0.65
+        _G.HandsPosZ = -0.3
+        _G.HandsRotX = -10
+        _G.HandsRotY = -25
+        _G.HandsRotZ = 35
+    elseif name == "Tactical High" then
+        _G.HandsPosX = 0.2
+        _G.HandsPosY = 0.3
+        _G.HandsPosZ = -0.75
+        _G.HandsRotX = 12
+        _G.HandsRotY = -6
+        _G.HandsRotZ = 0
+    elseif name == "Far Outstretched" then
+        _G.HandsPosX = 0
+        _G.HandsPosY = 0
+        _G.HandsPosZ = -1.5
+        _G.HandsRotX = 0
+        _G.HandsRotY = 0
+        _G.HandsRotZ = 0
+    elseif name == "Reset to Default" or name == "Custom (Manual)" then
+        _G.HandsPosX = 0
+        _G.HandsPosY = 0
+        _G.HandsPosZ = 0
+        _G.HandsRotX = 0
+        _G.HandsRotY = 0
+        _G.HandsRotZ = 0
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not _G.HandsPositionActive then return end
+    
+    local motors = GetHandsMotors()
+    if not motors then return end
+    
+    local px = tonumber(_G.HandsPosX) or 0
+    local py = tonumber(_G.HandsPosY) or 0
+    local pz = tonumber(_G.HandsPosZ) or 0
+    local rx = math.rad(tonumber(_G.HandsRotX) or 0)
+    local ry = math.rad(tonumber(_G.HandsRotY) or 0)
+    local rz = math.rad(tonumber(_G.HandsRotZ) or 0)
+    
+    local offsetCF = CFrame.new(px, py, pz) * CFrame.Angles(rx, ry, rz)
+    local target = _G.HandsTarget or "Right Arm & Weapon"
+    
+    if target == "Right Arm & Weapon" then
+        if motors.RightShoulder then
+            motors.RightShoulder.Transform = motors.RightShoulder.Transform * offsetCF
+        end
+    elseif target == "Both Arms" then
+        if motors.RightShoulder then
+            motors.RightShoulder.Transform = motors.RightShoulder.Transform * offsetCF
+        end
+        if motors.LeftShoulder then
+            local leftOffsetCF = CFrame.new(-px, py, pz) * CFrame.Angles(rx, -ry, -rz)
+            motors.LeftShoulder.Transform = motors.LeftShoulder.Transform * leftOffsetCF
+        end
+    elseif target == "Weapon Grip Only" then
+        if motors.RightGrip then
+            if not CachedGripC0[motors.RightGrip] then
+                CachedGripC0[motors.RightGrip] = motors.RightGrip.C0
+            end
+            motors.RightGrip.C0 = CachedGripC0[motors.RightGrip] * offsetCF
+        end
+    elseif target == "Left Arm Only" then
+        if motors.LeftShoulder then
+            motors.LeftShoulder.Transform = motors.LeftShoulder.Transform * offsetCF
+        end
+    end
+    
+    if _G.FirstPersonHands then
+        for _, part in ipairs(motors.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                local n = part.Name:lower()
+                if n:find("arm") or n:find("hand") then
+                    part.LocalTransparencyModifier = 0
+                end
+            end
+        end
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    table.clear(CachedGripC0)
+end)
+
+------------------------------------------------------------------------
 -- WORLD, WEATHER, FOG & SKYBOX VISUALS ENGINE
 ------------------------------------------------------------------------
 local OriginalLighting = {
@@ -2879,6 +3046,45 @@ CreateDropdown(SecCustomWeapons, "Blade Trail Color", {"Rainbow RGB", "Blood Red
         UpdateCustomWeapons()
     end
 end)
+
+local SecHandsPos = CreateSection(Tabs["Visuals"], "Hands & Viewmodel Position")
+CreateToggle(SecHandsPos, "Enable Hands Position", false, function(st)
+    _G.HandsPositionActive = st
+    if not st then
+        RestoreHandsPosition()
+    end
+end)
+CreateToggle(SecHandsPos, "Show Arms in First Person", true, function(st)
+    _G.FirstPersonHands = st
+end)
+CreateDropdown(SecHandsPos, "Target Joint / Mode", {"Right Arm & Weapon", "Both Arms", "Weapon Grip Only", "Left Arm Only"}, _G.HandsTarget, function(val)
+    _G.HandsTarget = val
+    if not _G.HandsPositionActive or val ~= "Weapon Grip Only" then
+        RestoreHandsPosition()
+    end
+end)
+CreateDropdown(SecHandsPos, "Viewmodel Preset", {"Custom (Manual)", "CS:GO Classic", "Doom / Centered", "Gangster / Low Hold", "Tactical High", "Far Outstretched", "Reset to Default"}, "Custom (Manual)", function(val)
+    ApplyHandsPreset(val)
+end)
+CreateSlider(SecHandsPos, "Offset X (Left / Right)", 0, -3, 3, true, function(val)
+    _G.HandsPosX = val
+end)
+CreateSlider(SecHandsPos, "Offset Y (Up / Down)", 0, -3, 3, true, function(val)
+    _G.HandsPosY = val
+end)
+CreateSlider(SecHandsPos, "Offset Z (Forward / Back)", 0, -3, 3, true, function(val)
+    _G.HandsPosZ = val
+end)
+CreateSlider(SecHandsPos, "Rotation X (Pitch)", 0, -180, 180, false, function(val)
+    _G.HandsRotX = val
+end)
+CreateSlider(SecHandsPos, "Rotation Y (Yaw)", 0, -180, 180, false, function(val)
+    _G.HandsRotY = val
+end)
+CreateSlider(SecHandsPos, "Rotation Z (Roll)", 0, -180, 180, false, function(val)
+    _G.HandsRotZ = val
+end)
+
 local SecChineseHat = CreateSection(Tabs["Visuals"], "HvH Chinese Hat Visual")
 CreateToggle(SecChineseHat, "Chinese Conical Hat", false, function(st)
     _G.ChineseHatActive = st
