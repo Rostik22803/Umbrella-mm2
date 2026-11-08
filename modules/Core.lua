@@ -196,15 +196,10 @@ _G.CustomModelScale = 1.0
 _G.CustomModelHeightOffset = 0.0
 _G.CustomModelRotation = 0
 
--- Custom Weapons (Knife & Gun Skins / 3D Models)
+-- Custom Weapons (Knife & Gun Skins / In-Hand Grips)
 _G.CustomKnifeActive = false
 _G.SelectedKnifeModel = "Luger Blade / Heat"
 _G.CustomGunActive = false
-_G.Custom3DGunActive = false
-_G.SelectedCustomGun = "AK-47 (Assault Rifle)"
-_G.Custom3DMeleeActive = false
-_G.SelectedCustomMelee = "Karambit (Fade / Doppler)"
-_G.Custom3DWeaponScale = 1.0
 _G.CustomGunGripActive = false
 _G.CustomWeaponGripActive = false
 _G.WeaponAnglePitch = 0
@@ -388,7 +383,5 @@ _G.SpeedValue = 40
 _G.SpinSpeed = 30
 _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
-
-
 
 return Core
