@@ -62,34 +62,40 @@ end
 
 
 -- 1. Prediction & Line-of-Sight AWALL Calculation
+-- В MM2 попадание в торс наносит 100 урона (ваншот) и исключает попадание в аксессуары шляп/волос, которые сбивают серверный хитрег
 local function GetAimbotBone(char)
     if not char then return nil end
+    local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    local head = char:FindFirstChild("Head")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
     if _G.AimBone == "Torso" then
-        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+        return torso or hrp or head
     else
-        return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+        return torso or head or hrp
     end
 end
 
--- РАСЧЕТ ХИТБОКСА И ПРЕДИКТА (100% Hit Registration в центр кости без завышения по Y)
+-- РАСЧЕТ ХИТБОКСА И ПРЕДИКТА (100% Серверный Hit Registration)
 local function GetPredictedPosition(targetPart)
     if not targetPart then return Vector3.new(0, 0, 0) end
     local basePos = targetPart.Position
     
-    -- Мягкое центрирование на область груди без перелета через голову (+0.35 стадса)
+    -- Центрирование на центр массы торса
     if targetPart.Name == "HumanoidRootPart" or targetPart.Name == "LowerTorso" then
-        basePos = basePos + Vector3.new(0, 0.35, 0)
+        basePos = basePos + Vector3.new(0, 0.4, 0)
     end
     
+    -- В MM2 револьвер - моментальный хитскан-луч на сервере
+    -- Если предикт выключен: пуля летит ровно в центр кости без упреждения
+    -- Если предикт включен: компенсирует исключительно пинг (по горизонтали), строго Y = 0 (без перелета над прыгающими)
     if _G.PredictionActive then
         local char = targetPart.Parent
         local root = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or targetPart)
         if root then
-            local vel = root.Velocity
-            -- В MM2 пуля хитскан (луч на сервере). Предикт компенсирует только пинг (30-60ms)
-            local predTime = math.clamp(_G.PredictionAmount or 0.04, 0.01, 0.08)
-            local predY = math.clamp(vel.Y, -1.5, 3.5)
-            local horizontalVel = Vector3.new(vel.X, predY, vel.Z)
+            local vel = root.AssemblyLinearVelocity or root.Velocity or Vector3.new(0, 0, 0)
+            local predTime = math.clamp(_G.PredictionAmount or 0.02, 0.005, 0.035)
+            local horizontalVel = Vector3.new(vel.X, 0, vel.Z)
             return basePos + (horizontalVel * predTime)
         end
     end
@@ -148,12 +154,8 @@ local function GetBestVisibleBone(char)
     local rArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("Right Arm")
     local lArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm")
     
-    local bones = {}
-    if _G.AimBone == "Head" then
-        bones = {head, torso, hrp, rArm, lArm}
-    else
-        bones = {torso, hrp, head, rArm, lArm}
-    end
+    -- Торс (UpperTorso / Torso) - абсолютный приоритет для надежной серверной регистрации (нет перекрытия шапками)
+    local bones = {torso, hrp, head, rArm, lArm}
     
     for _, bone in ipairs(bones) do
         if bone then
@@ -165,7 +167,7 @@ local function GetBestVisibleBone(char)
     end
     
     if _G.SilentAimWallbang then
-        return bones[1] or head or hrp
+        return torso or hrp or head or bones[1]
     end
     return nil
 end
@@ -299,10 +301,11 @@ task.spawn(function()
                                             elseif shootRemote and shootRemote:IsA("RemoteEvent") then
                                                 pcall(function() shootRemote:FireServer(1, shootPos, "AH") end)
                                             end
-                                        end
-                                        local shootEvent = gun:FindFirstChild("Shoot") or gun:FindFirstChild("ShootServer")
-                                        if shootEvent and shootEvent:IsA("RemoteEvent") then
-                                            pcall(function() shootEvent:FireServer(shootPos) end)
+                                        else
+                                            local shootEvent = gun:FindFirstChild("Shoot") or gun:FindFirstChild("ShootServer")
+                                            if shootEvent and shootEvent:IsA("RemoteEvent") then
+                                                pcall(function() shootEvent:FireServer(shootPos) end)
+                                            end
                                         end
                                         
                                         -- Трейсер и регистрация попадания
@@ -497,7 +500,7 @@ local OldIndex = nil
 local OldNamecall = nil
 
 if hookmetamethod then
-    -- Safe __index hook: ONLY intercepts Player Mouse instances to prevent global engine lag/crashes
+    -- Safe __index hook: Перехватывает Mouse.Hit и Mouse.Target для скрипта револьвера MM2
     pcall(function()
         OldIndex = hookmetamethod(game, "__index", function(self, key)
             if not isInsideHook and _G.RealSilentAimActive then
@@ -506,11 +509,20 @@ if hookmetamethod then
                     pcall(function() isCaller = checkcaller() end)
                 end
                 
-                if not isCaller and CurrentSilentPos and typeof(self) == "Instance" and self:IsA("Mouse") then
+                if not isCaller and typeof(self) == "Instance" and self:IsA("Mouse") then
                     if key == "Hit" or key == "hit" then
-                        return CFrame.new(CurrentSilentPos)
+                        local target, bone = GetClosestTarget()
+                        if target and target.Character and bone then
+                            local sPos = GetPredictedPosition(bone)
+                            return CFrame.new(sPos)
+                        elseif CurrentSilentPos then
+                            return CFrame.new(CurrentSilentPos)
+                        end
                     elseif key == "Target" or key == "target" then
-                        if CurrentSilentBone then
+                        local target, bone = GetClosestTarget()
+                        if target and target.Character and bone then
+                            return bone
+                        elseif CurrentSilentBone then
                             return CurrentSilentBone
                         end
                     end
@@ -520,7 +532,7 @@ if hookmetamethod then
         end)
     end)
 
-    -- Safe __namecall hook: Intercepts MM2 RemoteEvents & RemoteFunctions (ShootGun, Throw, Shoot)
+    -- Safe __namecall hook: 100% регистрация попадания для ShootGun / Throw / Shoot
     pcall(function()
         OldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
             if isInsideHook or not _G.RealSilentAimActive then
@@ -539,48 +551,54 @@ if hookmetamethod then
             if method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer" then
                 local remoteName = tostring(self.Name):lower()
                 if remoteName:find("shoot") or remoteName:find("throw") or remoteName:find("knife") or remoteName:find("gun") then
-                    -- Мгновенный расчет цели прямо в момент выстрела (без задержки от Heartbeat)
+                    -- Мгновенный расчет цели прямо в момент нажатия на спуск
                     local liveTarget, liveBone = GetClosestTarget()
                     if liveTarget and liveTarget.Character and liveBone then
                         local hitPos = GetPredictedPosition(liveBone)
                         isInsideHook = true
                         local args = {...}
-                        local replaced = false
-                        for i, arg in ipairs(args) do
-                            if typeof(arg) == "Vector3" then
-                                args[i] = hitPos
-                                replaced = true
-                            elseif typeof(arg) == "CFrame" then
-                                args[i] = CFrame.new(arg.Position, hitPos)
-                                replaced = true
-                            end
-                        end
-                        if not replaced and #args > 0 then
-                            if #args >= 2 and typeof(args[1]) == "number" then
+                        
+                        -- Точный формат вызова ShootGun MM2: InvokeServer(1, hitPos, "AH")
+                        if self.Name == "ShootGun" or remoteName == "shootgun" then
+                            if #args >= 2 then
                                 args[2] = hitPos
-                            else
+                                if not args[3] or args[3] == "" then
+                                    args[3] = "AH"
+                                end
+                            elseif #args == 1 then
                                 args[1] = hitPos
                             end
-                        end
-                        
-                        -- Гарантируем валидный код для ShootGun MM2
-                        if self.Name == "ShootGun" and #args >= 2 then
-                            if not args[3] or args[3] == "" then
-                                args[3] = "AH"
+                        else
+                            local replaced = false
+                            for i, arg in ipairs(args) do
+                                if typeof(arg) == "Vector3" then
+                                    args[i] = hitPos
+                                    replaced = true
+                                elseif typeof(arg) == "CFrame" then
+                                    args[i] = CFrame.new(arg.Position, hitPos)
+                                    replaced = true
+                                end
+                            end
+                            if not replaced and #args > 0 then
+                                if #args >= 2 and typeof(args[1]) == "number" then
+                                    args[2] = hitPos
+                                else
+                                    args[1] = hitPos
+                                end
                             end
                         end
                         
-                        -- Звук выстрела для обратной связи
+                        -- Звук выстрела
                         local gun = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Character:FindFirstChild("Revolver"))
                         PlayGunShotSound(gun)
                         
-                        -- Отрисовка трейсера и лог
+                        -- Трейсер и лог
                         if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
                             local myChar = LocalPlayer.Character
                             local origin = (gun and gun:FindFirstChild("Handle") and gun.Handle.Position) or (myChar and myChar:FindFirstChild("Head") and myChar.Head.Position) or Camera.CFrame.Position
                             Umbrella.HvH.CreateBulletTracer(origin, hitPos)
                         end
-                        OnHitRegistered(liveTarget, hitPos, liveBone.Name or "Head")
+                        OnHitRegistered(liveTarget, hitPos, liveBone.Name or "Torso")
                         
                         local ret = OldNamecall(self, unpack(args))
                         isInsideHook = false
