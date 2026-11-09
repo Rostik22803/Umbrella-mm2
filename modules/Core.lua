@@ -197,10 +197,10 @@ _G.CustomModelHeightOffset = 0.0
 _G.CustomModelRotation = 0
 
 -- Custom Weapons (Knife & Gun Skins / 3D Models)
-_G.CustomKnifeActive = false
+_G.CustomKnifeActive = true
 _G.BackKnifeActive = true
 _G.SelectedKnifeModel = "Luger Blade / Heat"
-_G.CustomGunActive = false
+_G.CustomGunActive = true
 _G.BackGunActive = true
 _G.CustomGunGripActive = false
 _G.CustomWeaponGripActive = false
