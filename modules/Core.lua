@@ -196,7 +196,7 @@ _G.CustomModelScale = 1.0
 _G.CustomModelHeightOffset = 0.0
 _G.CustomModelRotation = 0
 
--- Custom Weapons (Knife & Gun Skins / In-Hand Grips)
+-- Custom Weapons (Knife & Gun Skins / 3D Models)
 _G.CustomKnifeActive = false
 _G.SelectedKnifeModel = "Luger Blade / Heat"
 _G.CustomGunActive = false
@@ -233,8 +233,9 @@ _G.SilentAimTargetMode = "Murderer Only"
 _G.SilentAimWallbang = false
 _G.SilentAimVisibleOnly = true
 _G.MultiBoneScan = true
-_G.SilentAimFOV = 300
-_G.AutoShootCooldown = 1.1
+_G.SyncFOV = true
+_G.SilentAimFOV = 130
+_G.AutoShootCooldown = 1.35
 _G.SelectedGunModel = "Golden Luger"
 _G.CustomWeaponMaterial = "Default"
 _G.CustomWeaponColor = "Original"
@@ -245,7 +246,7 @@ _G.SelectedWeaponTrailColor = "Rainbow RGB"
 _G.CameraAimActive = false
 _G.RealSilentAimActive = false
 _G.PredictionActive = false
-_G.PredictionAmount = 0.165
+_G.PredictionAmount = 0.04
 _G.AwallCheckActive = false
 _G.ShowAwallSquare = false
 
@@ -383,5 +384,7 @@ _G.SpeedValue = 40
 _G.SpinSpeed = 30
 _G.KillAuraRange = 15
 _G.KillAuraDelay = 0.1
+
+
 
 return Core
