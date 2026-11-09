@@ -863,48 +863,65 @@ local function CreateSlider(parentSec, text, defaultVal, minVal, maxVal, isDecim
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Parent = parentSec
     SliderFrame.BackgroundTransparency = 1
-    SliderFrame.Size = UDim2.new(1, 0, 0, 30)
+    SliderFrame.Size = UDim2.new(1, 0, 0, 34)
     
     local Label = Instance.new("TextLabel")
     Label.Parent = SliderFrame
     Label.BackgroundTransparency = 1
     Label.Position = UDim2.new(0, 0, 0, 0)
     Label.Size = UDim2.new(1, 0, 0, 14)
-    Label.Font = Enum.Font.SourceSans
+    Label.Font = Enum.Font.SourceSansBold
     Label.Text = text .. ": " .. tostring(defaultVal)
-    Label.TextColor3 = Color3.fromRGB(200, 205, 215)
-    Label.TextSize = 11
+    Label.TextColor3 = Color3.fromRGB(210, 215, 225)
+    Label.TextSize = 12
     Label.TextXAlignment = Enum.TextXAlignment.Left
     
     local BarBg = Instance.new("Frame")
     BarBg.Parent = SliderFrame
     local bgPreset = MenuBgPresets[_G.SelectedMenuBgTheme] or MenuBgPresets["Classic Dark"]
     BarBg.BackgroundColor3 = bgPreset.Stroke
-    BarBg.Position = UDim2.new(0, 0, 0, 16)
-    BarBg.Size = UDim2.new(1, 0, 0, 6)
-    Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 3)
+    BarBg.Position = UDim2.new(0, 0, 0, 18)
+    BarBg.Size = UDim2.new(1, 0, 0, 8)
+    Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 4)
     
     local Fill = Instance.new("Frame")
     Fill.Parent = BarBg
     Fill.BackgroundColor3 = GetThemeAccentColor()
     local startPercent = (defaultVal - minVal) / (maxVal - minVal)
     Fill.Size = UDim2.new(math.clamp(startPercent, 0, 1), 0, 1, 0)
-    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 3)
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 4)
     table.insert(AllSliderFills, Fill)
     
-    local Handle = Instance.new("TextButton")
+    -- Handle кружок (увеличен до 14x14 с контуром для удобного захвата)
+    local Handle = Instance.new("Frame")
     Handle.Parent = BarBg
-    Handle.Text = ""
-    Handle.Position = UDim2.new(math.clamp(startPercent, 0, 1), -5, 0.5, -5)
-    Handle.Size = UDim2.new(0, 10, 0, 10)
+    Handle.Position = UDim2.new(math.clamp(startPercent, 0, 1), -7, 0.5, -7)
+    Handle.Size = UDim2.new(0, 14, 0, 14)
     Handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Handle.ZIndex = 3
     Instance.new("UICorner", Handle).CornerRadius = UDim.new(1, 0)
+    local hStroke = Instance.new("UIStroke", Handle)
+    hStroke.Color = Color3.fromRGB(25, 26, 32)
+    hStroke.Thickness = 1.5
+    
+    -- Невидимый расширенный триггер на весь бар и зону вокруг (мгновенный клик и перетаскивание)
+    local ClickArea = Instance.new("TextButton")
+    ClickArea.Name = "SliderClickArea"
+    ClickArea.Parent = SliderFrame
+    ClickArea.BackgroundTransparency = 1
+    ClickArea.Text = ""
+    ClickArea.Position = UDim2.new(0, -6, 0, 10)
+    ClickArea.Size = UDim2.new(1, 12, 0, 24)
+    ClickArea.ZIndex = 4
     
     local dragging = false
     local function Update(inputX)
-        local rel = math.clamp((inputX - BarBg.AbsolutePosition.X) / BarBg.AbsoluteSize.X, 0, 1)
+        local barX = BarBg.AbsolutePosition.X
+        local barW = BarBg.AbsoluteSize.X
+        if barW <= 0 then return end
+        local rel = math.clamp((inputX - barX) / barW, 0, 1)
         Fill.Size = UDim2.new(rel, 0, 1, 0)
-        Handle.Position = UDim2.new(rel, -5, 0.5, -5)
+        Handle.Position = UDim2.new(rel, -7, 0.5, -7)
         
         local val = minVal + (rel * (maxVal - minVal))
         if isDecimal then
@@ -916,16 +933,19 @@ local function CreateSlider(parentSec, text, defaultVal, minVal, maxVal, isDecim
         callback(val)
     end
     
-    Handle.InputBegan:Connect(function(input)
+    ClickArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
+            Update(input.Position.X)
         end
     end)
+    
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
+    
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             Update(input.Position.X)
