@@ -945,8 +945,151 @@ local function ApplyCustomGun(tool)
 end
 
 -- ========================================================================
--- ДВИЖОК ОРУЖИЯ НА СПИНЕ (HOLSTERED BACK WEAPONS & BACK ACCESSORIES)
+-- ДВИЖОК ОРУЖИЯ НА СПИНЕ (HOLSTERED BACK WEAPONS & LOBBY SYSTEM)
 -- ========================================================================
+local BodyPartNames = {
+    ["head"] = true,
+    ["torso"] = true,
+    ["uppertorso"] = true,
+    ["lowertorso"] = true,
+    ["humanoidrootpart"] = true,
+    ["left arm"] = true,
+    ["right arm"] = true,
+    ["left leg"] = true,
+    ["right leg"] = true,
+    ["leftupperarm"] = true,
+    ["leftlowerarm"] = true,
+    ["lefthand"] = true,
+    ["rightupperarm"] = true,
+    ["rightlowerarm"] = true,
+    ["righthand"] = true,
+    ["leftupperleg"] = true,
+    ["leftlowerleg"] = true,
+    ["leftfoot"] = true,
+    ["rightupperleg"] = true,
+    ["rightlowerleg"] = true,
+    ["rightfoot"] = true,
+    ["rootpart"] = true
+}
+
+local HiddenGameParts = {}
+
+-- Постоянное удержание прозрачности оригинального оружия в каждом кадре
+RunService.RenderStepped:Connect(function()
+    for part in pairs(HiddenGameParts) do
+        if part and part.Parent then
+            part.Transparency = 1
+            part.LocalTransparencyModifier = 1
+        else
+            HiddenGameParts[part] = nil
+        end
+    end
+end)
+
+local function HideOriginalBackWeapon(obj)
+    if not obj then return end
+    if obj.Name:find("Umbrella_") or obj.Name == "CustomChangerModel" then return end
+    
+    local function process(item)
+        if item:IsA("BasePart") then
+            HiddenGameParts[item] = true
+            item.Transparency = 1
+            item.LocalTransparencyModifier = 1
+            item.CastShadow = false
+        elseif item:IsA("Decal") or item:IsA("Texture") then
+            item.Transparency = 1
+        elseif item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") or item:IsA("Fire") or item:IsA("Smoke") or item:IsA("Sparkles") then
+            item.Enabled = false
+        elseif item:IsA("Light") or item:IsA("PointLight") or item:IsA("SurfaceLight") or item:IsA("SpotLight") then
+            item.Enabled = false
+        end
+    end
+    
+    process(obj)
+    for _, desc in ipairs(obj:GetDescendants()) do
+        process(desc)
+    end
+end
+
+local function IsGameBackWeapon(obj, knifeInHand, gunInHand)
+    if not obj then return false, nil end
+    if obj.Name:find("Umbrella_") or obj.Name == "CustomChangerModel" then return false, nil end
+    if obj == knifeInHand or obj == gunInHand then return false, nil end
+    if knifeInHand and obj:IsDescendantOf(knifeInHand) then return false, nil end
+    if gunInHand and obj:IsDescendantOf(gunInHand) then return false, nil end
+    
+    local name = obj.Name:lower()
+    if BodyPartNames[name] then return false, nil end
+    
+    local isKnife = name:find("knife") or name:find("blade") or name:find("sword") or name:find("scythe") or name:find("dagger") or name:find("slash")
+    local isGun = name:find("gun") or name:find("revolver") or name:find("luger") or name:find("blaster") or name:find("pistol") or name:find("shoot")
+    
+    -- Проверка на известные пресеты ножей MM2
+    if not isKnife and not isGun then
+        for kName, _ in pairs(KnifePresets) do
+            if kName ~= "Default" and name:find(kName:lower():sub(1, 6)) then
+                isKnife = true
+                break
+            end
+        end
+    end
+    if not isKnife and not isGun then
+        for gName, _ in pairs(GunPresets) do
+            if gName ~= "Default" and name:find(gName:lower():sub(1, 6)) then
+                isGun = true
+                break
+            end
+        end
+    end
+    
+    -- Проверка на аксессуары спины и пояса
+    if obj:IsA("Accessory") then
+        local accType = obj.AccessoryType
+        local isBackWaist = (accType == Enum.AccessoryType.Back or accType == Enum.AccessoryType.Waist)
+        local handle = obj:FindFirstChild("Handle")
+        if handle then
+            local hName = handle.Name:lower()
+            if isKnife or hName:find("knife") or hName:find("blade") or hName:find("sword") or hName:find("scythe") or hName:find("dagger") then
+                return true, "Knife"
+            elseif isGun or hName:find("gun") or hName:find("revolver") or hName:find("luger") or hName:find("pistol") then
+                return true, "Gun"
+            elseif isBackWaist then
+                for _, att in ipairs(handle:GetChildren()) do
+                    if att:IsA("Attachment") then
+                        local aName = att.Name:lower()
+                        if aName:find("waist") or aName:find("hip") then
+                            return true, "Gun"
+                        elseif aName:find("back") then
+                            return true, "Knife"
+                        end
+                    end
+                end
+                return true, "Knife"
+            end
+        end
+    end
+    
+    if isKnife then return true, "Knife" end
+    if isGun then return true, "Gun" end
+    
+    -- Проверка welds внутри деталей
+    local p = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+    if p then
+        for _, w in ipairs(p:GetChildren()) do
+            if w:IsA("Weld") or w:IsA("Motor6D") or w:IsA("WeldConstraint") then
+                local wName = w.Name:lower()
+                if wName:find("knife") or wName:find("back") then
+                    return true, "Knife"
+                elseif wName:find("gun") or wName:find("waist") or wName:find("holster") then
+                    return true, "Gun"
+                end
+            end
+        end
+    end
+    
+    return false, nil
+end
+
 local function UpdateBackWeapons()
     local char = LocalPlayer.Character
     if not char then return end
@@ -967,22 +1110,50 @@ local function UpdateBackWeapons()
         end
     end
     
-    local bpack = LocalPlayer:FindFirstChild("Backpack")
-    local hasKnifeInBpack = bpack and (bpack:FindFirstChild("Knife") or bpack:FindFirstChildWhichIsA("Tool"))
-    local hasGunInBpack = false
-    if bpack then
-        for _, obj in ipairs(bpack:GetChildren()) do
-            if obj:IsA("Tool") and (obj.Name:lower():find("gun") or obj.Name:lower():find("revolver") or obj:FindFirstChild("ShootGun")) then
-                hasGunInBpack = true
-                break
+    -- Отображение на спине: активно и в лобби, и в раунде когда оружие не в руках
+    local shouldShowBackKnife = (_G.BackKnifeActive ~= false) and (not knifeInHand)
+    local shouldShowBackGun = (_G.BackGunActive ~= false) and (not gunInHand)
+    
+    -- 1. ДЕЛАЕМ НЕВИДИМЫМ ВСЕ СТОКОВОЕ ОРУЖИЕ, КОТОРОЕ СТАВИТ ИГРА (И В ЛОББИ, И В КАТКЕ)
+    for _, obj in ipairs(char:GetChildren()) do
+        local isGameWeapon, wType = IsGameBackWeapon(obj, knifeInHand, gunInHand)
+        if isGameWeapon then
+            if wType == "Knife" and shouldShowBackKnife then
+                HideOriginalBackWeapon(obj)
+            elseif wType == "Gun" and shouldShowBackGun then
+                HideOriginalBackWeapon(obj)
             end
         end
     end
     
-    -- 1. КАСТОМНЫЙ НОЖ НА СПИНЕ (Отображается на спине, когда убран в рюкзак или когда руки свободны)
-    local shouldShowBackKnife = (_G.BackKnifeActive ~= false) and (not knifeInHand) and (_G.CustomKnifeActive or _G.CustomWeaponMaterial ~= "Default" or _G.CustomWeaponColor ~= "Original")
-    local existingBackKnife = char:FindFirstChild("Umbrella_BackKnife")
+    -- Сканируем крепления (Weld / Motor6D) на торсе, поставленные игрой
+    local origKnifeWeld = nil
+    local origGunWeld = nil
+    for _, part in ipairs({torso, char:FindFirstChild("LowerTorso"), char:FindFirstChild("HumanoidRootPart")}) do
+        if part then
+            for _, d in ipairs(part:GetChildren()) do
+                if d:IsA("Weld") or d:IsA("Motor6D") or d:IsA("WeldConstraint") then
+                    local dName = d.Name:lower()
+                    if (dName:find("knife") or dName:find("back")) and d.Name ~= "BackKnifeWeld" then
+                        origKnifeWeld = d
+                        if shouldShowBackKnife and d.Part1 and not d.Part1.Name:find("Umbrella_") then
+                            HideOriginalBackWeapon(d.Part1)
+                            if d.Part1.Parent ~= char then HideOriginalBackWeapon(d.Part1.Parent) end
+                        end
+                    elseif (dName:find("gun") or dName:find("waist") or dName:find("holster")) and d.Name ~= "BackGunWeld" then
+                        origGunWeld = d
+                        if shouldShowBackGun and d.Part1 and not d.Part1.Name:find("Umbrella_") then
+                            HideOriginalBackWeapon(d.Part1)
+                            if d.Part1.Parent ~= char then HideOriginalBackWeapon(d.Part1.Parent) end
+                        end
+                    end
+                end
+            end
+        end
+    end
     
+    -- 2. КАСТОМНЫЙ НОЖ НА СПИНЕ (СТАВИМ НАШ СКИН И В ЛОББИ, И В КАТКЕ)
+    local existingBackKnife = char:FindFirstChild("Umbrella_BackKnife")
     if shouldShowBackKnife then
         if not existingBackKnife then
             existingBackKnife = Instance.new("Part")
@@ -1003,8 +1174,12 @@ local function UpdateBackWeapons()
             weld.Name = "BackKnifeWeld"
             weld.Part0 = torso
             weld.Part1 = existingBackKnife
-            -- Диагональное крепление на спине через плечо
-            weld.C0 = CFrame.new(-0.2, 0.3, 0.65) * CFrame.Angles(math.rad(15), math.rad(180), math.rad(-45))
+            -- Используем C0 игры если доступно, иначе точное диагональное крепление через плечо
+            if origKnifeWeld and origKnifeWeld.C0 then
+                weld.C0 = origKnifeWeld.C0
+            else
+                weld.C0 = CFrame.new(-0.25, 0.35, 0.65) * CFrame.Angles(math.rad(15), math.rad(180), math.rad(-45))
+            end
             weld.Parent = existingBackKnife
         end
         
@@ -1018,17 +1193,17 @@ local function UpdateBackWeapons()
                 mesh.TextureId = (preset and preset.TextureId) or "rbxassetid://121944805"
             end
             mesh.Scale = (preset and preset.Scale) or Vector3.new(1, 1, 1)
+            mesh.Offset = (preset and preset.Offset) or Vector3.new(0, 0, 0)
         end
+        existingBackKnife.Transparency = 0
         ApplyMaterialAndColorToPart(existingBackKnife, preset, true)
         ApplyWeaponFX(nil, true, existingBackKnife)
     else
         if existingBackKnife then existingBackKnife:Destroy() end
     end
     
-    -- 2. КАСТОМНЫЙ ПИСТОЛЕТ НА СПИНЕ / ПОЯСЕ (Отображается на поясе/спине, когда не в руках)
-    local shouldShowBackGun = (_G.BackGunActive ~= false) and (not gunInHand) and (_G.CustomGunActive or _G.CustomWeaponMaterial ~= "Default" or _G.CustomWeaponColor ~= "Original")
+    -- 3. КАСТОМНЫЙ ПИСТОЛЕТ НА ПОЯСЕ/СПИНЕ (НАШ СКИН И В ЛОББИ, И В КАТКЕ)
     local existingBackGun = char:FindFirstChild("Umbrella_BackGun")
-    
     if shouldShowBackGun then
         if not existingBackGun then
             existingBackGun = Instance.new("Part")
@@ -1047,10 +1222,15 @@ local function UpdateBackWeapons()
             
             local weld = Instance.new("Motor6D")
             weld.Name = "BackGunWeld"
-            weld.Part0 = torso
+            local hipTorso = char:FindFirstChild("LowerTorso") or torso
+            weld.Part0 = hipTorso
             weld.Part1 = existingBackGun
-            -- Кобура на поясе справа
-            weld.C0 = CFrame.new(0.85, -0.65, 0.15) * CFrame.Angles(0, math.rad(90), math.rad(-15))
+            -- Используем C0 игры если доступно, иначе точная кобура на поясе
+            if origGunWeld and origGunWeld.C0 then
+                weld.C0 = origGunWeld.C0
+            else
+                weld.C0 = CFrame.new(0.85, -0.65, 0.15) * CFrame.Angles(0, math.rad(90), math.rad(-15))
+            end
             weld.Parent = existingBackGun
         end
         
@@ -1064,41 +1244,13 @@ local function UpdateBackWeapons()
                 mesh.TextureId = (preset and preset.TextureId) or "rbxassetid://97888197"
             end
             mesh.Scale = (preset and preset.Scale) or Vector3.new(1, 1, 1)
+            mesh.Offset = (preset and preset.Offset) or Vector3.new(0, 0, 0)
         end
+        existingBackGun.Transparency = 0
         ApplyMaterialAndColorToPart(existingBackGun, preset, false)
         ApplyWeaponFX(nil, false, existingBackGun)
     else
         if existingBackGun then existingBackGun:Destroy() end
-    end
-    
-    -- 3. СКАНИРОВАНИЕ И МОДИФИКАЦИЯ СУЩЕСТВУЮЩИХ АКСЕССУАРОВ НА СПИНЕ (Back/Waist Accessories)
-    for _, acc in ipairs(char:GetChildren()) do
-        if acc:IsA("Accessory") then
-            local n = acc.Name:lower()
-            local handle = acc:FindFirstChild("Handle")
-            if handle then
-                local isBackWeapon = (acc.AccessoryType == Enum.AccessoryType.Back or acc.AccessoryType == Enum.AccessoryType.Waist)
-                    or n:find("knife") or n:find("gun") or n:find("sword") or n:find("blade") or n:find("revolver") or n:find("weapon")
-                if isBackWeapon then
-                    local isKnifeAcc = n:find("knife") or n:find("sword") or n:find("blade") or (not n:find("gun") and not n:find("revolver"))
-                    local preset = isKnifeAcc and KnifePresets[_G.SelectedKnifeModel] or GunPresets[_G.SelectedGunModel]
-                    if (isKnifeAcc and _G.CustomKnifeActive) or (not isKnifeAcc and _G.CustomGunActive) then
-                        local mesh = handle:FindFirstChildOfClass("SpecialMesh")
-                        if mesh and preset then
-                            mesh.MeshId = preset.MeshId or mesh.MeshId
-                            if _G.CustomWeaponMaterial == "Neon Glow" or _G.CustomWeaponMaterial == "ForceField" then
-                                mesh.TextureId = ""
-                            else
-                                mesh.TextureId = preset.TextureId or mesh.TextureId
-                            end
-                            mesh.Scale = preset.Scale or mesh.Scale
-                        end
-                    end
-                    ApplyMaterialAndColorToPart(handle, preset, isKnifeAcc)
-                    ApplyWeaponFX(nil, isKnifeAcc, handle)
-                end
-            end
-        end
     end
 end
 
@@ -1253,43 +1405,55 @@ local function UpdateCustomWeapons()
     UpdateBackWeapons()
 end
 
--- Periodically maintain weapon skins & effects
+local function ShouldRunWeaponsEngine()
+    return true -- Всегда поддерживать оружие на спине и скины как в лобби, так и в катке
+end
+
+-- Постоянное поддержание скинов и оружия на спине (Лобби + Матч)
 task.spawn(function()
     while true do
-        task.wait(0.2)
-        if _G.CustomKnifeActive or _G.CustomGunActive or _G.CustomGunGripActive or _G.CustomWeaponGripActive then
-            UpdateCustomWeapons()
+        task.wait(0.1)
+        if ShouldRunWeaponsEngine() then
+            pcall(UpdateCustomWeapons)
         end
     end
 end)
+
+local function HookCharacter(char)
+    if not char then return end
+    char.ChildAdded:Connect(function(child)
+        task.wait(0.05)
+        pcall(UpdateCustomWeapons)
+    end)
+    char.DescendantAdded:Connect(function(desc)
+        if desc:IsA("Accessory") or desc:IsA("Tool") or desc:IsA("SpecialMesh") or desc:IsA("Weld") or desc:IsA("Motor6D") then
+            task.wait(0.05)
+            pcall(UpdateCustomWeapons)
+        end
+    end)
+end
 
 local function HookBackpackAndChar()
     local bpack = LocalPlayer:FindFirstChild("Backpack")
     if bpack then
         bpack.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive) then
-                task.wait(0.1)
-                UpdateCustomWeapons()
+            if child:IsA("Tool") then
+                task.wait(0.05)
+                pcall(UpdateCustomWeapons)
             end
         end)
     end
     if LocalPlayer.Character then
-        LocalPlayer.Character.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") and (_G.CustomKnifeActive or _G.CustomGunActive) then
-                task.wait(0.1)
-                UpdateCustomWeapons()
-            end
-        end)
+        HookCharacter(LocalPlayer.Character)
     end
 end
 
 HookBackpackAndChar()
 LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
+    HiddenGameParts = {}
+    task.wait(0.2)
     HookBackpackAndChar()
-    if _G.CustomKnifeActive or _G.CustomGunActive then
-        UpdateCustomWeapons()
-    end
+    pcall(UpdateCustomWeapons)
 end)
 
 
