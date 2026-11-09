@@ -704,7 +704,14 @@ local SecCombat = CreateSection(Tabs["Combat"], "Aimbot & Prediction")
 CreateToggle(SecCombat, "Camera Lock Aimbot", false, function(st) _G.CameraAimActive = st end)
 CreateDropdown(SecCombat, "Aim Target Bone", {"Head", "Torso"}, "Head", function(b) _G.AimBone = b end)
 CreateToggle(SecCombat, "Show FOV Circle", true, function(st) _G.ShowFOVCircle = st end)
-CreateSlider(SecCombat, "FOV Circle Radius", _G.FOVCircleRadius, 40, 350, false, function(val) _G.FOVCircleRadius = val end)
+CreateToggle(SecCombat, "Sync Silent Aim with FOV Circle", _G.SyncFOV ~= false, function(st)
+    _G.SyncFOV = st
+    if st then _G.SilentAimFOV = _G.FOVCircleRadius end
+end)
+CreateSlider(SecCombat, "FOV Circle Radius", _G.FOVCircleRadius, 40, 450, false, function(val)
+    _G.FOVCircleRadius = val
+    if _G.SyncFOV then _G.SilentAimFOV = val end
+end)
 CreateDropdown(SecCombat, "FOV Circle Color", FOVColorOptionNames, _G.SelectedFOVColor, function(b) _G.SelectedFOVColor = b end)
 CreateSlider(SecCombat, "FOV Transparency", math.round((_G.FOVTransparency or 0) * 100), 0, 90, false, function(val) _G.FOVTransparency = val / 100 end)
 CreateSlider(SecCombat, "FOV Thickness", _G.FOVThickness or 1.2, 1, 5, false, function(val) _G.FOVThickness = val end)
@@ -723,11 +730,14 @@ end)
 CreateDropdown(SecCombat, "Silent Aim Target", {"Murderer Only", "All Enemies / Players"}, _G.SilentAimTargetMode or "Murderer Only", function(val)
     _G.SilentAimTargetMode = val
 end)
-CreateSlider(SecCombat, "Silent Aim FOV Radius", _G.SilentAimFOV or 300, 40, 600, false, function(val)
+CreateSlider(SecCombat, "Silent Aim FOV Radius", _G.SilentAimFOV or 130, 40, 500, false, function(val)
     _G.SilentAimFOV = val
 end)
 CreateToggle(SecCombat, "Auto Shoot (Sheriff Triggerbot)", _G.AutoShootSheriff, function(st)
     _G.AutoShootSheriff = st
+end)
+CreateSlider(SecCombat, "Triggerbot Cooldown (Sec)", _G.AutoShootCooldown or 1.35, 1.25, 2.5, true, function(val)
+    _G.AutoShootCooldown = val
 end)
 CreateToggle(SecCombat, "Movement Velocity Prediction", false, function(st) _G.PredictionActive = st end)
 CreateSlider(SecCombat, "Prediction Time", _G.PredictionAmount, 0.05, 0.5, true, function(val) _G.PredictionAmount = val end)
