@@ -1111,18 +1111,14 @@ local function UpdateBackWeapons()
     end
     
     -- Отображение на спине: активно и в лобби, и в раунде когда оружие не в руках
-    local shouldShowBackKnife = (_G.BackKnifeActive ~= false) and (not knifeInHand)
-    local shouldShowBackGun = (_G.BackGunActive ~= false) and (not gunInHand)
+    local shouldShowBackKnife = (_G.BackKnifeActive ~= false)
+    local shouldShowBackGun = (_G.BackGunActive ~= false)
     
     -- 1. ДЕЛАЕМ НЕВИДИМЫМ ВСЕ СТОКОВОЕ ОРУЖИЕ, КОТОРОЕ СТАВИТ ИГРА (И В ЛОББИ, И В КАТКЕ)
     for _, obj in ipairs(char:GetChildren()) do
         local isGameWeapon, wType = IsGameBackWeapon(obj, knifeInHand, gunInHand)
         if isGameWeapon then
-            if wType == "Knife" and shouldShowBackKnife then
-                HideOriginalBackWeapon(obj)
-            elseif wType == "Gun" and shouldShowBackGun then
-                HideOriginalBackWeapon(obj)
-            end
+            HideOriginalBackWeapon(obj)
         end
     end
     
@@ -1136,13 +1132,13 @@ local function UpdateBackWeapons()
                     local dName = d.Name:lower()
                     if (dName:find("knife") or dName:find("back")) and d.Name ~= "BackKnifeWeld" then
                         origKnifeWeld = d
-                        if shouldShowBackKnife and d.Part1 and not d.Part1.Name:find("Umbrella_") then
+                        if d.Part1 and not d.Part1.Name:find("Umbrella_") then
                             HideOriginalBackWeapon(d.Part1)
                             if d.Part1.Parent ~= char then HideOriginalBackWeapon(d.Part1.Parent) end
                         end
                     elseif (dName:find("gun") or dName:find("waist") or dName:find("holster")) and d.Name ~= "BackGunWeld" then
                         origGunWeld = d
-                        if shouldShowBackGun and d.Part1 and not d.Part1.Name:find("Umbrella_") then
+                        if d.Part1 and not d.Part1.Name:find("Umbrella_") then
                             HideOriginalBackWeapon(d.Part1)
                             if d.Part1.Parent ~= char then HideOriginalBackWeapon(d.Part1.Parent) end
                         end
