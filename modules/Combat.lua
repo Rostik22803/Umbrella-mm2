@@ -28,6 +28,39 @@ local OnHitRegistered = function(...)
     end
 end
 
+local SoundService = Core.Services.SoundService or game:GetService("SoundService")
+
+local function PlayGunShotSound(gun)
+    local played = false
+    if gun then
+        for _, obj in ipairs(gun:GetDescendants()) do
+            if obj:IsA("Sound") and (obj.Name:lower():find("shoot") or obj.Name:lower():find("sound") or obj.Name:lower():find("gun") or obj.Name:lower():find("fire") or obj.Name:lower():find("bang")) then
+                pcall(function() obj:Play() end)
+                played = true
+                break
+            end
+        end
+        if not played then
+            local anySound = gun:FindFirstChildWhichIsA("Sound", true)
+            if anySound then
+                pcall(function() anySound:Play() end)
+                played = true
+            end
+        end
+    end
+    -- Fallback authentic MM2 gunshot sound
+    local snd = Instance.new("Sound")
+    snd.Name = "Umbrella_GunShot"
+    snd.SoundId = "rbxassetid://406913243"
+    snd.Volume = 2.5
+    snd.Parent = SoundService
+    pcall(function() snd:Play() end)
+    task.delay(1.5, function()
+        pcall(function() snd:Destroy() end)
+    end)
+end
+
+
 -- 1. Prediction & Line-of-Sight AWALL Calculation
 local function GetAimbotBone(char)
     if not char then return nil end
@@ -38,14 +71,14 @@ local function GetAimbotBone(char)
     end
 end
 
--- ФУНКЦИЯ РАСЧЕТА ПРЕДИКТА (Фильтрация гравитации Y, чтобы прицел не падал в пятки)
+-- РАСЧЕТ ХИТБОКСА И ПРЕДИКТА (100% Hit Registration в центр кости без завышения по Y)
 local function GetPredictedPosition(targetPart)
     if not targetPart then return Vector3.new(0, 0, 0) end
     local basePos = targetPart.Position
     
-    -- Фикс: если передали HRP, смещаем вверх на уровень груди/головы (+1.6 стадса)
+    -- Мягкое центрирование на область груди без перелета через голову (+0.35 стадса)
     if targetPart.Name == "HumanoidRootPart" or targetPart.Name == "LowerTorso" then
-        basePos = basePos + Vector3.new(0, 1.6, 0)
+        basePos = basePos + Vector3.new(0, 0.35, 0)
     end
     
     if _G.PredictionActive then
@@ -53,22 +86,25 @@ local function GetPredictedPosition(targetPart)
         local root = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or targetPart)
         if root then
             local vel = root.Velocity
-            -- Ограничиваем вертикальную скорость, предотвращая смещение в пол
-            local predY = math.clamp(vel.Y, -2, 7)
+            -- В MM2 пуля хитскан (луч на сервере). Предикт компенсирует только пинг (30-60ms)
+            local predTime = math.clamp(_G.PredictionAmount or 0.04, 0.01, 0.08)
+            local predY = math.clamp(vel.Y, -1.5, 3.5)
             local horizontalVel = Vector3.new(vel.X, predY, vel.Z)
-            return basePos + (horizontalVel * _G.PredictionAmount)
+            return basePos + (horizontalVel * predTime)
         end
     end
     return basePos
 end
 
--- ФУНКЦИЯ ПРОВЕРКИ AWALL И РАСЧЕТА ДИСТАНЦИИ (Строгая проверка линии огня от персонажа)
+-- СТРОГАЯ ПРОВЕРКА ЛИНИИ ОГНЯ (Соответствует серверному лучу MM2 FindPartOnRay)
 local function CheckLineOfSight(targetPart)
     local myChar = LocalPlayer.Character
     if not myChar or not targetPart then return false, 999 end
     
-    local myOrigin = (myChar:FindFirstChild("Head") and myChar.Head.Position)
-        or (myChar:FindFirstChild("HumanoidRootPart") and myChar.HumanoidRootPart.Position + Vector3.new(0, 1.5, 0))
+    local gun = myChar:FindFirstChild("Gun") or myChar:FindFirstChild("Revolver")
+    local myOrigin = (gun and gun:FindFirstChild("Handle") and gun.Handle.Position)
+        or (myChar:FindFirstChild("Head") and myChar.Head.Position)
+        or (myChar:FindFirstChild("HumanoidRootPart") and myChar.HumanoidRootPart.Position + Vector3.new(0, 1.2, 0))
         or Camera.CFrame.Position
         
     local endPos = targetPart.Position
@@ -84,34 +120,19 @@ local function CheckLineOfSight(targetPart)
     if workspace:FindFirstChild("Spawns") then table.insert(ignore, workspace.Spawns) end
     raycastParams.FilterDescendantsInstances = ignore
     
-    local currentOrigin = myOrigin
-    local currentDir = direction
-    local maxPasses = 5
-    for pass = 1, maxPasses do
-        local result = workspace:Raycast(currentOrigin, currentDir, raycastParams)
-        if not result then
-            -- Reached target without hitting any solid obstacle
-            return true, dist
-        end
-        local hitInst = result.Instance
-        if targetPart.Parent and hitInst:IsDescendantOf(targetPart.Parent) then
-            return true, result.Distance
-        end
-        -- Прозрачные не коллизионные объекты (монеты, частицы, стекло, триггеры) не блокируют пули
-        if hitInst.CanCollide == false or hitInst.Transparency > 0.85 or hitInst.Name:lower():find("coin") or hitInst.Name:lower():find("trigger") then
-            local hitPos = result.Position
-            local remainingDir = endPos - hitPos
-            if remainingDir.Magnitude < 0.3 then
-                return true, dist
-            end
-            currentOrigin = hitPos + (remainingDir.Unit * 0.1)
-            currentDir = endPos - currentOrigin
-        else
-            -- Стена карты: сервер MM2 гарантированно отклонит урон
-            return false, result.Distance
-        end
+    local result = workspace:Raycast(myOrigin, direction, raycastParams)
+    if not result then
+        return true, dist
     end
-    return false, dist
+    local hitInst = result.Instance
+    if targetPart.Parent and hitInst:IsDescendantOf(targetPart.Parent) then
+        return true, result.Distance
+    end
+    -- Монеты или дроп оружия не останавливают пулю
+    if hitInst.Name:lower():find("coin") or hitInst.Name:lower():find("gundrop") then
+        return true, dist
+    end
+    return false, result.Distance
 end
 
 local function CheckAwallRay(targetPart)
@@ -220,47 +241,79 @@ task.spawn(function()
     end
 end)
 
--- 6. HVH: AUTO SHOOT MURDERER FOR SHERIFF (Strict LoS & 1.1s Revolver Reload Cooldown)
+-- 6. HVH: AUTO SHOOT MURDERER FOR SHERIFF / TRIGGERBOT (Strict LoS, 100% Hitreg & Gunshot Audio)
 local lastAutoShootTime = 0
 task.spawn(function()
     while true do
-        task.wait(0.08)
+        task.wait(0.04)
         if _G.AutoShootSheriff and (GetRole(LocalPlayer) == "Sheriff" or GetRole(LocalPlayer) == "Innocent") and LocalPlayer.Character then
-            if tick() - lastAutoShootTime >= (_G.AutoShootCooldown or 1.1) then
+            -- Сервер MM2 отклоняет выстрелы быстрее времени перезарядки револьвера (~1.3-1.35 сек)
+            local effectiveCooldown = math.clamp(_G.AutoShootCooldown or 1.35, 1.25, 3.0)
+            if tick() - lastAutoShootTime >= effectiveCooldown then
                 local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Character:FindFirstChild("Revolver")
                 if not gun then
                     local bpack = LocalPlayer:FindFirstChild("Backpack")
                     if bpack then
                         local bgun = bpack:FindFirstChild("Gun") or bpack:FindFirstChild("Revolver")
-                        if bgun then bgun.Parent = LocalPlayer.Character gun = bgun end
+                        if bgun then
+                            bgun.Parent = LocalPlayer.Character
+                            gun = bgun
+                            task.wait(0.06)
+                        end
                     end
                 end
-                if gun then
+                if gun and gun.Parent == LocalPlayer.Character then
                     for _, player in ipairs(Players:GetPlayers()) do
                         if player ~= LocalPlayer and GetRole(player) == "Murderer" and player.Character then
                             local bestBone = GetBestVisibleBone(player.Character)
                             if bestBone then
                                 local isVisible, _ = CheckLineOfSight(bestBone)
                                 if isVisible then
-                                    lastAutoShootTime = tick()
-                                    local predPos = GetPredictedPosition(bestBone)
-                                    gun:Activate()
+                                    local shootPos = GetPredictedPosition(bestBone)
                                     
-                                    local knifeServer = gun:FindFirstChild("KnifeServer") or gun:FindFirstChild("GunServer")
-                                    local shootRemote = (knifeServer and knifeServer:FindFirstChild("ShootGun")) or gun:FindFirstChild("ShootGun")
-                                    if shootRemote and shootRemote:IsA("RemoteFunction") then
-                                        pcall(function() shootRemote:InvokeServer(1, predPos, "Gun") end)
-                                    elseif shootRemote and shootRemote:IsA("RemoteEvent") then
-                                        pcall(function() shootRemote:FireServer(1, predPos, "Gun") end)
+                                    -- Проверка FOV: триггербот стреляет только если цель в пределах общего/сайлент FOV
+                                    local screenPos, onScreen = Camera:WorldToViewportPoint(shootPos)
+                                    local maxFOV = (_G.SyncFOV ~= false) and (_G.FOVCircleRadius or 130) or (_G.SilentAimFOV or _G.FOVCircleRadius or 130)
+                                    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                                    local inFov = true
+                                    if _G.ShowFOVCircle and onScreen and screenPos.Z > 0 then
+                                        local distToCenter = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                                        if distToCenter > maxFOV then
+                                            inFov = false
+                                        end
                                     end
                                     
-                                    if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
-                                        local char = LocalPlayer.Character
-                                        local startPos = (char and char:FindFirstChild("Head") and char.Head.Position) or Camera.CFrame.Position
-                                        Umbrella.HvH.CreateBulletTracer(startPos, predPos)
+                                    if inFov then
+                                        lastAutoShootTime = tick()
+                                        
+                                        -- Воспроизведение звука выстрела и анимации
+                                        PlayGunShotSound(gun)
+                                        pcall(function() gun:Activate() end)
+                                        
+                                        -- Вызов сетевого ремоута MM2 с валидным кодом верификации
+                                        local knifeServer = gun:FindFirstChild("KnifeServer") or gun:FindFirstChild("GunServer")
+                                        local shootRemote = (knifeServer and knifeServer:FindFirstChild("ShootGun")) or gun:FindFirstChild("ShootGun")
+                                        if shootRemote then
+                                            if shootRemote:IsA("RemoteFunction") then
+                                                pcall(function() shootRemote:InvokeServer(1, shootPos, "AH") end)
+                                            elseif shootRemote and shootRemote:IsA("RemoteEvent") then
+                                                pcall(function() shootRemote:FireServer(1, shootPos, "AH") end)
+                                            end
+                                        end
+                                        local shootEvent = gun:FindFirstChild("Shoot") or gun:FindFirstChild("ShootServer")
+                                        if shootEvent and shootEvent:IsA("RemoteEvent") then
+                                            pcall(function() shootEvent:FireServer(shootPos) end)
+                                        end
+                                        
+                                        -- Трейсер и регистрация попадания
+                                        if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
+                                            local char = LocalPlayer.Character
+                                            local startPos = (gun and gun:FindFirstChild("Handle") and gun.Handle.Position) or (char and char:FindFirstChild("Head") and char.Head.Position) or Camera.CFrame.Position
+                                            Umbrella.HvH.CreateBulletTracer(startPos, shootPos)
+                                        end
+                                        OnHitRegistered(player, shootPos, bestBone.Name)
+                                        break
                                     end
-                                    OnHitRegistered(player, predPos, bestBone.Name)
-                                    break
                                 end
                             end
                         end
@@ -360,7 +413,7 @@ local function GetClosestTarget()
                     local screenPos, onScreen = Camera:WorldToViewportPoint(predPos)
                     if onScreen and screenPos.Z > 0 then
                         local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                        local maxAllowed = _G.SilentAimFOV or (_G.ShowFOVCircle and _G.FOVCircleRadius or 1200)
+                        local maxAllowed = (_G.SyncFOV ~= false) and (_G.FOVCircleRadius or 130) or (_G.SilentAimFOV or _G.FOVCircleRadius or 130)
                         if mouseDist <= maxAllowed and mouseDist < shortestDist then
                             shortestDist = mouseDist
                             closestPlayer = player
@@ -484,32 +537,50 @@ if hookmetamethod then
             
             local method = getnamecallmethod and getnamecallmethod()
             if method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer" then
-                if CurrentSilentPos and CurrentSilentTarget then
-                    local remoteName = tostring(self.Name):lower()
-                    if remoteName:find("shoot") or remoteName:find("throw") or remoteName:find("knife") or remoteName:find("gun") then
+                local remoteName = tostring(self.Name):lower()
+                if remoteName:find("shoot") or remoteName:find("throw") or remoteName:find("knife") or remoteName:find("gun") then
+                    -- Мгновенный расчет цели прямо в момент выстрела (без задержки от Heartbeat)
+                    local liveTarget, liveBone = GetClosestTarget()
+                    if liveTarget and liveTarget.Character and liveBone then
+                        local hitPos = GetPredictedPosition(liveBone)
                         isInsideHook = true
                         local args = {...}
                         local replaced = false
                         for i, arg in ipairs(args) do
                             if typeof(arg) == "Vector3" then
-                                args[i] = CurrentSilentPos
+                                args[i] = hitPos
                                 replaced = true
                             elseif typeof(arg) == "CFrame" then
-                                args[i] = CFrame.new(arg.Position, CurrentSilentPos)
+                                args[i] = CFrame.new(arg.Position, hitPos)
                                 replaced = true
                             end
                         end
                         if not replaced and #args > 0 then
-                            args[1] = CurrentSilentPos
+                            if #args >= 2 and typeof(args[1]) == "number" then
+                                args[2] = hitPos
+                            else
+                                args[1] = hitPos
+                            end
                         end
                         
-                        -- Draw bullet tracer & hit log
+                        -- Гарантируем валидный код для ShootGun MM2
+                        if self.Name == "ShootGun" and #args >= 2 then
+                            if not args[3] or args[3] == "" then
+                                args[3] = "AH"
+                            end
+                        end
+                        
+                        -- Звук выстрела для обратной связи
+                        local gun = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Character:FindFirstChild("Revolver"))
+                        PlayGunShotSound(gun)
+                        
+                        -- Отрисовка трейсера и лог
                         if Umbrella.HvH and Umbrella.HvH.CreateBulletTracer then
                             local myChar = LocalPlayer.Character
-                            local origin = (myChar and myChar:FindFirstChild("Head") and myChar.Head.Position) or Camera.CFrame.Position
-                            Umbrella.HvH.CreateBulletTracer(origin, CurrentSilentPos)
+                            local origin = (gun and gun:FindFirstChild("Handle") and gun.Handle.Position) or (myChar and myChar:FindFirstChild("Head") and myChar.Head.Position) or Camera.CFrame.Position
+                            Umbrella.HvH.CreateBulletTracer(origin, hitPos)
                         end
-                        OnHitRegistered(CurrentSilentTarget, CurrentSilentPos, CurrentSilentBone and CurrentSilentBone.Name or "Head")
+                        OnHitRegistered(liveTarget, hitPos, liveBone.Name or "Head")
                         
                         local ret = OldNamecall(self, unpack(args))
                         isInsideHook = false
