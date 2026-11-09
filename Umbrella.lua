@@ -350,7 +350,7 @@ end)
 -- ========================================================================
 -- COLUMN 1: MM2 KNIVES & VISUAL FX
 local SecKnifeSkins = CreateSection(Tabs["Skins"], "MM2 Knives & Blade FX")
-CreateToggle(SecKnifeSkins, "Enable MM2 Knife Skin", false, function(st)
+CreateToggle(SecKnifeSkins, "Enable MM2 Knife Skin", _G.CustomKnifeActive ~= false, function(st)
     _G.CustomKnifeActive = st
     UpdateCustomWeapons()
 end)
@@ -385,7 +385,7 @@ end)
 
 -- COLUMN 2: MM2 GUNS & WEAPON IN-HAND GRIP
 local SecGunSkins = CreateSection(Tabs["Skins"], "MM2 Guns & Weapon Grip")
-CreateToggle(SecGunSkins, "Enable MM2 Gun Skin", false, function(st)
+CreateToggle(SecGunSkins, "Enable MM2 Gun Skin", _G.CustomGunActive ~= false, function(st)
     _G.CustomGunActive = st
     UpdateCustomWeapons()
 end)
