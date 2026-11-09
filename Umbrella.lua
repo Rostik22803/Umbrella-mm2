@@ -354,29 +354,33 @@ CreateToggle(SecKnifeSkins, "Enable MM2 Knife Skin", false, function(st)
     _G.CustomKnifeActive = st
     UpdateCustomWeapons()
 end)
+CreateToggle(SecKnifeSkins, "Show Knife on Back (Unequipped)", _G.BackKnifeActive ~= false, function(st)
+    _G.BackKnifeActive = st
+    UpdateCustomWeapons()
+end)
 CreateDropdown(SecKnifeSkins, "MM2 Knife Skin", KnifeModelNames, _G.SelectedKnifeModel, function(val)
     _G.SelectedKnifeModel = val
-    if _G.CustomKnifeActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 CreateDropdown(SecKnifeSkins, "Weapon Material", {"Default", "Neon Glow", "ForceField", "Glass", "Chrome Metal"}, _G.CustomWeaponMaterial, function(val)
     _G.CustomWeaponMaterial = val
-    if _G.CustomKnifeActive or _G.CustomGunActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 CreateDropdown(SecKnifeSkins, "Weapon Color Tint", {"Original", "Blood Red", "Cyber Cyan", "Neon Pink", "Gold", "Lime Green", "Rainbow RGB"}, _G.CustomWeaponColor, function(val)
     _G.CustomWeaponColor = val
-    if _G.CustomKnifeActive or _G.CustomGunActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 CreateDropdown(SecKnifeSkins, "Weapon Aura (FX)", {"None", "Fire Flames", "Void Smoke", "Cyber Sparks", "Golden Haze", "Blood Drip"}, _G.CustomWeaponAura, function(val)
     _G.CustomWeaponAura = val
-    if _G.CustomKnifeActive or _G.CustomGunActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 CreateToggle(SecKnifeSkins, "Knife Blade Trail", false, function(st)
     _G.WeaponTrailActive = st
-    if _G.CustomKnifeActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 CreateDropdown(SecKnifeSkins, "Blade Trail Color", {"Rainbow RGB", "Blood Red", "Cyber Cyan", "Gold Glow", "Pure White"}, _G.SelectedWeaponTrailColor, function(val)
     _G.SelectedWeaponTrailColor = val
-    if _G.CustomKnifeActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 
 -- COLUMN 2: MM2 GUNS & WEAPON IN-HAND GRIP
@@ -385,9 +389,13 @@ CreateToggle(SecGunSkins, "Enable MM2 Gun Skin", false, function(st)
     _G.CustomGunActive = st
     UpdateCustomWeapons()
 end)
+CreateToggle(SecGunSkins, "Show Gun on Back/Hip (Unequipped)", _G.BackGunActive ~= false, function(st)
+    _G.BackGunActive = st
+    UpdateCustomWeapons()
+end)
 CreateDropdown(SecGunSkins, "MM2 Gun Skin", GunModelNames, _G.SelectedGunModel, function(val)
     _G.SelectedGunModel = val
-    if _G.CustomGunActive then UpdateCustomWeapons() end
+    UpdateCustomWeapons()
 end)
 
 CreateToggle(SecGunSkins, "Weapon In-Hand Angle & Grip", _G.CustomWeaponGripActive, function(st)
